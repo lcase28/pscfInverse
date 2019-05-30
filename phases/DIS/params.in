@@ -1,0 +1,123 @@
+InputFileVersion = 2.0
+ModelType = BlockPolymerMelt
+
+cells{
+  Dim = 2.0
+  NumCells = 1.0
+  cell1{
+    CellLengths = 5 5
+    CellAngles = 60
+    Basis = basis1
+    SpaceGroupIndex = 17
+  }
+  VariableCell = true
+  VarCellConserve = concentration
+}
+
+basis1{
+  NPW = 64.0 64.0
+}
+
+monomers{
+  nSpecies = 3.0
+  KuhnLen = 1.0 1.0 1
+}
+
+Interactions{
+  ChiN12 = 18
+
+  Compressibility_InvZetaN = 0.001
+  SmearScale = 0.0
+  CChainDensity = 1.0
+}
+
+chains{
+  nChains = 1.0
+  ContourDS = 0.01
+  DiffuserMethod = SOS
+  chain1{
+    Length = 1.0
+    nBlocks = 2.0
+    Architecture = linear
+    Statistics = gaussian
+    BlockSpecies = 1 2
+    BlockFractions = .3 .7
+    Label = "AB"
+  }
+}
+
+composition{
+  ensemble = canonical
+  chainvolfrac = 1
+}
+
+walls{
+  nwalls = 0.0
+  DefaultWallThickness = 1.0
+  DefaultWallProfileZ = 6.906754779
+  DefaultWallProfileDelta = 1.72668869
+  wall1{
+    Walltype = plane_x0
+    WallChiNinteractions_byspecies = 0 -30.0 0.0
+  }
+  wall2{
+    Walltype = plane_xl
+    WallChiNinteractions_byspecies = 0 -30.0 0.0
+  }
+  wall3{
+    Walltype = plane_y0
+    WallChiNinteractions_byspecies = 0 -30.0 0.0
+  }
+  wall4{
+    Walltype = plane_yl
+    WallChiNinteractions_byspecies = 0 -30.0 0.0
+  }
+}
+
+operators{
+  CalcStressTensor = false
+}
+
+Simulation{
+  jobtype = SCFT
+  FieldUpdater = SIS
+  NumTimeStepsPerBlock = 300
+  NumBlocks = 100
+  TimeStepDT = 1.0
+  lambdaForceScale = 1.0 3.0 1.0
+  lambdaStressScale = 0.003
+  randomseed = 61580.0
+  SCFTDisableStaggeredFieldUpdates = false
+  SCFTForceStoppingTol = 1E-5
+  SCFTStressStoppingTol = 1E-3
+}
+
+InitFields{
+  ReadInputFields = SpeciesFields
+  InputFieldsFile = fields.in
+  InitField1{
+    InitType = URNG
+  }
+  InitField2{
+    InitType = URNG
+  }
+  InitField3{
+    InitType = URNG
+  }
+}
+
+IO{
+  KeepDensityHistory = false
+  KeepFieldHistory = false
+  OutputFields = SpeciesFields
+  FieldOutputSpace = kspace
+}
+
+parallel{
+  CUDA_selectdevice = 2.0
+  CUDA_threadblocksize = 128.0
+  CUDA_memorysaving = false
+  CUDA_RNGonCPU = false
+  OpenMP_nthreads = 2.0
+}
+
