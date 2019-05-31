@@ -3,6 +3,11 @@ PSO tools for general global optimization problems with fixed dimensionality and
 
 Most of the core software is located in the `PSO/` directory, with various application examples present in the root.
 
+## Functionality Note:
+Core particle-swarm optimization (Griewank and Rosenbrock Tests) are functional (for python 2.7 - Print commands not currently ported for python 3)
+
+None of the polymer-specific functionality is operational, pending study and refactoring to establish compatibility with pscfpp.
+
 ## Brief description of core source files:
 - `PSO/Swarm.py` contains three main **base** classes:
     - `Point` stores information about the coordinate of a point in the search space.
