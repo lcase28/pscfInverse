@@ -10,7 +10,7 @@ import shutil
 def debug(line):
     #with open("debug.out", 'a') as f:
     #    f.write("{}\n".format(line))
-    print "DEBUG: {}".format(line)
+    print("DEBUG: {}".format(line))
 
 
 def output(line):

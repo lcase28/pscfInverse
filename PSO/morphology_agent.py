@@ -65,7 +65,7 @@ class MorphologyAgent(LocalSCFTAgent):
 
         # Check whether the target morphology melted to DIS and assign a bad fitness if it did
         if checkDISCollapse(self.Location.simulations[self.target.key]):
-            print " [FAIL]: Target melted to DIS for agent {}\n".format(self.id)
+            print(" [FAIL]: Target melted to DIS for agent {}\n".format(self.id))
             return -1E6
 
         # Read field data in k space
@@ -76,23 +76,23 @@ class MorphologyAgent(LocalSCFTAgent):
         elif os.path.isfile(simpath+"/fields_k.dat"):
             fielddata.readFields(simpath+"/fields_k.dat")
         else:
-            print " [FAIL]: Error reading target simulation density file\n"
+            print(" [FAIL]: Error reading target simulation density file\n")
             return -1E6
 
         # Check that SCFT converged to the same phase that was seeded
         if checkStructureSimilarity(fielddata, self.target.parameters['SeedField']):
-            print " [FAIL]: Target converged to a different phase for agent {}".format(self.id)
-            print "         Path = {}\n".format(self.Location.simulations[self.target.key])
+            print(" [FAIL]: Target converged to a different phase for agent {}".format(self.id))
+            print("         Path = {}\n".format(self.Location.simulations[self.target.key]))
             return -1E6
 
         # Check for status == failed
         if getSimulationStatus(self.Location.simulations[self.target.key]) == 'FAILED':
-            print " [FAIL]: Target simulation failed for agent {}\n".format(self.id)
+            print(" [FAIL]: Target simulation failed for agent {}\n".format(self.id))
             return -1E6
 
         cell_last = getCellMaxVecLength(fielddata)
         if cell_last > 30.0:
-            print " [FAIL]: The target phase simulation cell grew beyond 30 Rg\n"
+            print(" [FAIL]: The target phase simulation cell grew beyond 30 Rg\n")
             return -1E6
 
         #
@@ -116,7 +116,7 @@ class MorphologyAgent(LocalSCFTAgent):
         # PSO *maximizes* the objective function
         # define dH to be positive when target has lower free energy than most stable alternative candidate
         dH = sorted([H_values[c.key] for c in self.candidates])[0] - H_values[self.target.key]
-        print " All free energies = {};  Fitness = {}\n".format(H_values, dH)
+        print(" All free energies = {};  Fitness = {}\n".format(H_values, dH))
         return dH
 
 
@@ -129,7 +129,7 @@ def checkDISCollapse(simpath):
     elif os.path.isfile(simpath+"/density.dat"):
         fielddata.readFields(simpath+"/density.dat")
     else:
-        print "Error reading density file"
+        print("Error reading density file")
         return True
 
     total_variance = 0.
@@ -146,7 +146,7 @@ def checkStructureSimilarity(fielddata,ref_field=None,threshold=0.75):
     try:
         fielddata2.readFields(ref_field)
     except:
-        print "Reference field = {}".format(ref_field)
+        print("Reference field = {}".format(ref_field))
         sys.exit("Error reading reference field")
 
     # Normalize field 0 from phase 1

@@ -395,7 +395,7 @@ def setelement(key, val, parent, depth=0):
 #            except TypeError, e:
 #                print "TypeError", e
 #                parent[head] = val
-            except IndexError, TypeError:
+            except(IndexError, TypeError):
                 # Add elements (filled with None) to the array until we can fit the requested index, then set it
                 parent[head] = list(parent[head])
                 new = tail - (len(parent[head]) - 1)
@@ -469,36 +469,40 @@ class PolyFTSFactory(ParameterFactory):
     """
 
     Alias = {1: {},
-            2: {},
-            3: {
-            "BlockFractions1": "modelsBK_chainsBK_chain1BK_BlockFractions",
-            "BlockFractions2": "modelsBK_chainsBK_chain2BK_BlockFractions",
-            "Alpha2": "modelsBK_chainsBK_chain2BK_Length",
-            "BlendRatio": "modelsBK_model1BK_compositionBK_ChainVolFrac",
-            "ChainVolFrac": "modelsBK_model1BK_compositionBK_ChainVolFrac",
-            "DS": "modelsBK_chainsBK_ContourDS",
-            "Dim": "modelsBK_model1BK_cellBK_Dim",
-            "cell": "modelsBK_model1BK_cell", # Section
-            "SpaceGroupIndex": "modelsBK_model1BK_cellBK_SpaceGroupIndex",
+             2: {},
+             3: {
+                 "BlockFractions1": "modelsBK_chainsBK_chain1BK_BlockFractions",
+                 "BlockFractions2": "modelsBK_chainsBK_chain2BK_BlockFractions",
+                 "Alpha2": "modelsBK_chainsBK_chain2BK_Length",
+                 "BlendRatio": "modelsBK_model1BK_compositionBK_ChainVolFrac",
+                 "ChainVolFrac": "modelsBK_model1BK_compositionBK_ChainVolFrac",
+                 "DS": "modelsBK_chainsBK_ContourDS",
+                 "Dim": "modelsBK_model1BK_cellBK_Dim",
+                 "cell": "modelsBK_model1BK_cell", # Section
+                 "SpaceGroupIndex": "modelsBK_model1BK_cellBK_SpaceGroupIndex",
 
-            "CellLengths": "modelsBK_model1BK_cellBK_CellLengths",
-            "CellScaling": "modelsBK_model1BK_cellBK_CellScaling",
-            "CellAngles": "modelsBK_model1BK_cellBK_CellAngles",
-            "VariableCell": "simulationBK_VariableCell",
-            "Symmetrize": "modelsBK_model1BK_cellBK_Symmetrize",
-            "NPW": "modelsBK_model1BK_cellBK_NPW",
+                 "CellLengths": "modelsBK_model1BK_cellBK_CellLengths",
+                 "CellScaling": "modelsBK_model1BK_cellBK_CellScaling",
+                 "CellAngles": "modelsBK_model1BK_cellBK_CellAngles",
+                 "VariableCell": "simulationBK_VariableCell",
+                 "Symmetrize": "modelsBK_model1BK_cellBK_Symmetrize",
+                 "NPW": "modelsBK_model1BK_cellBK_NPW",
 
-            "chiN12": "modelsBK_model1BK_interactionsBK_chiN12",
+                 "chiN12": "modelsBK_model1BK_interactionsBK_chiN12",
 
-            "ReadInputFields": "modelsBK_model1BK_initfieldsBK_ReadInputFields",
-            "InitField1": "modelsBK_model1BK_initfieldsBK_initfield1BK_InitType",
-            "InitField2": "modelsBK_model1BK_initfieldsBK_initfield2BK_InitType",
-            "OutputFields": "simulationBK_IOBK_OutputFields",
-            "OMPThreads": "parallelBK_OpenMP_nthreads",
-            "DT": "simulationBK_TimeStepDT",
-            "StressDT": "simulationBK_lambdaStressScale"
-            }
+                 "ReadInputFields": "modelsBK_model1BK_initfieldsBK_ReadInputFields",
+                 "InitField1": "modelsBK_model1BK_initfieldsBK_initfield1BK_InitType",
+                 "InitField2": "modelsBK_model1BK_initfieldsBK_initfield2BK_InitType",
+                 "OutputFields": "simulationBK_IOBK_OutputFields",
+                 "OMPThreads": "parallelBK_OpenMP_nthreads",
+                 "DT": "simulationBK_TimeStepDT",
+                 "StressDT": "simulationBK_lambdaStressScale"
                 }
+            }
+
+    multiReadCues = {"nPolymer":"Polymer", "nBlock":"blocks", "nMonomer":"monomers"}
+    
+
 
     def __init__(self):
         ParameterFactory.__init__(self)
@@ -566,7 +570,7 @@ class PolyFTSFactory(ParameterFactory):
 #            else:
 #                return value
         except:
-            print "error parsing parameter", key
+            print("error parsing parameter", key)
             return None
 
     def BreakdownKey(self, key):
@@ -628,9 +632,26 @@ class PolyFTSFactory(ParameterFactory):
         self.sections = OrderedDict()
         self.params = OrderedDict()
 
+        # Track to ensure labels expected multiple times are encountered multiple times
+# TODO: Implement multi-read tracking from parameter file
+        multiReadCounts = OrderedDict()
+
         with open(filename, 'r') as f:
             blocks = ""
             for line in f:
+                # Tracing Commands
+                print("\n\nNext line: ",line)
+                print("\tSections:")
+                for key,value in self.sections.items():
+                    if isinstance(value,Section):
+                        print("\t\t",key,", ",getSectValString(value,3))
+                    else:
+                        print("\t\t",key,", ",value)
+                print("\tParams")
+                for key,value in self.params.items():
+                    print("\t\t",key,", ",value)
+
+
                 # First, do some cleaning up
                 line = line.strip()
                 line = line.split("#")[0]
@@ -657,12 +678,13 @@ class PolyFTSFactory(ParameterFactory):
                         if len(blocks) > 0:
                             blocks+="BK_"
 
-                    result = line.split('=')
+                    result = line.split(maxsplit=1)
 
                     # Not a section
                     if len(result) > 1:
                         # Simple parameter
                         key = result[0].strip()
+                        rng = multiReadCounts.get(key,1)
                         vals = [s.strip() for s in result[1].split()]
 
                         try:
@@ -675,6 +697,22 @@ class PolyFTSFactory(ParameterFactory):
                             vals = vals[0]
 
                         self.set(**{blocks+key: vals})
+
+                        rng -= 1
+                        if rng > 0:
+                            vals = [vals]
+                            for i in range(int(rng)):
+                                s = f.readline()
+                                s = s.strip()
+                                s = s.split("#")[0]
+                                s = s.strip()
+                                valNext = [v.strip() for v in s.split()]
+                                vals.append(valNext)
+                            self.set(**{blocks+key:vals})
+
+                    if key in PolyFTSFactory.multiReadCues:
+                        multiReadCounts.update(**{PolyFTSFactory.multiReadCues.get(key):vals})
+
 
     def HandleKey(self, k, v):
         # Check for string first... so we can safely check for array after
@@ -738,3 +776,13 @@ class PolyFTSFactory(ParameterFactory):
                 s+="{} = {}\n".format(key, val)
         return s
 
+def getSectValString(s,lev):
+    indentpre = "\t"*lev
+    out = ""
+    for key,val in s.items.items():
+        out+="\n"+indentpre+str(key)+", "
+        if isinstance(val,Section):
+            out+=getSectValString(val,lev+1)
+        else:
+            out+=str(val)
+    return out
