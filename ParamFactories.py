@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from copy import deepcopy
 import os
+import re
 
 class CalculatedParameter(object):
     def __init__(self, *args):
@@ -460,6 +461,157 @@ class Section(object):
 
         return s
 
+# Slight changes for PSCF
+class BlockSection(Section):
+    """
+    Handles Specialized formatting of Block lists in PSCF Polymers
+    """
+    nameFormat = 'blocks[.][0-9]+' # regex representation of the blocks section name requirement
+    
+    def __init__(self):
+        super().__init__()
+    
+    def __init__(self, base):
+        super().__init__()
+        self.depth = base.depth
+        self.name = base.name
+        
+        assert checkName(self.name), "Not a valid BlockSection Name: {}".format(self.name)
+        
+        result = self.name.split('.')
+        self.printName = result[0]
+        
+        #assert self.printName == 'blocks', "Not a valid BlockSection"
+        #assert len(result) > 1, "Invalid Block Name: No identifying index"
+        
+        idNumber = int(result[1])
+        self.blockNumber = idNumber
+        # TODO: Add check on start of block ID numbers
+        if self.blockNumber > 0:
+            self.printName = '      '  # replaces characters of "blocks" with spaces to keep uniform alignment for human readability
+        self.set(**base.items.items())
+
+    @classmethod
+    def CheckName(cls,key):
+        if re.fullmatch(cls.nameFormat,key) is not None:
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        s = '  '*self.depth
+        s += '  {}'.format(self.blockNumber)
+        s += '  {}'.format(int(self.get('monomerType',-1)))
+        verts = self.get('vertex',[-1,-1])
+        s += '  {}  {}'.format(verts[0],verts[1])
+        s += '  {}\n'.format(self.length)
+        return s
+
+class PolymerSection(Section):
+    """
+    Polymer section of a PSCFpp parameter file
+    """
+    nameFormat = 'Polymer([(][0-9]+[)])?'  # regex representation of expected Polymer section name
+
+    
+    def __init__(self):
+        super().__init__()
+    
+    def __init__(self, base):
+        super().__init__()
+        self.name = base.name
+        
+        assert CheckName(self.name), "Not a valid PolymerSection Name: {}".format(self.name)
+        
+        # Remove keyword indexing from name
+        result = self.name.split('(')
+        self.printName = result[0].strip()
+        
+        #assert self.printName == "Polymer", "Not a valid PolymerSection"
+        
+        # Copy internal data
+        for key,val in base.items.items():
+            if isinstance(val,Section):
+                #result = key.split('.')
+                #baseWord = result[0]
+                #if len(result) > 1 and baseWord == 'blocks':
+                if BlockSection.CheckName(key):
+                    val = BlockSection(val)
+            self.set(**{key: val})
+
+    @classmethod
+    def CheckName(cls,key):
+        if re.fullmatch(nameFormat,key) is not None:
+            return True
+        else:
+            return False
+    
+    def setBlockLengths(self):
+        try:
+            numBlocks = int(self.get('nBlock'))
+        except:
+            raise #clean up exception handling
+        
+        remainingLength = float(self.get('totalNeff'))
+        
+        for i in range(numBlocks-1):
+            curBlock = self.get('blocks.{}'.format(i))
+            curLength = remainingLength * curBlock.get('fraction',0.0)
+            curBlock.length = curLength
+            remainingLength -= curLength
+        self.get('blocks.{}'.format(numBlocks-1)).length = remainingLength
+        
+    def __str__(self):
+        # Handle special formatting cases of Polymer Section
+        self.SetBlockLengths()
+        tempname = self.name # store extra reference for restoration
+        self.name = self.printName
+        s = Section.__str__(self)
+        self.name = tempname
+            
+class MonomerSection(Section):
+    """
+    Class for handling the formatting requirements of MonomerSections
+    """
+    
+    nameFormat = 'monomers[.][0-9]+'            # Regex representation of MonomerSection name format
+
+    def __init__(self):
+        super().__init__()
+    
+    def __init__(self, base):
+        super().__init__()
+        assert isinstance(base,Section), "Invalid base for MonomerSection Initialization"
+        
+        self.depth = base.depth
+        self.name = base.name
+        
+        assert CheckName(self.name), "Not a valid MonomerSection name: {}".format(self.name)
+        nameComponents = self.name.split('.')
+        self.idNumber = int(nameComponents[1])
+        if self.idNumber == 0:
+            self.printName = nameComponents[0]
+        else:
+            self.printName = '        '         # replace characters of 'monomers' with spaces: for ease of human readability
+        
+        for key,val in base.items.items():
+            self.set(**{key:val})
+    
+    @classmethod
+    def CheckName(cls,key):
+        if re.fullmatch(nameFormat,key) is not None:
+            return True
+        else:
+            return False
+    
+    def __str__(self):
+        s = '  '*self.depth
+        s += self.printname
+        s += '  {}  {}  {}\n'.format(self.idNumber,self.get("name"),self.get("kuhn"))
+
+# TODO: Add Post-processing to ParamFactory to convert block, polymer, monomer sections
+
+
 # Now, the parameter factory
 class PolyFTSFactory(ParameterFactory):
     """
@@ -775,6 +927,22 @@ class PolyFTSFactory(ParameterFactory):
             else:
                 s+="{} = {}\n".format(key, val)
         return s
+
+class PSCFPPFactory(PolyFTSFactory):
+    """
+    Parameter factory for pscfpp program
+    """
+
+    def __init__(self):
+        PolyFTSFactory.__init__(self)
+        self.Code = "PSCFPP"
+
+    def ParseParameterFile(self,filename):
+        PolyFTSFactory.ParseParameterFile(self,filename)
+
+#TODO: Override output to account for special formatting of pscfpp
+
+        
 
 def getSectValString(s,lev):
     indentpre = "\t"*lev
