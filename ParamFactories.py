@@ -422,18 +422,21 @@ class Section(object):
         self.items = OrderedDict({})
         self.depth = 0 # Not functional, this is purely for adding tabs to make the produced file easier to parse by eye
 
+        self.nameValueSeparator = " = "
+
         self.set(**kwargs)
 
     def set(self, **kwargs):
         """
             Set values inside the section. Reference sub-sections with "BK\_". 
         """
-
+        
         for key, val in kwargs.items():
             # Tab only the inner sections
 #            if type(val) is Section:
 #                val.depth += 1
             setelement(key, val, self.items, depth=self.depth+1)
+    
     def get(self, key):
         return self.items[key]
 
@@ -445,51 +448,66 @@ class Section(object):
         s = pre+"{}{{\n".format(self.name)
 
         for key, val in self.items.items():
-            if type(val) == Section:
+            if isinstance(val,Section):
                 s += str(val)
             # Print a list 
             elif type(val) in [list, np.ndarray, tuple]:
                 # Print the key and `=` sign
-                s += "  "+pre+"{} = ".format(key)
+                s += "  "+pre+"{}{}".format(key, self.nameValueSeparator)
                 # Print the values as a space-separated list
                 s += " ".join(["{}".format(v) for v in val])
                 s += "\n"
             else:
-                s += "  "+pre+"{} = {}\n".format(key, val)
+                s += "  "+pre+"{}{}{}\n".format(key, self.nameValueSeparator, val)
 
         s += pre+"}\n"
 
         return s
 
 # Slight changes for PSCF
-class BlockSection(Section):
+class PSCFSection(Section):
+    """
+    Base class for specialized Sections for PSCF
+
+    Inheriting classes should provide implementation of "CheckName" as 
+        well as a name-formatting specification.
+    """
+    def __init__(self, base=None, **kwargs):
+        if base is None:
+            super().__init__(**kwargs)
+        else:
+            assert isinstance(base,Section), "Not a valid base for {} Object, {}".format(type(self),base)
+            super().__init__()
+            self.depth = base.depth
+            self.name = base.name
+            
+            self.set(**base.items)
+            self.set(**kwargs)
+        self.nameValueSeparator = "  "
+    
+    def CheckName(self,key):
+        return true
+
+class BlockSection(PSCFSection):
     """
     Handles Specialized formatting of Block lists in PSCF Polymers
     """
     nameFormat = 'blocks[.][0-9]+' # regex representation of the blocks section name requirement
     
-    def __init__(self):
-        super().__init__()
-    
-    def __init__(self, base):
-        super().__init__()
-        self.depth = base.depth
-        self.name = base.name
+    def __init__(self, base=None, **kwargs):
+        super().__init__(base, **kwargs)
         
-        assert checkName(self.name), "Not a valid BlockSection Name: {}".format(self.name)
+        assert self.CheckName(self.name), "Not a valid BlockSection Name: {}".format(self.name)
         
         result = self.name.split('.')
         self.printName = result[0]
-        
-        #assert self.printName == 'blocks', "Not a valid BlockSection"
-        #assert len(result) > 1, "Invalid Block Name: No identifying index"
         
         idNumber = int(result[1])
         self.blockNumber = idNumber
         # TODO: Add check on start of block ID numbers
         if self.blockNumber > 0:
             self.printName = '      '  # replaces characters of "blocks" with spaces to keep uniform alignment for human readability
-        self.set(**base.items.items())
+        #self.set(**base.items)
 
     @classmethod
     def CheckName(cls,key):
@@ -500,28 +518,23 @@ class BlockSection(Section):
 
     def __str__(self):
         s = '  '*self.depth
-        s += '  {}'.format(self.blockNumber)
-        s += '  {}'.format(int(self.get('monomerType',-1)))
-        verts = self.get('vertex',[-1,-1])
+        s += '{}  {}'.format(self.printName,self.blockNumber)
+        s += '  {}'.format(int(self.get('monomerType')))
+        verts = self.get('vertex')
         s += '  {}  {}'.format(verts[0],verts[1])
         s += '  {}\n'.format(self.length)
         return s
 
-class PolymerSection(Section):
+class PolymerSection(PSCFSection):
     """
     Polymer section of a PSCFpp parameter file
     """
     nameFormat = 'Polymer([(][0-9]+[)])?'  # regex representation of expected Polymer section name
-
     
-    def __init__(self):
-        super().__init__()
-    
-    def __init__(self, base):
-        super().__init__()
-        self.name = base.name
+    def __init__(self, base=None, **kwargs):
+        super().__init__(base,**kwargs)
         
-        assert CheckName(self.name), "Not a valid PolymerSection Name: {}".format(self.name)
+        assert self.CheckName(self.name), "Not a valid PolymerSection Name: {}".format(self.name)
         
         # Remove keyword indexing from name
         result = self.name.split('(')
@@ -541,12 +554,12 @@ class PolymerSection(Section):
 
     @classmethod
     def CheckName(cls,key):
-        if re.fullmatch(nameFormat,key) is not None:
+        if re.fullmatch(cls.nameFormat,key) is not None:
             return True
         else:
             return False
     
-    def setBlockLengths(self):
+    def SetBlockLengths(self):
         try:
             numBlocks = int(self.get('nBlock'))
         except:
@@ -556,7 +569,8 @@ class PolymerSection(Section):
         
         for i in range(numBlocks-1):
             curBlock = self.get('blocks.{}'.format(i))
-            curLength = remainingLength * curBlock.get('fraction',0.0)
+# TODO: remove float() cast in next line... first need to handle numeric inputs.
+            curLength = remainingLength * float(curBlock.get("fraction"))
             curBlock.length = curLength
             remainingLength -= curLength
         self.get('blocks.{}'.format(numBlocks-1)).length = remainingLength
@@ -568,25 +582,19 @@ class PolymerSection(Section):
         self.name = self.printName
         s = Section.__str__(self)
         self.name = tempname
+        return s
             
-class MonomerSection(Section):
+class MonomerSection(PSCFSection):
     """
     Class for handling the formatting requirements of MonomerSections
     """
     
     nameFormat = 'monomers[.][0-9]+'            # Regex representation of MonomerSection name format
-
-    def __init__(self):
-        super().__init__()
     
-    def __init__(self, base):
-        super().__init__()
-        assert isinstance(base,Section), "Invalid base for MonomerSection Initialization"
+    def __init__(self, base=None, **kwargs):
+        super().__init__(base,**kwargs)
         
-        self.depth = base.depth
-        self.name = base.name
-        
-        assert CheckName(self.name), "Not a valid MonomerSection name: {}".format(self.name)
+        assert self.CheckName(self.name), "Not a valid MonomerSection name: {}".format(self.name)
         nameComponents = self.name.split('.')
         self.idNumber = int(nameComponents[1])
         if self.idNumber == 0:
@@ -599,18 +607,16 @@ class MonomerSection(Section):
     
     @classmethod
     def CheckName(cls,key):
-        if re.fullmatch(nameFormat,key) is not None:
+        if re.fullmatch(cls.nameFormat,key) is not None:
             return True
         else:
             return False
     
     def __str__(self):
         s = '  '*self.depth
-        s += self.printname
+        s += self.printName
         s += '  {}  {}  {}\n'.format(self.idNumber,self.get("name"),self.get("kuhn"))
-
-# TODO: Add Post-processing to ParamFactory to convert block, polymer, monomer sections
-
+        return s
 
 # Now, the parameter factory
 class PolyFTSFactory(ParameterFactory):
@@ -838,11 +844,11 @@ class PolyFTSFactory(ParameterFactory):
                         key = result[0].strip()
                         rng = multiReadCounts.get(key,1)
                         vals = [s.strip() for s in result[1].split()]
-
-                        try:
-                            vals = [float(v) for v in vals]
-                        except:
-                            pass
+                        # This method should simply read string values. Additional manipulation done in post-processing.
+                        #try:
+                        #    vals = [float(v) for v in vals]
+                        #except:
+                        #    pass
 
                         # Don't store single values as a list
                         if len(vals) == 1:
@@ -913,19 +919,19 @@ class PolyFTSFactory(ParameterFactory):
         # Print the header and sections - the val can be either a Section, a list, or a single value
         for key, val in self.sections.items():
             # Print a section
-            if type(val) == Section:
+            if isinstance(val,Section):
                 s+="\n{}".format(val)
 
             # Print a list
             elif type(val) in [list, np.ndarray, tuple]:
-                s+="{} = ".format(key)
+                s+="{} ".format(key)
                 for v in val:
                     s+=" {}".format(v)
                 s+='\n'
 
             # Print a single value 
             else:
-                s+="{} = {}\n".format(key, val)
+                s+="{}  {}\n".format(key, val)
         return s
 
 class PSCFPPFactory(PolyFTSFactory):
@@ -933,12 +939,80 @@ class PSCFPPFactory(PolyFTSFactory):
     Parameter factory for pscfpp program
     """
 
+    SpecialSectionTypes = [BlockSection,PolymerSection,MonomerSection]
+
     def __init__(self):
         PolyFTSFactory.__init__(self)
         self.Code = "PSCFPP"
-
+    
     def ParseParameterFile(self,filename):
         PolyFTSFactory.ParseParameterFile(self,filename)
+        print("\n\nFILE READ.\nCURRENT STATE:\n",self)
+        print("\n\nENTERING POST-PROCESS.\n\n")
+        self.PostProcess()
+
+    def PostProcess(self, target=None, blocks=""):
+        if target is None:
+            target = self.sections
+
+        print("\nTarget is:\n",target)
+
+        if isinstance(target,Section):
+            items = target.items.items()
+            target = target.items       # set ordered dict as target for later assignment
+        else:
+            items = target.items()
+
+        print("\nItems: ",items)
+
+        for key, val in items:
+            if isinstance(val,Section):
+                blocks += key + "BK_"
+                newval = self.CheckSectionType(val)
+                target[key] = newval
+                self.PostProcess(newval, blocks)
+            else:
+                # Convert numeric values to appropriate form
+                newval = self.CheckValueType(val)
+                if newval is not None:
+                    # Update to numeric value
+                    target[key] = newval
+                else:
+                    pass
+    
+    @classmethod
+    def CheckSectionType(cls,val):
+        # Check the name and type of val against know "special sections"
+        # if the name matches that of special section, and val is not that
+        # type, cast it as such.
+        if not isinstance(val,Section):
+            return val
+        
+        for RequiredType in cls.SpecialSectionTypes:
+            if RequiredType.CheckName(val.name):
+                if not type(val) == RequiredType:
+                    val = RequiredType(val)
+        # ensure that all sections are minimally converted to PSCFSection objects
+        if not isinstance(val,PSCFSection):
+            val = PSCFSection(val)
+        
+        return val
+    
+    #TODO: Determine best way to handle numeric conversions alongside arrays
+    @classmethod
+    def CheckValueType(cls,val):
+        try:
+            floatVal = float(val)
+        except(ValueError):
+            # Non-numeric - return None
+            return None
+        except(TypeError):
+            # Illegal Cast
+            return None
+        try:
+            intval = int(val)
+        except:
+            pass
 
 #TODO: Override output to account for special formatting of pscfpp
 
