@@ -618,6 +618,92 @@ class MonomerSection(PSCFSection):
         s += '  {}  {}  {}\n'.format(self.idNumber,self.get("name"),self.get("kuhn"))
         return s
 
+class ChiInteractionSection(PSCFSection):
+    """
+    Section Containing Flory-Huggins Interaction Data
+    """
+    nameFormat = "ChiInteraction" # Expected Name for this section
+    
+    def __init__(self, base=None, **kwargs):
+        super().__init__(base,**kwargs)
+        
+        self.printName = self.name
+        self.chiCount = 0
+        for key, val in base.items.items():
+            if ChiInteraction.CheckName(key):
+                newVal = ChiInteraction(key,val,self.chiCount==0)
+                self.chiCount += 1
+                self.set(**{key:newVal})
+            else:
+                print("\nERROR IN ChiInteraction SECTION: INVALID CHI: {}, {}\n".format(key,val))
+    
+    @classmethod
+    def CheckName(cls,key):
+        if re.fullmatch(cls.nameFormat, key) is not None:
+            return True
+        else:
+            return False
+    
+    def __str__(self):
+        s = '  '*self.depth
+        pre = s + '  '
+        s += "{}{{\n".format(self.name)
+        
+        for key, val in self.items.items():
+            if isinstance(val,ChiInteraction):
+                s += pre + str(val) + "\n"
+            else:
+                s += pre + "{}  {}\n".format(key,val)
+        
+        s += '  '*self.depth
+        s += "}\n"
+        
+        return s
+
+class ChiInteraction():
+    """
+    Class to store individual Flory-Huggins Parameters
+    """
+    nameFormat = 'chi[.][0-9]+[.][0-9]+'        # Regex representation of expected chi name
+    
+    def __init__(self, key, val, showName=True):
+        self.name = key
+        self.showName = showName
+        
+        assert self.CheckName(key), "Invalid Chi-Parameter Input, {}, {}".format(key,val)
+        result = key.split('.')
+        
+        assert len(result) == 3, "Improper Chi Name, {}, {}".format(key, val)
+        
+        if showName:
+            self.printName = result[0].strip()
+        else:
+            self.printName = '   '  # 'chi' replacing alphabetic characters with spaces
+        
+        try:
+            self.monomer1 = int(result[1].strip())
+            self.monomer2 = int(result[2].strip())
+        except(ValueError):
+            # TO DO: clean up error handling here
+            print('\nIMPROPER CHI INDEXING, {}, {}\n'.format(key,val))
+            
+        try:
+            self.chi = float(val)
+        except(ValueError):
+            # TO DO: clean up error handling here
+            print('\nIMPROPER CHI VALUE, {}, {}\n'.format(key,val))
+        
+    @classmethod
+    def CheckName(cls, key):
+        if re.fullmatch(cls.nameFormat, key) is not None:
+            return True
+        else:
+            return False
+    
+    def __str__(self):
+        s = '{}  {}  {}  {}'.format(self.printName, self.monomer1, self.monomer2, self.chi)
+        return s
+
 # Now, the parameter factory
 class PolyFTSFactory(ParameterFactory):
     """
@@ -939,7 +1025,7 @@ class PSCFPPFactory(PolyFTSFactory):
     Parameter factory for pscfpp program
     """
 
-    SpecialSectionTypes = [BlockSection,PolymerSection,MonomerSection]
+    SpecialSectionTypes = [BlockSection,PolymerSection,MonomerSection, ChiInteractionSection]
 
     def __init__(self):
         PolyFTSFactory.__init__(self)
