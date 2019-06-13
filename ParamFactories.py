@@ -580,8 +580,16 @@ class PolymerSection(PSCFSection):
         self.SetBlockLengths()
         tempname = self.name # store extra reference for restoration
         self.name = self.printName
+        
+        # Temporarily remove totalNeff to avoid printing
+        self.items.move_to_end("totalNeff")
+        Neff = self.items.popitem()
         s = Section.__str__(self)
+        
+        # Restore
+        self.set(**{Neff[0]:Neff[1]})
         self.name = tempname
+        
         return s
             
 class MonomerSection(PSCFSection):
@@ -1103,7 +1111,7 @@ class PSCFPPFactory(PolyFTSFactory):
 #TODO: Override output to account for special formatting of pscfpp
 
         
-
+# Temporary function to enable tracing of program
 def getSectValString(s,lev):
     indentpre = "\t"*lev
     out = ""
