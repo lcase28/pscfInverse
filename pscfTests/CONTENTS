@@ -1,0 +1,8 @@
+Directory tree rooted in this directory contains test scripts used during the development of the PSCF-interfaced PSO tool.
+
+Sub-directory guide:
+    
+        compatibilityTests/     Tests of direct PSCF-PSO interaction features
+                                (Parameter file writing, field file writing, etc.)
+        
+        ** New Directories will be added as they're created.

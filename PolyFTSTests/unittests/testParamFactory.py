@@ -25,7 +25,7 @@ pfac.set(chiN12=30.0)
 # Test adding a 2D sweep
 pfac.Sweep(chiN12=np.linspace(10.,20.,6))
 pfac.Sweep(BlockFractions1=np.linspace(2,5,4)*0.1)
-print "Number of simulations = ",pfac.GetTotalSimulations()
+print("Number of simulations = ",pfac.GetTotalSimulations())
 #pfac.PrintGraph() # Writes a tree graph representation of the sweep to Graph.png
 
 #########################
@@ -33,4 +33,4 @@ print "Number of simulations = ",pfac.GetTotalSimulations()
 # This function is for launching SWEEPS
 pfac.LaunchSimulations(SL.LaunchSimulation,PolyFTSbin,"diblocksweep/")
 
-print "Done testing"
+print("Done testing")
