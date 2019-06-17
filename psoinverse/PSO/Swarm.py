@@ -27,14 +27,17 @@ def log_exception():
 # Point Class - represents a point in phase space (block fraction, N_BCP, ChiN, ...)
 #
 # =========================================================
+
+## Base Class representing a point in PSO search space
 @total_ordering
 class Point(object):
-    def __init__(self):
-        self.Fitness = None # This point's fitness when @ Coords
-        self.Coords = None # Parameter values (current)
-        self.Scale = None # Scale factor to apply to the coordinates
+    def __init__(self, **kwargs):
+        self.Fitness = kwargs.get("Fitness",None) # This point's fitness when @ Coords
+        self.Coords = kwargs.get("Coords",None) # Parameter values (current)
+        self.Scale = kwargs.get("Scale",1.0) # Scale factor to apply to the coordinates
+        # maybe remove entirely - Makes no sense to have in point
         self.simulations = {} # A record of all of the simulations used to determine fitness
-        self.keys = None # Parameter names
+        self.keys = kwargs.get("Keys",None) # Parameter names
 
     def fill_from(self, other_point):
         self.Coords = np.copy(other_point.Coords)
@@ -55,6 +58,7 @@ class Point(object):
 #            sim.Group = new_group
 #        self.clear_simulations()
 
+    # this may not make sense to keep in point
     def copy_simulations_to(self, newpath): # Copy local run files to a new path
         for k, sim in self.simulations.items():
             # Form destination and clean up existing
@@ -91,6 +95,14 @@ class Point(object):
         return False
 
     def __eq__(self, other):
+        # !! This seems to pose logical inconsistency issues with @total_ordering
+        if self.Fitness == other.Fitness: # and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
+            return True
+        return False
+    
+    def same_point(self,other):
+        if not isinstance(other, self.__class__):
+            raise(TypeError("other must be instance of {}".format(self.__class__)))
         if self.Fitness == other.Fitness and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
             return True
         return False
@@ -611,12 +623,12 @@ class SCFTAgent(Agent):
 
             self.Location.Fitness += fitness
 
-        except SQLAlchemyError, e:
+        except SQLAlchemyError as e:
             output("SQLAlchemy error: {}".format(e))
             log_exception()
             self.Location.Fitness = -2E4
             return False
-        except Exception, e:
+        except Exception as e:
             output("\t Exception on agent {}: {}".format(self.id, e))
             log_exception()
             self.Location.Fitness = -2E4
@@ -639,10 +651,10 @@ class SCFTAgent(Agent):
         with FTS.Globals['lock']:
             try:
                 t, h = FTS.Load(sim, "operators.dat", cols=[0, 1])
-            except Exception, e:
-                print "simid = {}".format(sim.id)
-                print "Failed to get operators.dat (for H)", sim
-                print "Exception: ", e
+            except Exception as e:
+                print("simid = {}".format(sim.id))
+                print("Failed to get operators.dat (for H)", sim)
+                print("Exception: ", e)
                 raise e
 
         return h[-1]
@@ -786,7 +798,7 @@ class LocalSCFTAgent(Agent):
         try:
             fitness = self.ComputeFitness()
             self.Location.Fitness += fitness
-        except Exception, e:
+        except Exception as e:
             debug("\t Exception on agent {}: {}".format(self.id, e))
             log_exception()
             self.Location.Fitness = -2E4
@@ -826,7 +838,7 @@ class LocalSCFTAgent(Agent):
             runpath = self.Location.simulations[simulation_key]
             # Load operators.dat
             opdata = np.loadtxt(runpath+"/operators.dat", usecols=[0,1])
-        except Exception, e:
+        except Exception as e:
             debug("Agent ID = {}".format(self.id))
             debug("simulation_key = {}".format(simulation_key))
             debug("Exception: ", e)
