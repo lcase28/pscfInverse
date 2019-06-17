@@ -1,17 +1,20 @@
 import numpy as np
-from functools import total_ordering
+#from functools import total_ordering
 import time
 import traceback
 import os
 import shutil
 
+# moving Point class to alternate module, splitting functionality
+# This should allow identical functionality throughout this module
+#  because functionality was fully recreated in SearchSpace Module
+from .SearchSpace import SimulationPoint as Point
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
 def debug(line):
     #with open("debug.out", 'a') as f:
     #    f.write("{}\n".format(line))
     print("DEBUG: {}".format(line))
-
 
 def output(line):
     from datetime import datetime
@@ -20,134 +23,6 @@ def output(line):
 
 def log_exception():
     debug("Exception raised: {}".format(traceback.format_exc()))
-
-
-# =========================================================
-#
-# Point Class - represents a point in phase space (block fraction, N_BCP, ChiN, ...)
-#
-# =========================================================
-
-## Base Class representing a point in PSO search space
-@total_ordering
-class Point(object):
-    def __init__(self, **kwargs):
-        self.Fitness = kwargs.get("Fitness",None) # This point's fitness when @ Coords
-        self.Coords = kwargs.get("Coords",None) # Parameter values (current)
-        self.Scale = kwargs.get("Scale",1.0) # Scale factor to apply to the coordinates
-        # maybe remove entirely - Makes no sense to have in point
-        self.simulations = {} # A record of all of the simulations used to determine fitness
-        self.keys = kwargs.get("Keys",None) # Parameter names
-
-    def fill_from(self, other_point):
-        self.Coords = np.copy(other_point.Coords)
-        self.Scale = other_point.Scale
-        self.Fitness = other_point.Fitness
-        self.simulations = {}
-        self.simulations.update(other_point.simulations) # Update is a native dictionary operation
-        self.keys = other_point.keys
-
-#    def delete_simulations(self): # FTS_DB relete simulation records and resources
-#        for k, simulation in self.simulations.items():
-#            if simulation is not None:
-#                FTS.DeleteSimulation(simulation)
-#        self.clear_simulations()
-#
-#    def move_simulations_to(self, new_group): # FTS_DB - relocate the simulation records to a new group
-#        for k, sim in self.simulations.items():
-#            sim.Group = new_group
-#        self.clear_simulations()
-
-    # this may not make sense to keep in point
-    def copy_simulations_to(self, newpath): # Copy local run files to a new path
-        for k, sim in self.simulations.items():
-            # Form destination and clean up existing
-            newsim = newpath+k
-            if os.path.isfile(newsim):
-                os.remove(newsim)
-            elif os.path.isdir(newsim):
-                shutil.rmtree(newsim) # Remove any existing contents at newpath
-            # This simulation may not have ran if not needed for computing fitness.
-            # In that case skip the copy.
-            if sim == None:
-                continue
-            if not os.path.isdir(sim):
-                continue
-            # Copy
-            shutil.copytree(sim, newsim)
-
-    def clear_simulations(self):
-        for key in self.simulations.keys():
-            self.simulations[key] = None
-
-    def init_simulations(self, keys):
-        for key in keys:
-            self.simulations[key] = None
-
-    def __gt__(self, other):
-        if self.Fitness > other.Fitness:
-            return True
-        return False
-
-    def __lt__(self, other):
-        if self.Fitness < other.Fitness:
-            return True
-        return False
-
-    def __eq__(self, other):
-        # !! This seems to pose logical inconsistency issues with @total_ordering
-        if self.Fitness == other.Fitness: # and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
-            return True
-        return False
-    
-    def same_point(self,other):
-        if not isinstance(other, self.__class__):
-            raise(TypeError("other must be instance of {}".format(self.__class__)))
-        if self.Fitness == other.Fitness and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
-            return True
-        return False
-
-    def get_dict(self):
-        import OrderedDict
-        return OrderedDict(zip(self.keys, self.get_scaled_coords()))
-
-    def get_scaled_coords(self):
-        return self.Coords * self.Scale
-
-    # Allow friendly output when we print a Point() object
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        try:
-            return "".join(["{}: {:.4f}\n".format(self.keys[i], self.get_scaled_coords()[i]) for i in
-                            range(len(self.Coords))]) + "Fitness={:.4f}".format(self.Fitness)
-        except ValueError:
-            return "".join(["{}: {}\n".format(self.keys[i], self.get_scaled_coords()[i]) for i in
-                            range(len(self.Coords))]) + "Fitness={:.4f}".format(self.Fitness)
-
-#    # Support for pickling the Simulation record
-#    def __getstate__(self):
-#        try:
-#            self.simulation_ids = {k: v.id for k, v in self.simulations.items()}
-#        except:
-#            pass
-#
-#        return self.__dict__
-#
-#    def __setstate__(self, state):
-#        from table_def import Simulation
-#
-#        s = FTS.Globals['session']
-#        for k, sim_id in state['simulation_ids'].items():
-#            try:
-#                state['simulations'][k] = s.query(Simulation).filter_by(id=state['simulation_ids'][k]).one()
-#            except:
-#                print "Failed to load sim_id {} unpickling Point".format(state['simulation_ids'][k])
-#                state['simulations'][k] = None
-#
-#        self.__dict__.update(state)
-
 
 # =========================================================
 #
