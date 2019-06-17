@@ -1,0 +1,19 @@
+Updated: 14 June 2019
+
+Next Tasks:
+    - Refactor Swarm.py
+        - Split Point into a simpler base class. Add complexity in derived classes.
+            - Split __eq__ method: __eq__ should cover fitness, samePoint should compare coordinates
+        - Move graph entirely into Swarm class (remove neighbors list from Agent)
+        - Handle Agent Position updating inside Swarm???
+        *** FLESH OUT DOCUMENTATION AS YOU REFACTOR***
+    
+    - Generate simple unit test for each class and method -- use pytest package
+    
+Other Tasks
+    - Split pscfppFactory from PolyFTSFactory class.
+        - Develop unit tests
+    
+    - Generate MorphologyAgent class for pscfpp
+    
+    - Generate PSCF tools for reading output files
