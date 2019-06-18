@@ -133,4 +133,72 @@ class SimulationPoint(DictPoint):
         for key in keys:
             self.simulations[key] = None
 
-
+class SearchBounds(object):
+    def __init__(self, lower=None, upper=None):
+        if upper is not None:
+            self.upper = np.asarray(upper)
+            try:
+                self.upper.astype(float)
+            except(ValueError):
+                raise(ValueError("Bounds must be numeric values: {}".format(upper)))
+        else:
+            self.upper = None
+        
+        if lower is not None:
+            self.lower = np.asarray(lower)
+            try:
+                self.lower.astype(float)
+            except(ValueError):
+                raise(ValueError("Bounds must be numeric values: {}".format(lower)))
+        else:
+            self.lower = None
+            
+        # ensure bounds are valid:
+        if self.upper is not None and self.lower is not None:
+            if not len(self.upper) == len(self.lower):
+                raise(ValueError("Lower and upper bounds must be same dimension:\n\t{}\n\t{}".format(self.lower, self.upper)))
+        if not self.below_upper(self.lower):
+            raise(ValueError("Lower Bound must be less than Upper Bound: {} > {}".format(self.lower, self.upper)))
+        if not self.above_lower(self.upper):
+            raise(ValueError("Upper Bound must be greater than Lower Bound: {} > {}".format(self.lower, self.upper)))
+    
+    def inBounds(self, target):
+        if isinstance(target, Point):
+            newTarget = target.get_scaled_coords()
+        else:
+            newTarget = np.asarray(target)
+        
+        try:
+            newTarget = newTarget.astype(float)
+        except(ValueError, AttributeError):
+            raise(ValueError("Coordinates must be numeric values or child of Point Class: {}".format(target)))
+        
+        return self.below_upper(newTarget) and self.above_lower(newTarget)
+    
+    def below_upper(self, target):
+        if self.upper is None:
+            return True
+        
+        if not len(self.upper) == len(target):
+            raise(ValueError("Coordinates must be same dimensions as bounds: {}".format(target)))
+        
+        for Ubnd, pt in zip(self.upper, target):
+            if Ubnd < pt:
+                return False
+        
+        return True
+    
+    def above_lower(self, target):
+        if self.lower is None:
+            return True
+        
+        if not len(self.lower) == len(target):
+            raise(ValueError("Coordinates must be same dimension as bounds: {}".format(target)))
+        
+        for Lbnd, pt in zip(self.lower, target):
+            if Lbnd > pt:
+                return False
+        
+        return True
+    
+    
