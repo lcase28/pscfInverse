@@ -18,7 +18,6 @@ from .Swarm import Agent
 #
 # Inheriting classes must override method Update
 class Integrator(ABC):
-    
     ## Constructor
     def __init__(self, **kwargs):
         super().__init__()
@@ -48,6 +47,12 @@ class Integrator(ABC):
 ## "Standard" PSO Update Scheme
 class StandardIntegrator(Integrator):
     ## Constructor
+    #
+    # @param chi Constriction factor value. (Default: 0.729)
+    # @param c1 Personal Best weighting factor. (Default: 2.05)
+    # @param c2 Neighbor Best weighting factor. (Default: 2.05)
+    # @param seekMax (Optional, key-word) Boolean. Default: False
+    #                If True, Neighbor best is the MAXIMUM neighbor value.
     def __init__(self, chi=None, c1=None, c2=None, **kwargs):
         super().__init__(**kwargs)
         try:
