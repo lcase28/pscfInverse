@@ -1,4 +1,5 @@
 import numpy as np
+import networkx as nx
 #from functools import total_ordering
 import time
 import traceback
@@ -8,7 +9,7 @@ import shutil
 # moving Point class to alternate module, splitting functionality
 # This should allow identical functionality throughout this module
 #  because functionality was fully recreated in SearchSpace Module
-from SearchSpace import SimulationPoint as Point
+from .SearchSpace import SimulationPoint as Point
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
 def debug(line):
@@ -30,45 +31,76 @@ def log_exception():
 #
 # =========================================================
 class Swarm(object):
-    def __init__(self, graph, agents, chi=None, c1=None, c2=None):
+    #def __init__(self, graph, agents, chi=None, c1=None, c2=None):
+    #    assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
+    #    self.Agents = agents
+
+    #    # For output
+    #    self.History, self.Best = [], []
+
+    #    # PSO Parameters - update from defaults if supplied
+    #    if chi != None:
+    #        Agent.chi = chi
+    #        for a in self.Agents:
+    #            a.chi = chi
+    #    if c1 != None:
+    #        Agent.c1 = c1
+    #        for a in self.Agents:
+    #            a.c1 = c1
+    #    if c2 != None:
+    #        Agent.c2 = c2
+    #        for a in self.Agents:
+    #            a.c2 = c2
+
+    #    # Fill each agent's neighbor list according to the supplied graph
+    #    #import networkx as nx
+    #    [self.Agents[node].connect(self.Agents[b]) for node in graph for b in graph.neighbors(node)]
+    
+    def __init__(self, graph, agents, integrator, seekMax=False):
         assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
+        
         self.Agents = agents
-
-        # For output
+        self.Graph = graph
+        self.integrator = integrator
+        self.steps = 0
+        
+        # record-keeping
         self.History, self.Best = [], []
-
-        # PSO Parameters - update from defaults if supplied
-        if chi != None:
-            Agent.chi = chi
-            for a in self.Agents:
-                a.chi = chi
-        if c1 != None:
-            Agent.c1 = c1
-            for a in self.Agents:
-                a.c1 = c1
-        if c2 != None:
-            Agent.c2 = c2
-            for a in self.Agents:
-                a.c2 = c2
-
-        # Fill each agent's neighbor list according to the supplied graph
-        import networkx as nx
-        [self.Agents[node].connect(self.Agents[b]) for node in graph for b in graph.neighbors(node)]
-
+        
+        # switch
+        try:
+            self.SeekMax = bool(seekMax)
+        except(TypeError, ValueError):
+            self.SeekMax = False
+    
+    def step(self):
+        for i in range(len(self.Agents)):
+            neighbors = [self.Agents[a] for a in self.Graph.neighbors(i)]
+            self.Agents[i].update(neighbors, self.integrator) #self.Agents[self.Graph.neighbors(i)], self.integrator)
+    
+    def printState(self):
+        for a in self.Agents:
+            print("\tAgent {}: {}, {}".format(a.id, a.get_coords(), a.Location.Fitness))
+    
     # Return global best of whole swarm
     def get_gbest(self):
         gbest_pt = self.Agents[0].PBest
         best_agent = self.Agents[0]
 
         for a in self.Agents:
-            if a.PBest > gbest_pt:
+            if self.SeekMax and a.PBest > gbest_pt:
                 gbest_pt = a.PBest
                 best_agent = a
+            elif not self.SeekMax and a.PBest < gbest_pt:
+                gbest_pt = a.PBest
+                best_agent = a
+            else:
+                pass
 
         return best_agent
 
     def print_neighbor_graph(self, fname="SwarmNetwork.png"):
-        import networkx as nx
+        #import networkx as nx
         import pylab as py
 
         g = nx.Graph()
@@ -141,14 +173,14 @@ class Agent(object):
     # STATIC MEMBERS
     NextID = 0  # Static counter for generating unique agent IDs
 
-    # These can be modified from their defaults in the Swarm object constructor, but
-    # they should be shared by all agents and are hence static
-    #
-    # Influencer weights
-    c1 = 2.05
-    c2 = 2.05
-    # Constriction factor
-    chi = 0.729
+    ## These can be modified from their defaults in the Swarm object constructor, but
+    ## they should be shared by all agents and are hence static
+    ##
+    ## Influencer weights
+    #c1 = 2.05
+    #c2 = 2.05
+    ## Constriction factor
+    #chi = 0.729
 
     def __init__(self, boundaries, v0=None):
         """
@@ -202,28 +234,30 @@ class Agent(object):
         #debug("Agent {}: velocity = {}".format(self.id, self.Velocity))
         #debug("Agent {}: fitness  = {}".format(self.id, self.Location.Fitness))
 
-
     def get_coords(self):
         return self.Location.get_scaled_coords()
 
-
-    def get_nbest(self):
+    def get_nbest(self, neighbors):
         # Find the best among the neighbors (including self)
         best = self.PBest
-        for n in self.neighbors:
+        for n in neighbors:
             if n.PBest > best:
                 best = n.PBest
         return best
 
-
-    def update(self, acceleration=None):
+    def update(self, neighbors, integrator, acceleration=None):
         """ Update the agent's Position (and Velocity) based on the current Position and neighbor information.
 
             ::Returns:: the agent's personal best fitness value (not Position)
         """
-
+        # Temporary Measure: Extract chi, c1, c2
+        # TODO: remove this when Integrator has been fully implemented
+        chi = integrator[0]
+        c1 = integrator[1]
+        c2 = integrator[2]
+        
         # Find the best among the neighbors
-        nbest = self.get_nbest()
+        nbest = self.get_nbest(neighbors)
 
         # Random variables for forcing terms
         e1 = np.random.rand(len(self.Location.Coords))
@@ -237,9 +271,9 @@ class Agent(object):
 
         # Update the velocity
         new_velocity = (self.Velocity
-                     + Agent.c1 * e1 * (self.PBest.Coords - self.Location.Coords)
-                     + Agent.c2 * e2 * (nbest.Coords - self.Location.Coords))
-        new_velocity = Agent.chi * new_velocity + acc
+                     + c1 * e1 * (self.PBest.Coords - self.Location.Coords)
+                     + c2 * e2 * (nbest.Coords - self.Location.Coords))
+        new_velocity = chi * new_velocity + acc
 
         # Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
         attempt = Point()
@@ -282,17 +316,17 @@ class Agent(object):
 
         return True
 
-    # Disconnect self and a neighbor 'a' from each other
-    def disconnect(self, a):
-        self.neighbors.remove(a)
-        a.neighbors.remove(self)
+    ## Disconnect self and a neighbor 'a' from each other
+    #def disconnect(self, a):
+    #    self.neighbors.remove(a)
+    #    a.neighbors.remove(self)
 
-    # Connect self and a neighbor 'a' to each other
-    def connect(self, a):
-        if a not in self.neighbors:
-            self.neighbors.append(a)
-        if self not in a.neighbors:
-            a.neighbors.append(self)
+    ## Connect self and a neighbor 'a' to each other
+    #def connect(self, a):
+    #    if a not in self.neighbors:
+    #        self.neighbors.append(a)
+    #    if self not in a.neighbors:
+    #        a.neighbors.append(self)
 
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
     def evaluate(self):

@@ -8,10 +8,10 @@ class SwarmPlotter(object):
     def __init__(self, runname, numplotcoords, maxnsteps, labels=["x","y","z"], axislimits=[[0,1],[0,1],[0,1]], OptimalCoord=None, makemovie=False, OutputDir=None, **kwargs):
         self.numplotcoords = numplotcoords
         if numplotcoords > 3:
-            print "Bad numplotcoords = {}. Only first three coordinates will be plotted".format(numplotcoords)
+            print("Bad numplotcoords = {}. Only first three coordinates will be plotted".format(numplotcoords))
             self.numplotcoords = 3
         elif numplotcoords < 1:
-            print "Bad numplotcoords = {}. First coordinate will be plotted.".format(numplotcoords)
+            print("Bad numplotcoords = {}. First coordinate will be plotted.".format(numplotcoords))
             self.numplotcoords = 1
         self.labels = labels
         self.runname = runname
@@ -55,7 +55,7 @@ class SwarmPlotter(object):
         elif self.numplotcoords == 3:
             self.__updatePlot3D(agent_list, gbest, currentstep, overlaycallbackfn, **kwargs)
         else:
-            print "Unknown plot type"
+            print("Unknown plot type")
 
         # The right panel is always the same - the fitness over time
         # BUT here we mask out extreme fitness values that are sometimes used for
