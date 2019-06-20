@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 # Local Library imports
 from .SearchSpace import Point
-from .Swarm import Agent
+#from .Swarm import Agent
 
 ## Abstract Base class for PSO Integrators
 #
@@ -115,8 +115,8 @@ class StandardIntegrator(Integrator):
     def get_nbest(self, Neighbors):
         nbest = None
         for n in Neighbors:
-            if not isinstance(n,Agent):
-                raise(TypeException("Neighbors List must contain only subclasses of Agent"))
+            #if not isinstance(n,Agent):
+            #    raise(TypeException("Neighbors List must contain only subclasses of Agent"))
             if nbest is None:
                 nbest = n.Location
             else:

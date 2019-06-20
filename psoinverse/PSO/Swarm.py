@@ -10,6 +10,7 @@ import shutil
 # This should allow identical functionality throughout this module
 #  because functionality was fully recreated in SearchSpace Module
 from .SearchSpace import SimulationPoint as Point
+from .Integrators import Integrator
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
 def debug(line):
@@ -56,27 +57,25 @@ class Swarm(object):
     #    #import networkx as nx
     #    [self.Agents[node].connect(self.Agents[b]) for node in graph for b in graph.neighbors(node)]
     
-    def __init__(self, graph, agents, integrator, seekMax=False):
+    def __init__(self, graph, agents, integrator):
         assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
         
         self.Agents = agents
         self.Graph = graph
         self.integrator = integrator
-        self.steps = 0
+        self.stepsTaken = 0
         
         # record-keeping
         self.History, self.Best = [], []
         
         # switch
-        try:
-            self.SeekMax = bool(seekMax)
-        except(TypeError, ValueError):
-            self.SeekMax = False
+        self.SeekMax = integrator.seekMax
     
     def step(self):
         for i in range(len(self.Agents)):
             neighbors = [self.Agents[a] for a in self.Graph.neighbors(i)]
-            self.Agents[i].update(neighbors, self.integrator) #self.Agents[self.Graph.neighbors(i)], self.integrator)
+            self.Agents[i].update(neighbors, self.integrator)
+        self.stepsTaken += 1
     
     def printState(self):
         for a in self.Agents:
@@ -173,15 +172,6 @@ class Agent(object):
     # STATIC MEMBERS
     NextID = 0  # Static counter for generating unique agent IDs
 
-    ## These can be modified from their defaults in the Swarm object constructor, but
-    ## they should be shared by all agents and are hence static
-    ##
-    ## Influencer weights
-    #c1 = 2.05
-    #c2 = 2.05
-    ## Constriction factor
-    #chi = 0.729
-
     def __init__(self, boundaries, v0=None):
         """
             v0 is the initial velocity scale; all velocities will be randomized [-v0, v0]
@@ -252,33 +242,35 @@ class Agent(object):
         """
         # Temporary Measure: Extract chi, c1, c2
         # TODO: remove this when Integrator has been fully implemented
-        chi = integrator[0]
-        c1 = integrator[1]
-        c2 = integrator[2]
+        #chi = integrator[0]
+        #c1 = integrator[1]
+        #c2 = integrator[2]
         
-        # Find the best among the neighbors
-        nbest = self.get_nbest(neighbors)
+        ## Find the best among the neighbors
+        #nbest = self.get_nbest(neighbors)
 
-        # Random variables for forcing terms
-        e1 = np.random.rand(len(self.Location.Coords))
-        e2 = np.random.rand(len(self.Location.Coords))
+        ## Random variables for forcing terms
+        #e1 = np.random.rand(len(self.Location.Coords))
+        #e2 = np.random.rand(len(self.Location.Coords))
 
-        # Inertia
-        if acceleration is not None:
-            acc = acceleration
-        else:
-            acc = np.zeros_like(e1)
+        ## Inertia
+        #if acceleration is not None:
+        #    acc = acceleration
+        #else:
+        #    acc = np.zeros_like(e1)
 
-        # Update the velocity
-        new_velocity = (self.Velocity
-                     + c1 * e1 * (self.PBest.Coords - self.Location.Coords)
-                     + c2 * e2 * (nbest.Coords - self.Location.Coords))
-        new_velocity = chi * new_velocity + acc
+        ## Update the velocity
+        #new_velocity = (self.Velocity
+        #             + c1 * e1 * (self.PBest.Coords - self.Location.Coords)
+        #             + c2 * e2 * (nbest.Coords - self.Location.Coords))
+        #new_velocity = chi * new_velocity + acc
 
-        # Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
+        ## Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
         attempt = Point()
         attempt.fill_from(self.Location)
-        attempt.Coords += new_velocity
+        attempt.Coords, new_velocity = integrator.update(self, neighbors)
+        
+        
 
         # Reflective boundaries
         if self.boundaries is not None:
