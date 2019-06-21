@@ -32,31 +32,6 @@ def log_exception():
 #
 # =========================================================
 class Swarm(object):
-    #def __init__(self, graph, agents, chi=None, c1=None, c2=None):
-    #    assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
-    #    self.Agents = agents
-
-    #    # For output
-    #    self.History, self.Best = [], []
-
-    #    # PSO Parameters - update from defaults if supplied
-    #    if chi != None:
-    #        Agent.chi = chi
-    #        for a in self.Agents:
-    #            a.chi = chi
-    #    if c1 != None:
-    #        Agent.c1 = c1
-    #        for a in self.Agents:
-    #            a.c1 = c1
-    #    if c2 != None:
-    #        Agent.c2 = c2
-    #        for a in self.Agents:
-    #            a.c2 = c2
-
-    #    # Fill each agent's neighbor list according to the supplied graph
-    #    #import networkx as nx
-    #    [self.Agents[node].connect(self.Agents[b]) for node in graph for b in graph.neighbors(node)]
-    
     def __init__(self, graph, agents, integrator):
         assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
         
@@ -79,7 +54,7 @@ class Swarm(object):
     
     def printState(self):
         for a in self.Agents:
-            print("\tAgent {}: {}, {}".format(a.id, a.get_coords(), a.Location.Fitness))
+            print("\n{}".format(a))
     
     # Return global best of whole swarm
     def get_gbest(self):
@@ -159,10 +134,6 @@ class Swarm(object):
                                 ))
         f.close()
 
-        #with open("Output.pkl", 'w') as f:
-        #    pickle.dump(dict(history=self.History, best=self.Best), f)
-
-
 # =========================================================
 #
 # Agent Class (Abstract)
@@ -240,37 +211,10 @@ class Agent(object):
 
             ::Returns:: the agent's personal best fitness value (not Position)
         """
-        # Temporary Measure: Extract chi, c1, c2
-        # TODO: remove this when Integrator has been fully implemented
-        #chi = integrator[0]
-        #c1 = integrator[1]
-        #c2 = integrator[2]
-        
-        ## Find the best among the neighbors
-        #nbest = self.get_nbest(neighbors)
-
-        ## Random variables for forcing terms
-        #e1 = np.random.rand(len(self.Location.Coords))
-        #e2 = np.random.rand(len(self.Location.Coords))
-
-        ## Inertia
-        #if acceleration is not None:
-        #    acc = acceleration
-        #else:
-        #    acc = np.zeros_like(e1)
-
-        ## Update the velocity
-        #new_velocity = (self.Velocity
-        #             + c1 * e1 * (self.PBest.Coords - self.Location.Coords)
-        #             + c2 * e2 * (nbest.Coords - self.Location.Coords))
-        #new_velocity = chi * new_velocity + acc
-
         ## Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
         attempt = Point()
         attempt.fill_from(self.Location)
         attempt.Coords, new_velocity = integrator.update(self, neighbors)
-        
-        
 
         # Reflective boundaries
         if self.boundaries is not None:
@@ -278,9 +222,9 @@ class Agent(object):
             for i, out_of_bounds in enumerate(
                     np.logical_or(scaled_attempt < self.boundaries[:, 0], scaled_attempt > self.boundaries[:, 1])):
                 if out_of_bounds:
-                    #print "REFLECT AGENT {}, V COMPONENT {}".format(self.id,i)
-                    #print "OLD POSITION = {}".format(self.Location.get_scaled_coords())
-                    #print "TRIAL POSITION = {}".format(scaled_attempt)
+                    print("REFLECT AGENT {}, V COMPONENT {}".format(self.id,i))
+                    print("OLD POSITION = {}".format(self.Location.get_scaled_coords()))
+                    print("TRIAL POSITION = {}".format(scaled_attempt))
                     #print
                     #print
                     new_velocity[i] *= -1.0
@@ -333,7 +277,11 @@ class Agent(object):
             # If sim_tmp = None (PBest never set), then a new record will be generated automatically in Agent.Evaluate()
             #self.Location.simulations = sim_tmp
         return True
-
+    
+    def __str__(self):
+        s = "Agent {}:\n\tCoords: {}\n\tVelcty: {}\n\tFitnes: {}"
+        s = s.format(self.id, self.get_coords(), self.Velocity, self.Location.Fitness)
+        return s
 
 # =========================================================
 #

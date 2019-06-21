@@ -43,7 +43,6 @@ class Integrator(ABC):
     def update(self, Position, Velocity, Neighbors, **kwargs):
         return Position, Velocity
     
-    
 ## "Standard" PSO Update Scheme
 class StandardIntegrator(Integrator):
     ## Constructor
@@ -70,14 +69,16 @@ class StandardIntegrator(Integrator):
     
     ## Return updated position and velocity for agent with Neighbors
     #
-    # @param Position The Current Position of the Agent (SearchSpace.Point)
-    # @param Velocity The velocity of the Agent (numpy.array or array-like)
-    # @param Neighbors An iterable set of neighboring agents
-    # @return new_position The new position of the agent (if accepted)
-    # @return new_velocity The updated velocity of the agent
+    # Operates on and returns the scaled (O(1)) coordinates and velocities.
     #
-    # @throws ValueError if Position, Velocity, or neighbor Positions do not
-    #                    agree in dimension
+    # Assumes that Agent.Location.Coords and Agent.Velocity are equivallently scaled.
+    #
+    # @param target The Agent being updated in the call (will not be modified in call)
+    # @param Neighbors An iterable set of neighboring agents
+    # @param acceleration Additional velocity increment (Optional, key-word)
+    # @return new_position The new position of the agent (if accepted) (np.array)
+    # @return new_velocity The updated velocity of the agent (np.array)
+    #
     def update(self, target, Neighbors, **kwargs):
         nbest = self.get_nbest(Neighbors) # best among neighbors
         
@@ -101,7 +102,7 @@ class StandardIntegrator(Integrator):
         # new Velocity
         val1 = self.c1 * e1 * (pbest.Coords - Position.Coords)
         val2 = self.c2 * e2 * (nbest.Coords - Position.Coords)
-        new_velocity = self.chi * (Velocity + val1 + val2)
+        new_velocity = self.chi * (Velocity + val1 + val2) + acc
         
         # new Position
         new_position = Position.Coords + new_velocity
