@@ -279,8 +279,8 @@ class Agent(object):
         return True
     
     def __str__(self):
-        s = "Agent {}:\n\tCoords: {}\n\tVelcty: {}\n\tFitnes: {}"
-        s = s.format(self.id, self.get_coords(), self.Velocity, self.Location.Fitness)
+        s = "Agent {}:\n\tScaled: {}\n\tCoords: {}\n\tVelcty: {}\n\tFitnes: {}"
+        s = s.format(self.id, self.get_coords(), self.Location.Coords, self.Velocity, self.Location.Fitness)
         return s
 
 # =========================================================

@@ -40,7 +40,7 @@ def plotoptfn(mplaxis, **kwargs):
 #  Ask Sean about why it is present and determine whether it helps in setting initial velocities.
 nagents = 20
 axislimit=10.0
-boundaries = np.array([[-axislimit,axislimit],[-axislimit,axislimit],[-axislimit,axislimit]])
+boundaries = np.array([[-axislimit,axislimit],[-axislimit,axislimit]])
 #initialvelocity = boundaries * 0.1;
 agent_list=[]
 for i in range(nagents):
