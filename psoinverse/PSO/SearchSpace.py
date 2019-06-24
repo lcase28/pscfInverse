@@ -157,10 +157,10 @@ class SearchBounds(object):
         if self.upper is not None and self.lower is not None:
             if not len(self.upper) == len(self.lower):
                 raise(ValueError("Lower and upper bounds must be same dimension:\n\t{}\n\t{}".format(self.lower, self.upper)))
-        if not self.below_upper(self.lower):
-            raise(ValueError("Lower Bound must be less than Upper Bound: {} > {}".format(self.lower, self.upper)))
-        if not self.above_lower(self.upper):
-            raise(ValueError("Upper Bound must be greater than Lower Bound: {} > {}".format(self.lower, self.upper)))
+            if not np.all(self.below_upper(self.lower)):
+                raise(ValueError("Lower Bound must be less than Upper Bound: {} > {}".format(self.lower, self.upper)))
+            if not np.all(self.above_lower(self.upper)):
+                raise(ValueError("Upper Bound must be greater than Lower Bound: {} > {}".format(self.lower, self.upper)))
     
     def inBounds(self, target):
         if isinstance(target, Point):
@@ -173,32 +173,38 @@ class SearchBounds(object):
         except(ValueError, AttributeError):
             raise(ValueError("Coordinates must be numeric values or child of Point Class: {}".format(target)))
         
-        return self.below_upper(newTarget) and self.above_lower(newTarget)
+        return np.logical_and(self.below_upper(newTarget), self.above_lower(newTarget))
     
     def below_upper(self, target):
         if self.upper is None:
-            return True
+            if target is not None:
+                return [True for a in target]
+            else:
+                raise(TypeError("Target can not be type {}".format(type(target))))
         
         if not len(self.upper) == len(target):
             raise(ValueError("Coordinates must be same dimensions as bounds: {}".format(target)))
         
-        for Ubnd, pt in zip(self.upper, target):
-            if Ubnd < pt:
-                return False
+        res = [(Ubnd >= pt) for Ubnd, pt in zip(self.upper, target)]
         
-        return True
+        return res
     
     def above_lower(self, target):
         if self.lower is None:
-            return True
+            if target is not None:
+                return [True for a in target]
+            else:
+                raise(TypeError("Target must not be type: {}".format(type(target))))
+            
         
         if not len(self.lower) == len(target):
             raise(ValueError("Coordinates must be same dimension as bounds: {}".format(target)))
         
-        for Lbnd, pt in zip(self.lower, target):
-            if Lbnd > pt:
-                return False
+        res = [Lbnd <= pt for Lbnd, pt in zip(self.lower,target)]
+        #for Lbnd, pt in zip(self.lower, target):
+        #    if Lbnd > pt:
+        #        return False
         
-        return True
+        return res
     
     
