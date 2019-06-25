@@ -9,14 +9,13 @@ import numpy as np
 
 class TestSearchBounds(object):
     def test_empty_init(self):
-        bnd = Bounds()
-        
-        assert np.all(bnd.inBounds([1,2,3]))
-        assert np.all(bnd.inBounds([0,0,0,0]))
+        with pytest.raises(ValueError):
+            bnd = Bounds()
+        #assert np.all(bnd.inBounds([1,2,3]))
+        #assert np.all(bnd.inBounds([0,0,0,0]))
     
     def test_init(self):
         bnd = Bounds([1,2,3],[8,9,10])
-        
         assert np.all(bnd.inBounds([5,5,5]))
         assert not np.all(bnd.inBounds([10,10,10]))
     
@@ -65,5 +64,36 @@ class TestSearchBounds(object):
         with pytest.raises(ValueError):
             bnd.inBounds(pt)
         
+    def test_unbounded_initialization(self):
+        bnd = Bounds(None,[10,10,10])
+        # TODO: Finish implementing unbounded tests
+        assert bnd is None
+        assert False
         
+    def test_unbounded_inBounds(self):
+        assert False
         
+    def test_full_bounded_getRange(self):
+        assert False
+    
+    def test_indexed_bounded_getRange(self):
+        assert False
+    
+    def test_full_bounded_getScale(self):
+        assert False
+        
+    def test_indexed_bounded_getScale(self):
+        assert False
+        
+    def test_full_unbounded_getRange(self):
+        assert False
+    
+    def test_indexed_unbounded_getRange(self):
+        assert False
+    
+    def test_full_unbounded_getScale(self):
+        assert False
+        
+    def test_indexed_unbounded_getScale(self):
+        assert False
+    

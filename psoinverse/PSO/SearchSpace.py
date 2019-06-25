@@ -90,7 +90,7 @@ class Point(object):
         """
         if not isinstance(other, self.__class__):
             raise(TypeError("other must be instance of {}".format(self.__class__)))
-        if np.close(self.Fitness, other.Fitness) and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
+        if np.isclose(self.Fitness, other.Fitness) and np.allclose(other.get_scaled_coords(), self.get_scaled_coords()):
             return True
         return False
     
@@ -354,7 +354,7 @@ class SearchBounds(object):
     def __range_index(self, dim):
         try:
             newDim = int(dim)
-        else:
+        except(TypeError,ValueError):
             raise(TypeError("dim {} does not represent a valid index".format(dim)))
         
         if newDim >= len(self.lower) or newDim >= len(self.upper):
