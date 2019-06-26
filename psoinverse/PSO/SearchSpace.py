@@ -219,7 +219,11 @@ class SearchBounds(object):
     Class to store and manage search space bounds.
     
     Intended for hyperrectangular bounds, with a 
-    fixed upper and lower bound for each dimension
+    fixed upper and lower bound for each dimension.
+    
+    Once Initialized, bounds are generally intended
+    to be unmodified. Modification of the bounds 
+    by the user risks undefined behavior.
     """
     
     def __init__(self, lower=None, upper=None):
@@ -245,18 +249,16 @@ class SearchBounds(object):
                 (In this ane previous case, np.nan will always be accepted)
         """
         if upper is not None:
-            self.upper = np.asarray(upper)
             try:
-                self.upper.astype(float)
+                self.upper = np.array(upper).astype(float)
             except(ValueError):
                 raise(ValueError("Bounds must be numeric values: {}".format(upper)))
         else:
             self.upper = None
         
         if lower is not None:
-            self.lower = np.asarray(lower)
             try:
-                self.lower.astype(float)
+                self.lower = np.array(lower).astype(float)
             except(ValueError):
                 raise(ValueError("Bounds must be numeric values: {}".format(lower)))
         else:
@@ -274,7 +276,7 @@ class SearchBounds(object):
             if not np.all(self.above_lower(self.upper)):
                 raise(ValueError("Upper Bound must be greater than Lower Bound: {} > {}".format(self.lower, self.upper)))
         else:
-            raise(ValueError("One of upper or lower must be set on instantiation"))
+            raise(ValueError("One of upper or lower must be set on instantiation to fix dimensions"))
     
     def getScale(self, dim=None):
         """
@@ -370,7 +372,7 @@ class SearchBounds(object):
         
     def inBounds(self, target):
         """
-        Checks if target is within the specified bounds.
+        Checks if target is within the specified bounds (inclusive).
         
         Parameters:
         -----------
@@ -441,7 +443,7 @@ class SearchBounds(object):
         if not len(self.upper) == len(target):
             raise(ValueError("Coordinates must be same dimensions as bounds: {}".format(target)))
         
-        res = [((Ubnd >= pt) or np.isnan(Ubnd)) for Ubnd, pt in zip(self.upper, target)]
+        res = [((Ubnd >= pt) or np.isnan(Ubnd) or np.isnan(pt)) for Ubnd, pt in zip(self.upper, target)]
         
         return res
     
@@ -478,7 +480,7 @@ class SearchBounds(object):
         if not len(self.lower) == len(target):
             raise(ValueError("Coordinates must be same dimension as bounds: {}".format(target)))
         
-        res = [((Lbnd <= pt) or np.isnan(Lbnd)) for Lbnd, pt in zip(self.lower,target)]
+        res = [((Lbnd <= pt) or np.isnan(Lbnd) or np.isnan(pt)) for Lbnd, pt in zip(self.lower,target)]
         
         return res
     
