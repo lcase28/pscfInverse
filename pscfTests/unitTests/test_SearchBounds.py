@@ -119,7 +119,9 @@ class TestSearchBounds(object):
         assert np.allclose(bnd.getScale(), np.full(3,10.))
         
     def test_indexed_bounded_getScale(self):
-        bnd = Bounds([0, 1, np.NINF, 3, np.nan, 5], [10, np.inf, 12, np.nan, 14, 15])
+        Lbnd = [0, 1, np.NINF, 3, np.nan, 5]
+        Ubnd = [10, np.inf, 12, np.nan, 14, 15]
+        bnd = Bounds(Lbnd, Ubnd)
         
         correctvals = np.array([10, 1., 1., 1., 1., 10.]).astype(float)
         

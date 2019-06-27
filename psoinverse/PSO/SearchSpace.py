@@ -278,7 +278,23 @@ class SearchBounds(object):
         else:
             raise(ValueError("One of upper or lower must be set on instantiation to fix dimensions"))
     
-    def getScale(self, dim=None):
+    def __convert_to_finite(self):
+        """
+        (PRIVATE)
+        Convert the upper and lower bounds to finite values
+        (largest or smallest available floating point values)
+        """
+        for i,up in enumerate(self.upper):
+            if np.isnan(up):
+                self.upper[i] = np.inf
+        self.upper = np.nan_to_num(self.upper, False)
+        
+        for i,low in enumerate(self.lower):
+            if np.isnan(low):
+                self.upper[i] = np.NINF
+        self.lower = np.nan_to_num(self.lower, False)
+    
+    def getScale(self, dim=None, maxAbsoluteBound=np.inf):
         """
         Evaluates and returns the numerical scale of the
         bounded interval
@@ -327,6 +343,10 @@ class SearchBounds(object):
         -----------
         dim : int, optional
             The dimension of interest (zero-indexed)
+        maxAbsoluteBound : number, optional
+            A ceiling in the absolute value of the considered bound.
+            Lower Bounds are treated as max(lower_bound, -maxAbsoluteBound)
+            Upper Bounds are treated as min(lower_bound, maxAbsoluteBound)
         
         Return:
         -------
@@ -368,7 +388,9 @@ class SearchBounds(object):
         low = Lraw if not np.isnan(Lraw) else np.NINF
         hi = Uraw if not np.isnan(Uraw) else np.inf
         
-        return hi - low
+        rng = hi - low
+        
+        return rng
         
     def inBounds(self, target):
         """

@@ -10,6 +10,7 @@ import shutil
 # This should allow identical functionality throughout this module
 #  because functionality was fully recreated in SearchSpace Module
 from .SearchSpace import SimulationPoint as Point
+from .SearchSpace import SearchBounds
 from .Integrators import Integrator
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
@@ -143,11 +144,19 @@ class Agent(object):
     # STATIC MEMBERS
     NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, v0=None):
+    def __init__(self, boundaries, v0=None, spawnRange=None, useScale=None):
         """
-            v0 is the initial velocity scale; all velocities will be randomized [-v0, v0]
-              If v0 is None, the initial velocity will be set to 1/10 of the boundary range in each direction
-            boundaries are the bounds of the search domain and should be a numpy array with shape (dims, 2).
+        Constructor for Agent base class.
+        
+        Parameters
+        ----------
+        boundaries : SearchSpace.SearchBounds or sub-class
+            The desired search space.
+        v0 : 1D list-like, numerical values, optional
+            Initial velocity scale; all velocities will be
+            randomized [-v0, v0].
+            If v0 is None, the initial velocity will be set
+            to 1/10 of the boundary range in each direction.
         """
         # Initialize to zero steps taken
         self.steps = 0
@@ -158,25 +167,50 @@ class Agent(object):
 
         #debug("Agent class init, ID = {}".format(self.id))
 
-        # Store the seach boundaries and generate scale
+        # Store the seach boundaries and generate scale and range
         self.boundaries = boundaries
-        scale = np.array([b[1] - b[0] for b in boundaries])
-
+        #scale = np.array([b[1] - b[0] for b in boundaries])
+        #scale = self.boundaries.getScale()
+        #rng = self.boundaries.getRange()
+        
+        if useScale is None:
+            if spawnRange is not None and isinstance(spawnRange, SearchBounds):
+                scale = spawnRange.getScale()
+                if not len(scale) == len(self.boundaries.upper):
+                    raise(ValueError("Dimension mismatch between spawnRange and boundaries"))
+            else:
+                scale = self.boundaries.getScale()
+        else:
+            scale = np.array(useScale).astype(float)
+            if not len(scale) == len(self.boundaries.upper):
+                raise(ValueError("Dimension mismatch between useScale and boundaries"))
+        
+        if spawnRange is not None and isinstance(spawnRange, SearchBounds):
+            rng = spawnRange.getRange(dim=None, maxAbsoluteBound=self.maxDefaultInitPosition)
+            if not len(rng) == len(self.boundaries.upper):
+                raise(ValueError("Dimension mismatch between spawnRange and boundaries"))
+        else:
+            rng = self.boundaries.getRange(dim=None, maxAbsoluteBound=self.maxDefaultInitPosition)
+        
         #print "AGENT {}, boundaries = {}".format(self.id, scale)
 
         # The coords used in the update are scaled by the range of the search domain
         # Generate a Point object to store and manipulate the coordinate of the agent in phase space
-        dims = len(boundaries)
-        self.Location = Point()
-        self.Location.Coords = (np.random.rand(dims) * (boundaries[:, 1] - boundaries[:, 0]) + boundaries[:, 0]) / scale
-        self.Location.Scale = scale
+        dims = len(self.boundaries.upper)
+        LB = np.maximum(self.boundaries.lower, np.full_like(self.boundaries.lower, -self.maxDefaultInitPosition))
+        initCoords = (np.random.rand(dims) * rng + LB) / scale
+        self.Location = Point(Coords=initCoords, Fitness= -1e8, Scale=scale)
+        #self.Location.Coords = (np.random.rand(dims) * (boundaries[:, 1] - boundaries[:, 0]) + boundaries[:, 0]) / scale
+        
+        #self.Location.Scale = scale
         #print "AGENT {}, initial coordinates = {}, scaled coords = {} ".format(self.id, self.Location.Coords, self.Location.get_scaled_coords())
-        self.Location.Fitness = -1e8
+        #self.Location.Fitness = -1e8
 
         # Randomize velocity uniformly on [-v0, v0]. Velocity is added to scaled coordinates.
         if v0 is None:
             self.Velocity = 2. * (np.random.rand(dims) - 0.5)
-            self.Velocity *= 0.1 * np.array([b[1] - b[0] for b in boundaries]) / scale
+            #self.Velocity *= 0.1 * np.array([b[1] - b[0] for b in boundaries]) / scale
+            self.Velocity *= 0.1 * rng / scale
         else:
             self.Velocity = 2 * v0 * (np.random.rand(dims) - 0.5) / scale
 
@@ -187,24 +221,8 @@ class Agent(object):
         self.PBest.fill_from(self.Location)
         #assert self.PBest.Fitness <  -1e7, "pbest fitness is too positive."
 
-        # Initialize empty neighbor list and set fitness to zero. Will be maximized positive.
-        self.neighbors = []
-        #self.Location.Fitness = 0  # Do not do this - in some cases the fitness metric can be any sign and we don't want to pin the initial GBest/PBest to zero
-
-        #debug("Agent {}: coords   = {}".format(self.id, self.get_coords()))
-        #debug("Agent {}: velocity = {}".format(self.id, self.Velocity))
-        #debug("Agent {}: fitness  = {}".format(self.id, self.Location.Fitness))
-
     def get_coords(self):
         return self.Location.get_scaled_coords()
-
-    def get_nbest(self, neighbors):
-        # Find the best among the neighbors (including self)
-        best = self.PBest
-        for n in neighbors:
-            if n.PBest > best:
-                best = n.PBest
-        return best
 
     def update(self, neighbors, integrator, acceleration=None):
         """ Update the agent's Position (and Velocity) based on the current Position and neighbor information.
@@ -219,8 +237,8 @@ class Agent(object):
         # Reflective boundaries
         if self.boundaries is not None:
             scaled_attempt = attempt.get_scaled_coords()
-            for i, out_of_bounds in enumerate(
-                    np.logical_or(scaled_attempt < self.boundaries[:, 0], scaled_attempt > self.boundaries[:, 1])):
+            for i, out_of_bounds in enumerate(self.boundaries.inBounds(scaled_attempt)):
+                    #np.logical_or(scaled_attempt < self.boundaries[:, 0], scaled_attempt > self.boundaries[:, 1])):
                 if out_of_bounds:
                     print("REFLECT AGENT {}, V COMPONENT {}".format(self.id,i))
                     print("OLD POSITION = {}".format(self.Location.get_scaled_coords()))
@@ -251,18 +269,6 @@ class Agent(object):
                 return False
 
         return True
-
-    ## Disconnect self and a neighbor 'a' from each other
-    #def disconnect(self, a):
-    #    self.neighbors.remove(a)
-    #    a.neighbors.remove(self)
-
-    ## Connect self and a neighbor 'a' to each other
-    #def connect(self, a):
-    #    if a not in self.neighbors:
-    #        self.neighbors.append(a)
-    #    if self not in a.neighbors:
-    #        a.neighbors.append(self)
 
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
     def evaluate(self):
