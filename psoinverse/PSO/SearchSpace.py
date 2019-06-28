@@ -6,6 +6,7 @@
 import numpy as np
 from functools import total_ordering
 from collections import OrderedDict
+import copy
 
 @total_ordering
 class Point(object):
@@ -46,8 +47,8 @@ class Point(object):
         other_point : Point or sub-class
         """
         self.Coords = np.copy(other_point.Coords)
-        self.Scale = other_point.Scale
-        self.Fitness = other_point.Fitness
+        self.Scale = copy.deepcopy(other_point.Scale)
+        self.Fitness = copy.deepcopy(other_point.Fitness)
     
     def __gt__(self, other):
         """Compares two points by Fitness value"""
@@ -294,6 +295,28 @@ class SearchBounds(object):
                 self.upper[i] = np.NINF
         self.lower = np.nan_to_num(self.lower, False)
     
+    def getBoundsList( self, dim=None ):
+        """
+        Get and Return the bounds of dimension dim as a List.
+        If dim is not specified, returns a list of all bounds.
+        
+        Parameters:
+        -----------
+        dim : int, optional
+            The dimension of interest.
+            If None, all dimensions are returned.
+            
+        Return:
+        -------
+        List of bounds.
+        """
+        if dim is None:
+            return [ [ Lo, Hi ] for Lo, Hi in zip(self.lower, self.upper)]
+        elif dim >= len(self.lower):
+            raise(IndexError("dim {} is outside the available dimensions".format(dim)))
+        else:
+            return [ self.lower[dim], self.upper[dim] ]
+        
     def getScale(self, dim=None, maxAbsoluteBound=np.inf):
         """
         Evaluates and returns the numerical scale of the

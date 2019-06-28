@@ -11,8 +11,6 @@ class TestSearchBounds(object):
     def test_empty_init(self):
         with pytest.raises(ValueError):
             bnd = Bounds()
-        #assert np.all(bnd.inBounds([1,2,3]))
-        #assert np.all(bnd.inBounds([0,0,0,0]))
     
     def test_init(self):
         bnd = Bounds([1,2,3],[8,9,10])
@@ -150,3 +148,8 @@ class TestSearchBounds(object):
         bnd = Bounds([0,1,2], [10, np.nan, 12])
         assert np.allclose(bnd.getScale(), np.array([10., 1., 10.]))
     
+    def test_bounds_to_list(self):
+        bnd = Bounds( [0, 1, 2], [10, 11, 12])
+        correctList = [[0, 10], [1, 11], [2, 12]]
+        assert np.all( [ np.all(corr == tes) for corr, tes in zip( correctList, bnd.getBoundsList() ) ] )
+

@@ -173,6 +173,7 @@ class Agent(object):
         #scale = self.boundaries.getScale()
         #rng = self.boundaries.getRange()
         
+        # Select scaling source
         if useScale is None:
             if spawnRange is not None and isinstance(spawnRange, SearchBounds):
                 scale = spawnRange.getScale()
@@ -185,19 +186,21 @@ class Agent(object):
             if not len(scale) == len(self.boundaries.upper):
                 raise(ValueError("Dimension mismatch between useScale and boundaries"))
         
+        # Select Particle spawn range source
         if spawnRange is not None and isinstance(spawnRange, SearchBounds):
-            rng = spawnRange.getRange(dim=None, maxAbsoluteBound=self.maxDefaultInitPosition)
+            rng = spawnRange.getRange()
             if not len(rng) == len(self.boundaries.upper):
                 raise(ValueError("Dimension mismatch between spawnRange and boundaries"))
         else:
-            rng = self.boundaries.getRange(dim=None, maxAbsoluteBound=self.maxDefaultInitPosition)
+            rng = self.boundaries.getRange()
         
         #print "AGENT {}, boundaries = {}".format(self.id, scale)
 
         # The coords used in the update are scaled by the range of the search domain
         # Generate a Point object to store and manipulate the coordinate of the agent in phase space
         dims = len(self.boundaries.upper)
-        LB = np.maximum(self.boundaries.lower, np.full_like(self.boundaries.lower, -self.maxDefaultInitPosition))
+        #LB = np.maximum(self.boundaries.lower, np.full_like(self.boundaries.lower, -self.maxDefaultInitPosition))
+        LB = self.boundaries.lower
         initCoords = (np.random.rand(dims) * rng + LB) / scale
         self.Location = Point(Coords=initCoords, Fitness= -1e8, Scale=scale)
         #self.Location.Coords = (np.random.rand(dims) * (boundaries[:, 1] - boundaries[:, 0]) + boundaries[:, 0]) / scale
@@ -237,14 +240,11 @@ class Agent(object):
         # Reflective boundaries
         if self.boundaries is not None:
             scaled_attempt = attempt.get_scaled_coords()
-            for i, out_of_bounds in enumerate(self.boundaries.inBounds(scaled_attempt)):
-                    #np.logical_or(scaled_attempt < self.boundaries[:, 0], scaled_attempt > self.boundaries[:, 1])):
-                if out_of_bounds:
+            for i, in_bounds in enumerate(self.boundaries.inBounds(scaled_attempt)):
+                if not in_bounds:
                     print("REFLECT AGENT {}, V COMPONENT {}".format(self.id,i))
                     print("OLD POSITION = {}".format(self.Location.get_scaled_coords()))
                     print("TRIAL POSITION = {}".format(scaled_attempt))
-                    #print
-                    #print
                     new_velocity[i] *= -1.0
                     attempt.Coords[i] = self.Location.Coords[i]
 
@@ -274,11 +274,7 @@ class Agent(object):
     def evaluate(self):
         # Now that fitness has been updated, compare to PBest
         if self.Location > self.PBest:
-            # Re-use the old PBest simulation record
-            #sim_tmp = {k: v for k, v in self.PBest.simulations.items()}
-
             self.PBest.fill_from(self.Location)
-
             # When we store the PBest point, it gets a reference to self.Location.sim
             # If sim_tmp = None (PBest never set), then a new record will be generated automatically in Agent.Evaluate()
             #self.Location.simulations = sim_tmp
@@ -298,7 +294,7 @@ class FunctionAgent(Agent):
     def __init__(self, fn, **kwargs):
         self.Function = fn
 
-        super(FunctionAgent, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.PBest.Fitness = -1
 
@@ -307,7 +303,7 @@ class FunctionAgent(Agent):
     def evaluate(self):
         self.Location.Fitness = self.Function(self.get_coords())
 
-        return super(FunctionAgent, self).evaluate()
+        return super().evaluate()
 
 
 
