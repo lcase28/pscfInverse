@@ -12,9 +12,17 @@ Next Tasks:
             - Seems to have high risk of circular dependencies, lowered efficiency
             - Still not sure about this construct.
         
+        - Completely remove simulation tracking from point classes
+            - This construct absolutely did not make any sense.
+            - Derived Agent classes (or actual simulation management classes)
+                should be made responsible for this.
+        
         *** FLESH OUT DOCUMENTATION AS YOU REFACTOR***
     
     - Generate simple unit test for each class and method -- use pytest package
+    
+    - Generate easily-parsed output for swarm update tracking for easier verification of update procedure
+        - (Check out Pandas)
     
 Other Tasks
     - Split pscfppFactory from PolyFTSFactory class.

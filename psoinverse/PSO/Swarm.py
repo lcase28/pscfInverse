@@ -9,7 +9,7 @@ import shutil
 # moving Point class to alternate module, splitting functionality
 # This should allow identical functionality throughout this module
 #  because functionality was fully recreated in SearchSpace Module
-from .SearchSpace import SimulationPoint as Point
+from .SearchSpace import Point #SimulationPoint as Point
 from .SearchSpace import SearchBounds
 from .Integrators import Integrator
 
