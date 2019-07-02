@@ -66,6 +66,9 @@ class StandardIntegrator(Integrator):
             self.c2 = float(c2)
         except(TypeError, ValueError):
             self.c2 = 2.05
+        
+        seed = kwargs.get('RandSeed',None)
+        self.__randGen = np.random.RandomState(seed)
     
     ## Return updated position and velocity for agent with Neighbors
     #
@@ -81,15 +84,14 @@ class StandardIntegrator(Integrator):
     #
     def update(self, target, Neighbors, **kwargs):
         nbest = self.get_nbest(Neighbors) # best among neighbors
-        
         # Get data from target
         Position = target.Location
         Velocity = target.Velocity
         pbest = target.PBest
         
         # Random forcing terms
-        e1 = np.random.rand(len(Position.Coords))
-        e2 = np.random.rand(len(Position.Coords))
+        e1 = self.__randGen.rand(len(Position.Coords))
+        e2 = self.__randGen.rand(len(Position.Coords))
         
         # Inertia??
         res = kwargs.get("acceleration",None) # Temporary result storage

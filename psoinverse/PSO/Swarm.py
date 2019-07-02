@@ -144,7 +144,7 @@ class Agent(object):
     # STATIC MEMBERS
     NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, v0=None, spawnRange=None, useScale=None):
+    def __init__(self, boundaries, **kwargs): #v0=None, spawnRange=None, useScale=None):
         """
         Constructor for Agent base class.
         
@@ -157,6 +157,16 @@ class Agent(object):
             randomized [-v0, v0].
             If v0 is None, the initial velocity will be set
             to 1/10 of the boundary range in each direction.
+        spawnRange : SearchSpace.SearchBounds or sub-class, optional
+            The range in which to spawn (initialize) the agent.
+        useScale : 1D list-like, numerical values, optional
+            The scaling to use on the Agent's positions.
+        initPosition : SearchSpace.Point or subclass, or 1D list-like, optional
+            A forced initial position for Agent. Intended for use
+            in test and validation cases. spawnRange will be ignored.
+        initVelocity : 1D list-like, optional
+            A forced initial velocity for Agent. Intended for use
+            in test and validation cases. v0 will be ignored.
         """
         # Initialize to zero steps taken
         self.steps = 0
@@ -165,14 +175,67 @@ class Agent(object):
         self.id = Agent.NextID
         Agent.NextID += 1 # Update the static counter to deliver unique IDs
 
-        #debug("Agent class init, ID = {}".format(self.id))
-
-        # Store the seach boundaries and generate scale and range
         self.boundaries = boundaries
-        #scale = np.array([b[1] - b[0] for b in boundaries])
-        #scale = self.boundaries.getScale()
-        #rng = self.boundaries.getRange()
         
+        # Parse kwargs
+        useScale = kwargs.get("useScale",None)
+        spawnRange = kwargs.get("spawnRange",None)
+        v0 = kwargs.get("v0", None)
+        self.seekMax = kwargs.get("seekMax",True)
+        # optional arguments to enable fixed-starting position initialization for debugging
+        # and unit tests -- Not intended for general use.
+        initPosition = kwargs.get("position", None)
+        initVelocity = kwargs.get("velocity",None)
+        
+        # determine scaling of point
+        scale = self.__choose_scaling_source(boundaries, spawnRange, useScale)
+        
+        # Initialize Position
+        if initPosition is None:
+            # general case
+            rng = self.__choose_spawn_range(boundaries, spawnRange)
+            dims = len(self.boundaries.upper)
+            LB = self.boundaries.lower
+            initCoords = (np.random.rand(dims) * rng + LB) / scale
+            self.Location = Point(Coords=initCoords, Fitness= -1e8, Scale=scale)
+        else:
+            # debug / testing case
+            if isinstance(initPosition, Point):
+                self.location = Point()
+                self.location.fill_from(initPosition)
+            else:
+                try:
+                    initCoords = np.array(initPosition)
+                except:
+                    raise
+                if not len(initCoords) == len(self.boundaries.upper):
+                    raise(ValueError("initPosition does not match dimension of boundaries"))
+                
+                self.Location = Point(Coords=initCoords, Fitness=-1e8, Scale=scale)
+        
+        # Initialize Velocity
+        if initVelocity is None:
+            # general case
+            if v0 is None:
+                self.Velocity = 2. * (np.random.rand(dims) - 0.5)
+                self.Velocity *= 0.1 * rng / scale
+            else:
+                self.Velocity = 2 * v0 * (np.random.rand(dims) - 0.5) / scale
+        else:
+            # debug / testing case
+            try:
+                self.Velocity = np.array(initVelocity)
+            except:
+                raise
+            
+            if not len(self.Velocity) == len(self.boundaries.upper):
+                raise(ValueError("initVelocity does not match dimension of boundaries"))
+
+        # Store PBest - best Point() location discovered in all history
+        self.PBest = Point()
+        self.PBest.fill_from(self.Location)
+        
+    def __choose_scaling_source(self, boundaries, spawnRange, useScale):
         # Select scaling source
         if useScale is None:
             if spawnRange is not None and isinstance(spawnRange, SearchBounds):
@@ -185,7 +248,9 @@ class Agent(object):
             scale = np.array(useScale).astype(float)
             if not len(scale) == len(self.boundaries.upper):
                 raise(ValueError("Dimension mismatch between useScale and boundaries"))
-        
+        return scale
+    
+    def __choose_spawn_range(self, boundaries, spawnRange):
         # Select Particle spawn range source
         if spawnRange is not None and isinstance(spawnRange, SearchBounds):
             rng = spawnRange.getRange()
@@ -193,37 +258,8 @@ class Agent(object):
                 raise(ValueError("Dimension mismatch between spawnRange and boundaries"))
         else:
             rng = self.boundaries.getRange()
+        return rng
         
-        #print "AGENT {}, boundaries = {}".format(self.id, scale)
-
-        # The coords used in the update are scaled by the range of the search domain
-        # Generate a Point object to store and manipulate the coordinate of the agent in phase space
-        dims = len(self.boundaries.upper)
-        #LB = np.maximum(self.boundaries.lower, np.full_like(self.boundaries.lower, -self.maxDefaultInitPosition))
-        LB = self.boundaries.lower
-        initCoords = (np.random.rand(dims) * rng + LB) / scale
-        self.Location = Point(Coords=initCoords, Fitness= -1e8, Scale=scale)
-        #self.Location.Coords = (np.random.rand(dims) * (boundaries[:, 1] - boundaries[:, 0]) + boundaries[:, 0]) / scale
-        
-        #self.Location.Scale = scale
-        #print "AGENT {}, initial coordinates = {}, scaled coords = {} ".format(self.id, self.Location.Coords, self.Location.get_scaled_coords())
-        #self.Location.Fitness = -1e8
-
-        # Randomize velocity uniformly on [-v0, v0]. Velocity is added to scaled coordinates.
-        if v0 is None:
-            self.Velocity = 2. * (np.random.rand(dims) - 0.5)
-            #self.Velocity *= 0.1 * np.array([b[1] - b[0] for b in boundaries]) / scale
-            self.Velocity *= 0.1 * rng / scale
-        else:
-            self.Velocity = 2 * v0 * (np.random.rand(dims) - 0.5) / scale
-
-        #print "AGENT {}, initial velocity = {} ".format(self.id, self.Velocity)
-
-        # Store PBest - best Point() location discovered in all history
-        self.PBest = Point()
-        self.PBest.fill_from(self.Location)
-        #assert self.PBest.Fitness <  -1e7, "pbest fitness is too positive."
-
     def get_coords(self):
         return self.Location.get_scaled_coords()
 
@@ -273,8 +309,12 @@ class Agent(object):
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
     def evaluate(self):
         # Now that fitness has been updated, compare to PBest
-        if self.Location > self.PBest:
+        if self.Location > self.PBest and self.seekMax:
             self.PBest.fill_from(self.Location)
+        elif self.Location < self.PBest and not self.seekMax:
+            self.PBest.fill_from(self.Location)
+        else:
+            pass
             # When we store the PBest point, it gets a reference to self.Location.sim
             # If sim_tmp = None (PBest never set), then a new record will be generated automatically in Agent.Evaluate()
             #self.Location.simulations = sim_tmp
@@ -293,11 +333,9 @@ class Agent(object):
 class FunctionAgent(Agent):
     def __init__(self, fn, **kwargs):
         self.Function = fn
-
+        
         super().__init__(**kwargs)
-
-        self.PBest.Fitness = -1
-
+        
         self.evaluate()
 
     def evaluate(self):
