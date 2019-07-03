@@ -1,25 +1,45 @@
-## @package Integrators
-# A set of classes to perform position and velocity updates on PSO Agents.
-#
-# The Integrators do not assign new positions and velocities, but are meant to be called by
-# the agents to simply perform the update calculations.
-#
-# Experimental component to ease the implementation and testing of various update schemes.
+"""
+A set of classes to perform position and velocity updates on PSO Agents.
+
+The Integrators do not assign new positions and velocities, but are meant to be called by
+the agents to simply perform the update calculations and return the new positions.
+
+Experimental component to ease the implementation and testing of various update schemes.
+"""
 
 # Third Party imports
-import numpy as np
 from abc import ABC, abstractmethod
+import numpy as np
 
 # Local Library imports
 from .SearchSpace import Point
 #from .Swarm import Agent
 
-## Abstract Base class for PSO Integrators
-#
 # Inheriting classes must override method Update
 class Integrator(ABC):
-    ## Constructor
+    """
+    Abstract base class for Integrator objects.
+    
+    Defines the basic functionality of an Integrator.
+    
+    Abstract Methods
+    ----------------
+    update
+        Calculates the new position and velocity of a target Agent
+    """
+    
     def __init__(self, **kwargs):
+        """
+        Constructor for abstract Integrator Class
+        
+        Keyword Arguments
+        -----------------
+        seekMax : Boolean, optional, Default False
+            If True, the Integrator considers higher Fitness better
+            If False, lower fitness is considered better
+            If given value can not be cast as bool, seekMax set to
+            default and warning is printed.
+        """
         super().__init__()
         
         seekMax = kwargs.get("seekMax",False)
@@ -29,18 +49,25 @@ class Integrator(ABC):
             self.seekMax = False
             print("DEBUG: seekMax set to default value of False")
     
-    ## Return updated Position and Velocity for agent with Neighbors
-    #
-    # @param Position The Current Position of the Agent (SearchSpace.Point)
-    # @param Velocity The velocity of the Agent (numpy.array or array-like)
-    # @param Neighbors An iterable set of neighboring agents
-    # @return new_position The new position of the agent (if accepted)
-    # @return new_velocity The updated velocity of the agent
-    #
-    # @throws ValueError if Position, Velocity, or neighbor Positions do not
-    #                    agree in dimension
     @abstractmethod
-    def update(self, Position, Velocity, Neighbors, **kwargs):
+    def update(self, Target, Neighbors, **kwargs):
+        """
+        [Abstract] Calculate and return the updated position and velocity for Target
+        
+        Parameters
+        ----------
+        Target : Swarm.Agent or subclass
+            The Agent being updated
+        Neighbors : 1D List-like containing Agents
+            The neighbors of Target
+        
+        Returns
+        -------
+        new_position : 1D numpy array
+            The new position of Target after update
+        new_velocity : 1D numpy array
+            The new velocity of Target after update
+        """
         return Position, Velocity
     
 ## "Standard" PSO Update Scheme

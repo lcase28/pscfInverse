@@ -5,6 +5,7 @@ import time
 import traceback
 import os
 import shutil
+from abc import ABC, abstractmethod
 
 # moving Point class to alternate module, splitting functionality
 # This should allow identical functionality throughout this module
@@ -140,7 +141,7 @@ class Swarm(object):
 # Agent Class (Abstract)
 #
 # =========================================================
-class Agent(object):
+class Agent(ABC):
     # STATIC MEMBERS
     NextID = 0  # Static counter for generating unique agent IDs
 
@@ -307,6 +308,7 @@ class Agent(object):
         return True
 
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
+    @abstractmethod
     def evaluate(self):
         # Now that fitness has been updated, compare to PBest
         if self.Location > self.PBest and self.seekMax:
