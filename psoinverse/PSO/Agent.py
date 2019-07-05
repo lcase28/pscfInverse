@@ -12,10 +12,11 @@ from .SearchSpace import Point #SimulationPoint as Point
 from .SearchSpace import SearchBounds
 
 class Agent(ABC):
-    # STATIC MEMBERS
-    NextID = 0  # Static counter for generating unique agent IDs
+    """Abstract base class for PSO Agents."""
+    
+    __NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, **kwargs): #v0=None, spawnRange=None, useScale=None):
+    def __init__(self, boundaries, **kwargs):
         """
         Constructor for Agent base class.
         
@@ -23,6 +24,9 @@ class Agent(ABC):
         ----------
         boundaries : SearchSpace.SearchBounds or sub-class
             The desired search space.
+        
+        Keyword Arguments
+        -----------------
         v0 : 1D list-like, numerical values, optional
             Initial velocity scale; all velocities will be
             randomized [-v0, v0].
@@ -43,8 +47,8 @@ class Agent(ABC):
         self.steps = 0
 
         # Grab a unique ID for this agent
-        self.id = Agent.NextID
-        Agent.NextID += 1 # Update the static counter to deliver unique IDs
+        self.id = Agent.__NextID
+        Agent.__NextID += 1 # Update the static counter to deliver unique IDs
 
         self.boundaries = boundaries
         
@@ -133,7 +137,7 @@ class Agent(ABC):
         
     def get_coords(self):
         return self.Location.get_scaled_coords()
-
+    
     def update(self, neighbors, integrator, acceleration=None):
         """ Update the agent's Position (and Velocity) based on the current Position and neighbor information.
 
