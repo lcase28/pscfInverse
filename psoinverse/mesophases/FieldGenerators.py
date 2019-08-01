@@ -25,18 +25,37 @@ def sphere_form_factor(qR):
 class FieldGenerator(object):
     """ Generator class for 3D k-grid density fields of diblock systems """
     
-    def __init__(self, lattice, nparticles, particlePositions, nspecies, sigma_smear, **kwargs):
+    def __init__(self, lattice, **kwargs):
         self.lattice = lattice
-        self.particles = particlePositions
-        self.nparticles = nparticles
-        self.nspecies = nspecies
-        self.smear = sigma_smear
+        self.particles = kwargs.get("particlePositions",None)
+        self.nparticles = kwargs.get("N_particles")
+        self.nspecies = kwargs.get("N_monomer")
+        self.smear = kwargs.get("sigma_smear")
+        self.dim = kwargs.get("dim")
+        self.crystal_system = kwargs.get("crystal_system")
+        self.group_name = keargs.get("group_name")
+        self.ngrid = kwargs.get("ngrid")
         self.formfactor = kwargs.get("formfactor", sphere_form_factor)
         super().__init__(**kwargs)
     
+    @classmethod
+    def from_file(cls, fname):
+        with open(fname) as f:
+            for line in f.readlines():
+                line = line.strip()
+                splitline = line.split(maxsplit=1)
+                if len(splitline) > 1:
+                    key = splitline[0].strip()
+                    data = splitline[1].strip().split()
+                    #interpret key for data parsing
+                    #   most keys should be directly passable to __init__
+                    #   some require additional treatment (lattice, particle positions)
+                    
+                
+    
     # TODO: Figure out how to generate 2D, 1D initial guesses
-    def to_kgrid(self, ngrid, frac, sphereFraction):
-        
+    def to_kgrid(self, frac):
+        ngrid = self.ngrid
         # Shift grid for k-grid
         kgrid = np.zeros_like(ngrid)
         for (i,x) in enumerate(ngrid):
@@ -50,7 +69,6 @@ class FieldGenerator(object):
         vol = self.lattice.volume
         Rsph = ((3 * frac[-1]) / (4 * np.pi * self.nparticles))**(1./3)
         a, b, c, alpha, beta, gamma = self.lattice.lattice_parameters
-        
         
         # primary loop for n-dimensional generation
         t = 0
@@ -81,6 +99,7 @@ class FieldGenerator(object):
             I = I + np.sin(qR)
         
         return R, I
+    
     def miller_to_brillouin(G, grid):
         """
         Convert miller indices to brillouin zone (Aliasing)
