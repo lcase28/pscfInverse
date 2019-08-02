@@ -4,12 +4,13 @@ N_monomer           2
 dim                 3
 crystal_system      'cubic'
 N_cell_param        1
-cell_param          2
-lattice_const       2   2   2   90  90  90
+cell_param          1.9
+lattice_const       1.9 1.9 1.9 90  90  90
 
 group_name          'I m -3 m'
 N_particles         2
-Fractional_coord    0   0   0   0.5 0.5 0.5
+particlePositions   0   0   0   0.5 0.5 0.5
+sigma_smear         0.1
 
 ngrid               36  36  36
 
