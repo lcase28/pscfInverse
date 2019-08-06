@@ -83,7 +83,9 @@ class FieldGenerator(object):
     
     # TODO: Figure out how to generate 2D, 1D initial guesses
     def to_kgrid(self, frac):
+        coreindex = 0
         ngrid = self.ngrid
+        print("ngrid = ", ngrid)
         # Shift grid for k-grid
         kgrid = np.zeros_like(ngrid)
         for (i,x) in enumerate(ngrid):
@@ -91,33 +93,51 @@ class FieldGenerator(object):
                 kgrid[i] = x/2
             else:
                 kgrid[i] = x - 1
+        print("kgrid = ",kgrid)
             
         nwaves = str_to_num(np.prod(kgrid + np.ones_like(kgrid)))
+        print("nwaves = ", nwaves)
         rho = np.zeros((nwaves, self.nspecies))
+        print("rho init size: ", rho.size)
         vol = self.lattice.volume
-        const = frac[-1] / self.nparticles
-        Rsph = ((3 * frac[-1]) / (4 * np.pi * self.nparticles))**(1./3)
+        print("volume = ", vol)
+        const = frac[coreindex] / self.nparticles
+        print("frac / nparticles = ", const)
+        Rsph = ((3 * frac[coreindex] * vol) / (4 * np.pi * self.nparticles))**(1./3)
+        print("Rsph = ", Rsph)
         a, b, c, alpha, beta, gamma = self.lattice.lattice_parameters
+        print("Lattice params: ", a, b, c, alpha, beta, gamma)
         
         # primary loop for n-dimensional generation
         t = -1
-        for G in itertools.product(*[range(x) for x in kgrid]):
+        for G in itertools.product(*[range(x+1) for x in kgrid]):
             # fill in loop operations - G is miller indices in n-dimensions.
             G = np.array(G) #convert tuple to array
             brillouin = self.miller_to_brillouin(G, ngrid)
             t = t + 1
+            print("\nt = ", t)
+            print("miller: ", G)
+            print("brillouin: ", brillouin)
             if np.array_equiv(brillouin, np.zeros_like(brillouin)):
                 rho[t,:] = frac[:] # not sure if this will work correctly
             else:
                 # Actual wave-form calculations needed here.
                 R, I = self.sum_ff(brillouin)
+                print("R = ", R)
                 GdotR = np.multiply(brillouin, [1/a, 1/b, 1/c])
+                print("GdotR = ", GdotR)
                 qR = 2 * np.pi * Rsph * np.dot(GdotR, GdotR)**0.5
-                rho[t, -1] = const * R * self.formfactor(qR) * np.exp(-self.smear * qR**2 / 2)
-                rhoTemp = -rho[t, -1] / np.sum(frac[:-1])
+                print("qR = ", qR)
+                rho[t, coreindex] = const * R * self.formfactor(qR) * np.exp(-(self.smear**2 * qR**2 / 2))
+                rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
                 for i in range(self.nspecies-1):
-                    rho[t, i] = rhoTemp * frac[i]
+                    rho[t, i+1] = rhoTemp * frac[i+1]
+                for (i,r) in enumerate(rho[t,:]):
+                    if r == -0.0:
+                        rho[t,i] = 0.0
+            print("rho[{}] = {}".format(t, rho[t,:]))
         
+        print("rho final size: ", rho.size)
         return rho
                 
     def to_file(self, frac, fileRoot=None):
@@ -152,7 +172,7 @@ class FieldGenerator(object):
                 f.write(ngridString.format(self.ngrid))
             
             rho = self.to_kgrid(frac)
-            baseString = "({:.4e},0.0000e+00)"
+            baseString = "({:.4E},0.0000E+00)"
             rowString = "\n" + baseString
             for i in range(self.nspecies-1):
                 rowString += "  " + baseString
@@ -176,6 +196,7 @@ class FieldGenerator(object):
         
         """
         out = np.zeros_like(G, dtype=int)
+        out[0] = G[0]
         dim = self.dim-1
         for i in [1,2]:
             if dim >= i:
