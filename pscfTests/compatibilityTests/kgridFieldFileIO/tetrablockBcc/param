@@ -12,9 +12,9 @@ N_chain
 N_block             
                    4
 block_monomer       
-                   2                   1                   2                   3
+                   1                    2                   3                   2     
 block_length        
-    2.1250000000E-01    4.25000000000E-01    2.1250000000E-01    1.5000000000E-01
+    1.5000000000E-01    2.1250000000E-01    4.25000000000E-01    2.1250000000E-01
  
 COMPOSITION         
 ensemble            
@@ -26,8 +26,8 @@ INTERACTION
 interaction_type    
                'chi'
 chi                 
-    1.23342E+01
-    6.81476E+01    3.45944E+01
+    3.45944E+01 
+    6.81476E+01    1.23342E+01
  
 UNIT_CELL           
 dim                 
