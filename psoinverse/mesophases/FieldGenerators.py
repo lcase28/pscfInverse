@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from crystals import Lattice, LatticeSystem
 import numpy as np
-from psoinverse.util.stringTools import str_to_num
+from psoinverse.util.stringTools import str_to_num, wordGenerator
 import itertools
 import re
 from enum import Enum
@@ -23,30 +23,9 @@ from enum import Enum
 #    def DensityFields(self, **kwargs):
     
 def sphere_form_factor(qR):
+    """ Return the form factor of a sphere """
     out = 3 * (np.sin(qR) - qR * np.cos(qR)) / qR**3
     return out
-
-def wordsGenerator(stringIterable):
-    """
-    Split a string iterable into individual words.
-    
-    Words, here, defined as groups of characters separated by whitespace, 
-    or groups of characters (including whitespace) fully enclosed by double-
-    or single-quotes.
-    
-    example: words("This is 'a test'") returns ["This", "is", "'a test'"]
-    
-    Paramters
-    ---------
-    stringIterable : iterable of string objects
-        The "stream" of strings to convert to words, such as a file.
-    """ 
-    lineStream = iter(stringIterable)
-    for line in lineStream:
-        line = line.strip()
-        wordlist = [w for w in re.split("(\s+|\\\".*?\\\"|'.*?')", line) if w.strip()]
-        for word in wordlist:
-            yield word.strip()
 
 class FieldGenerator(object):
     """ Generator class for 3D k-grid density fields of diblock systems """
@@ -82,54 +61,62 @@ class FieldGenerator(object):
         super().__init__()
     
     @classmethod
-    def from_file(cls, fname):
-        with open(fname) as f:
-            kwargs = {}
-            for line in f:
-                line = line.strip()
-                splitline = line.split(maxsplit=1)
-                if len(splitline) > 1:
-                    key = splitline[0].strip()
-                    if key != "group_name":
-                        data = splitline[1].strip().split()
-                        data = data[0] if len(data) == 1 else data
-                    else:
-                        data = splitline[1].strip()
-                    #interpret key for data parsing
-                    print(key)
-                    print(data)
-                    print("\n")
-                    if key == "lattice_const":
-                        kwargs.update(lattice=Lattice.from_parameters(*[float(d) for d in data]))
-                    elif key == "particlePositions":
-                        nparticles = kwargs.get("N_particles")
-                        dim = kwargs.get("dim")
-                        pos = np.zeros((nparticles,dim))
-                        print("{}\t{}\t{}".format(nparticles, dim, pos))
-                        for i in range(nparticles):
-                            line = f.readline()
-                            print(line)
-                            data = line.strip().split()
-                            pos[i,:] = np.array([float(d) for d in data])
-                            print("{}\t{}\t{}\t{}".format(i, nparticles, dim, pos))
-                        #pos = np.reshape(pos, (-1, 3)) # resizes position data to 3 columns with rows for each particle
-                        kwargs.update([(key,pos)])
-                    else:
-                        if len(data) > 1 and not isinstance(data, str):
-                            try:
-                                data = np.array([str_to_num(d) for d in data])
-                            except(ValueError, TypeError):
-                                pass
-                        else:
-                            try:
-                                data = str_to_num(data)
-                            except(ValueError,TypeError):
-                                pass
-                        kwargs.update([(key, data)])
-        return cls(**kwargs)
+    #def from_file(cls, fname):
+    #    with open(fname) as f:
+    #        kwargs = {}
+    #        for line in f:
+    #            line = line.strip()
+    #            splitline = line.split(maxsplit=1)
+    #            if len(splitline) > 1:
+    #                key = splitline[0].strip()
+    #                if key != "group_name":
+    #                    data = splitline[1].strip().split()
+    #                    data = data[0] if len(data) == 1 else data
+    #                else:
+    #                    data = splitline[1].strip()
+    #                #interpret key for data parsing
+    #                print(key)
+    #                print(data)
+    #                print("\n")
+    #                if key == "lattice_const":
+    #                    kwargs.update(lattice=Lattice.from_parameters(*[float(d) for d in data]))
+    #                elif key == "particlePositions":
+    #                    nparticles = kwargs.get("N_particles")
+    #                    dim = kwargs.get("dim")
+    #                    pos = np.zeros((nparticles,dim))
+    #                    print("{}\t{}\t{}".format(nparticles, dim, pos))
+    #                    for i in range(nparticles):
+    #                        line = f.readline()
+    #                        print(line)
+    #                        data = line.strip().split()
+    #                        pos[i,:] = np.array([float(d) for d in data])
+    #                        print("{}\t{}\t{}\t{}".format(i, nparticles, dim, pos))
+    #                    #pos = np.reshape(pos, (-1, 3)) # resizes position data to 3 columns with rows for each particle
+    #                    kwargs.update([(key,pos)])
+    #                else:
+    #                    if len(data) > 1 and not isinstance(data, str):
+    #                        try:
+    #                            data = np.array([str_to_num(d) for d in data])
+    #                        except(ValueError, TypeError):
+    #                            pass
+    #                    else:
+    #                        try:
+    #                            data = str_to_num(data)
+    #                        except(ValueError,TypeError):
+    #                            pass
+    #                    kwargs.update([(key, data)])
+    #    return cls(**kwargs)
     
     @classmethod
-    def from_file_wordparse(cls, fname):
+    def from_file(cls, fname):
+        """
+        Return a FieldGenerator instance  based on the file "fname"
+        
+        Parameters
+        ----------
+        fname : string, filename
+            Name of the file to instantiate from
+        """
         with open(fname) as f:
             kwargs = {}
             words = wordsGenerator(f)
@@ -202,9 +189,18 @@ class FieldGenerator(object):
                 kwargs.update([(key, data)])
             return cls(**kwargs)
     
-    
     # TODO: Figure out how to generate 2D, 1D initial guesses
     def to_kgrid(self, frac):
+        """
+        Return the reciprocal space grid of densities.
+        
+        Parameters
+        ----------
+        frac : numerical, array-like
+            volume fractions of all monomer types. Sum of all values = 1.
+            Value at index 0 represents the "core" or particle-forming monomer.
+            And must also be monomer 1 by PSCF indications.
+        """
         coreindex = 0
         ngrid = self.ngrid
         print("ngrid = ", ngrid)
@@ -263,6 +259,18 @@ class FieldGenerator(object):
         return rho
                 
     def to_file(self, frac, fileRoot=None):
+        """
+        Write the reciprocal space density to file.
+        
+        COMPATIBILITY WARNING: function is written assuming linux, unix or MacOS.
+        
+        Parameters
+        ----------
+        frac : numerical, array-like
+            Volume fraction of each monomer type in the system.
+        fileRoot : string, optional
+            Root directory in which to write the file. Optionally terminated with "/"
+        """
         if fileRoot is not None:
             fileRoot = fileRoot.strip().rstrip("/")
             fname = fileRoot + "/" + self.outfile.strip().strip("'")
@@ -303,6 +311,14 @@ class FieldGenerator(object):
         return 0
         
     def sum_ff(self, G):
+        """
+        Return sum of the form factors.
+        
+        Parameters
+        ----------
+        G : array-like
+            reciprocal space indices (first brillouin zone wave vector).
+        """
         R = 0
         I = 0
         for i in range(self.nparticles):
@@ -314,8 +330,7 @@ class FieldGenerator(object):
     
     def miller_to_brillouin(self, G, grid):
         """
-        Convert miller indices to brillouin zone (Aliasing)
-        
+        Convert miller indices to first brillouin zone (Aliasing)
         """
         out = np.zeros_like(G, dtype=int)
         out[0] = G[0]
