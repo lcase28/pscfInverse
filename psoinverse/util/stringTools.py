@@ -1,5 +1,5 @@
 """ Module containing useful functions for string parsing """
-
+import re
 
 def str_to_num(stringNum):
     """

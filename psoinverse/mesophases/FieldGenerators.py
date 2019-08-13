@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from crystals import Lattice, LatticeSystem
 import numpy as np
 import scipy as sp
-from psoinverse.util.stringTools import str_to_num, wordGenerator
+from psoinverse.util.stringTools import str_to_num, wordsGenerator
 import itertools
 import re
 from enum import Enum
@@ -67,53 +67,6 @@ class FieldGenerator(object):
         self.formfactor = kwargs.get("formfactor", sphere_form_factor)
         self.particleScale = kwargs.get("particleScale", 1.0)
         super().__init__()
-    
-    @classmethod
-    #def from_file(cls, fname):
-    #    with open(fname) as f:
-    #        kwargs = {}
-    #        for line in f:
-    #            line = line.strip()
-    #            splitline = line.split(maxsplit=1)
-    #            if len(splitline) > 1:
-    #                key = splitline[0].strip()
-    #                if key != "group_name":
-    #                    data = splitline[1].strip().split()
-    #                    data = data[0] if len(data) == 1 else data
-    #                else:
-    #                    data = splitline[1].strip()
-    #                #interpret key for data parsing
-    #                print(key)
-    #                print(data)
-    #                print("\n")
-    #                if key == "lattice_const":
-    #                    kwargs.update(lattice=Lattice.from_parameters(*[float(d) for d in data]))
-    #                elif key == "particlePositions":
-    #                    nparticles = kwargs.get("N_particles")
-    #                    dim = kwargs.get("dim")
-    #                    pos = np.zeros((nparticles,dim))
-    #                    print("{}\t{}\t{}".format(nparticles, dim, pos))
-    #                    for i in range(nparticles):
-    #                        line = f.readline()
-    #                        print(line)
-    #                        data = line.strip().split()
-    #                        pos[i,:] = np.array([float(d) for d in data])
-    #                        print("{}\t{}\t{}\t{}".format(i, nparticles, dim, pos))
-    #                    #pos = np.reshape(pos, (-1, 3)) # resizes position data to 3 columns with rows for each particle
-    #                    kwargs.update([(key,pos)])
-    #                else:
-    #                    if len(data) > 1 and not isinstance(data, str):
-    #                        try:
-    #                            data = np.array([str_to_num(d) for d in data])
-    #                        except(ValueError, TypeError):
-    #                            pass
-    #                    else:
-    #                        try:
-    #                            data = str_to_num(data)
-    #                        except(ValueError,TypeError):
-    #                            pass
-    #                    kwargs.update([(key, data)])
-    #    return cls(**kwargs)
     
     @classmethod
     def from_file(cls, fname):
