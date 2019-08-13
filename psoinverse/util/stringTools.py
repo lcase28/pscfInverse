@@ -47,9 +47,11 @@ def wordsGenerator(stringIterable):
         The "stream" of strings to convert to words, such as a file.
     """ 
     lineStream = iter(stringIterable)
+    splitPattern = re.compile("(\s+|\\\".*?\\\"|'.*?')")
     for line in lineStream:
         line = line.strip()
-        wordlist = [w for w in re.split("(\s+|\\\".*?\\\"|'.*?')", line) if w.strip()]
+        #wordlist = [w for w in re.split("(\s+|\\\".*?\\\"|'.*?')", line) if w.strip()]
+        wordlist = [w for w in splitPattern.split(line) if w.strip()]
         for word in wordlist:
             yield word.strip()
             

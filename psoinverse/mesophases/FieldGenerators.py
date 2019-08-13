@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from crystals import Lattice, LatticeSystem
 import numpy as np
+import scipy as sp
 from psoinverse.util.stringTools import str_to_num, wordGenerator
 import itertools
 import re
@@ -26,6 +27,11 @@ def sphere_form_factor(qR):
     """ Return the form factor of a sphere """
     out = 3 * (np.sin(qR) - qR * np.cos(qR)) / qR**3
     return out
+    
+def cylinder_form_factor(qR):
+    """ Return the form factor of a cylinder"""
+    out = 2 * sp.j1(qR) / qR
+    return out
 
 class FieldGenerator(object):
     """ Generator class for 3D k-grid density fields of diblock systems """
@@ -40,6 +46,7 @@ class FieldGenerator(object):
                     "group_name" : 1,
                     "N_particles" : 1,
                     "particlePositions" : -1,
+                    "particleScale" : 1,
                     "sigma_smear" : 1,
                     "ngrid" : -1,
                     "output_filename" : 1}
@@ -58,6 +65,7 @@ class FieldGenerator(object):
         self.ngrid = kwargs.get("ngrid")
         self.outfile = kwargs.get("output_filename", "rho_kgrid")
         self.formfactor = kwargs.get("formfactor", sphere_form_factor)
+        self.particleScale = kwargs.get("particleScale", 1.0)
         super().__init__()
     
     @classmethod
@@ -222,6 +230,7 @@ class FieldGenerator(object):
         const = frac[coreindex] / self.nparticles
         print("frac / nparticles = ", const)
         Rsph = ((3 * frac[coreindex] * vol) / (4 * np.pi * self.nparticles))**(1./3)
+        Rsph = self.particleScale * Rsph
         print("Rsph = ", Rsph)
         a, b, c, alpha, beta, gamma = self.lattice.lattice_parameters
         print("Lattice params: ", a, b, c, alpha, beta, gamma)
