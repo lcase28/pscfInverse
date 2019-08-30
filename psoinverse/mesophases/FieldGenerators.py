@@ -52,6 +52,43 @@ class FieldGenerator(object):
                     "output_filename" : 1}
     
     def __init__(self, **kwargs):
+        """
+        Initialize a new FieldGenerator.
+        
+        Keyword Parameters
+        ------------------
+        dim : integer
+            Dimensionality of the system (1-3)
+        formfactor : function object
+            Function returning form factor of particles, given qR as argument
+        lattice : Lattice object
+            Object representing the basis vectors of the lattice
+        N_particle : integer
+            Number of particles in the system
+        particlePositions : array-like, N_particles by dim
+            Positions of particles in coordinates of the basis vectors.
+        particleScale : float
+            Ratio of desired particle size to default particle size calculated
+            from volume fractions. Values < 1 will give smaller particles.
+            Scale applied to the defining dimension of the particle (radius of 
+            sphere or cylinder, for example)
+        N_monomer : integer
+            Number of monomer species present in the system
+        crystal_system : string
+            The crystal system being considered (cubic, tetragonal, etc).
+            Name must be enclosed in single quotes.
+        N_cell_param : int
+            Minimum number of parameters required to specify the lattice,
+            per PSCF specifications.
+        cell_param : array-like
+            The cell parameters, per PSCF specifications.
+        group_name : string
+            The name of the group as specified by PSCF
+        ngrid : array-like of int
+            Grid points to use in SCFT calculations in each dimension.
+        output_filename : string
+            Name to use when generating initial guess kgrid file.
+        """
         self.lattice = kwargs.get("lattice", Lattice.from_parameters(1,1,1,90,90,90))
         self.particles = kwargs.get("particlePositions",None)
         self.nparticles = kwargs.get("N_particles")
