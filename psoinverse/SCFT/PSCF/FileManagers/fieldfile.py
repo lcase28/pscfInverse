@@ -1,7 +1,7 @@
-from abc import ABC, AbstractMethod
-from io import IO, IoException
+from abc import ABC, abstractmethod
+from .iotools import IO, IoException
 import numpy as np
-from version import Version
+from .version import Version
 import string
 import sys
 
@@ -45,11 +45,11 @@ class FieldFile(ABC):
         The file named filename is opened and closed within this function.
         '''
         self.file = open(filename, 'r')
-	self._io   = IO()
-	file = self.file
+        self._io   = IO()
+        file = self.file
 
         # Read version line
-	self.version = Version(self.file)
+        self.version = Version(self.file)
 
         self._input_unit_cell()
         self.group_name = self._input_var('char')
@@ -86,7 +86,7 @@ class FieldFile(ABC):
         #    self.counts.append(int(data[j]))
 
         self.file.close()
-	self.file = None
+        self.file = None
 
     def write(self, file, major=1, minor=0):
         '''
@@ -106,9 +106,9 @@ class FieldFile(ABC):
             file = temp
         self.file = file
            
-	self.version.major = major
-	self.version.minor = minor
-	self.version.write(file)
+        self.version.major = major
+        self.version.minor = minor
+        self.version.write(file)
 
         self._output_unit_cell()
         self._output_var('char', 'group_name')
@@ -125,11 +125,11 @@ class FieldFile(ABC):
         #    file.write('%6d' % self.counts[i])
         #    file.write("\n")
 
-	file.close()
+        file.close()
         self.file = None
     
     # Abstract Methods
-    @AbstractMethod
+    @abstractmethod
     def addMonomer(self):
         ''' 
         PURPOSE
@@ -142,7 +142,7 @@ class FieldFile(ABC):
         '''
         self.N_monomer += 1
     
-    @AbstractMethod
+    @abstractmethod
     def duplicateMonomer(self, i):
         ''' 
         PURPOSE
@@ -155,7 +155,7 @@ class FieldFile(ABC):
         '''
         self.N_monomer += 1
     
-    @AbstractMethod
+    @abstractmethod
     def switchMonomers(self, i, j):
         '''
         PURPOSE
@@ -169,11 +169,11 @@ class FieldFile(ABC):
     # "Private" methods
     
     # Abstract Methods
-    @AbstractMethod
+    @abstractmethod
     def _readField(self):
         pass
     
-    @AbstractMethod
+    @abstractmethod
     def _outputField(self):
         pass
 
@@ -189,12 +189,12 @@ class FieldFile(ABC):
     def _output_var(self, type, name, f='A'):
         if self.__dict__.has_key(name):
             data = self.__dict__[name]
-	    self._io.output_var(self.file, type, data, name, f)
+            self._io.output_var(self.file, type, data, name, f)
 
     def _output_vec(self, type, name, n=None, s='R', f='A'):
         if self.__dict__.has_key(name):
             data = self.__dict__[name]
-	    self._io.output_vec(self.file, type, data, n, name, s, f)
+            self._io.output_vec(self.file, type, data, n, name, s, f)
 
     def _input_unit_cell(self):
         ''' Analog of subroutine _input_unit_cell in unit_cell_mod.f '''

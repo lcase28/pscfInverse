@@ -1,4 +1,4 @@
-from io import IO, IoException
+from iotools import IO, IoException
 from version import Version
 from paramfile import ParamFile
 import string 

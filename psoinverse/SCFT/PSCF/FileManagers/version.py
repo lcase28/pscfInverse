@@ -1,4 +1,4 @@
-from io import IO, IoException
+from iotools import IO, IoException
 import string 
 
 class Version(object):
@@ -16,17 +16,17 @@ class Version(object):
         '''
 
         # Read first line to determine file format
-	line = file.readline().strip()
+        line = file.readline().strip()
         if line == '':
             self.major = 0
             self.minor = 9
         else:
-  	    line = line.split()
-	    if line[0] == 'format':
+            line = line.split()
+            if line[0] == 'format':
                 self.major = int(line[1])
                 self.minor = int(line[2])
             else: 
-                raise 'Invalid file format line' 
+                raise('Invalid file format line')
 
     def write(self, file, major=None, minor=None):
         if major is None:
