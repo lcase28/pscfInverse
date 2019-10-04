@@ -11,7 +11,9 @@ class IO:
     type is passed passed as a string argument 'type', which can have 
     values 'int', 'real', 'char' and (for scalars) 'logical'.
     """
-
+    ## TODO: Frequently throughout, Python keywords 'file' and 'type'
+    ##      are used as variable names -- remove and replace
+    
     def __init__(self):
         """
         Default construct an initially empty object.
@@ -22,6 +24,10 @@ class IO:
         """
         Read the comment associated with a variable.
         """
+        ## TODO: It seems as if, if this isn't true,
+        ##      the program is in undefined behavior
+        ##      -- May want to assert this, or
+        ##      otherwise raise warning/error
         if not self.comment:
             self.comment = file.readline().strip()
         if comment:
@@ -77,6 +83,7 @@ class IO:
           s    -- 'R' -> row vector (one line)
                -- 'C' -> column vector (n lines)
         """
+        ## TODO: Never handles 'logic', but lists as option
         if f == 'A':
 	    if not self.input_comment(file,comment):
 	        return None
