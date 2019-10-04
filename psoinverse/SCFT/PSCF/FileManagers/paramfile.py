@@ -1,5 +1,5 @@
-from iotools import IO, IoException
-from version import Version
+from .iotools import IO, IoException
+from .version import Version
 import string
 import sys
 

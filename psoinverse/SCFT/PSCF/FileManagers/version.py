@@ -1,4 +1,4 @@
-from iotools import IO, IoException
+from .iotools import IO, IoException
 import string 
 
 class Version(object):

@@ -1,4 +1,4 @@
-from outfile import OutFile
+from .outfile import OutFile
 import sys, os, string
 
 class Sweep(object):
