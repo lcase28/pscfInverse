@@ -1,4 +1,4 @@
-from .iotools import IO, IoException
+from .iotools import IO, IOException
 import string 
 
 class Version(object):
@@ -26,7 +26,7 @@ class Version(object):
                 self.major = int(line[1])
                 self.minor = int(line[2])
             else: 
-                raise('Invalid file format line')
+                raise(IOException('Invalid file format line'))
 
     def write(self, file, major=None, minor=None):
         if major is None:

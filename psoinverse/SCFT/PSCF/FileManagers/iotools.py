@@ -66,9 +66,9 @@ class IO:
             elif data in ['F','false','FALSE','FALSE']:
                 return 0
             else:
-                raise("Invalid logical variable:", data)
+                raise(IOException("Invalid logical variable:"+str(data)))
         else:
-            raise('Illegal type in input_var')
+            raise(IOException('Illegal type in input_var'))
     
     def input_vec(self,file,type,n=None, comment=None, s='R', f='A'):
         """
@@ -92,7 +92,7 @@ class IO:
             if n:
                 data = data[:n]
         elif s == 'C': # Column Vector
-            if not n: raise('No n value in input_int_vec for column vector')
+            if not n: raise(IOException('No n value in input_int_vec for column vector'))
             data = []
             for i in range(n):
                 data.append( file.readline().split()[0] )
@@ -103,7 +103,7 @@ class IO:
         elif type == 'char':
             return [ strip_quotes(x) for x in data ]
         else:
-            raise('Illegal type in input_vec')
+            raise(IOException('Illegal type in input_vec'))
     
     # Matrices
         
@@ -142,7 +142,7 @@ class IO:
         elif s == 'L':
             min = 1
         else:
-            raise('Invalid style in input_mat: s=' + str(s))
+            raise(IOException('Invalid style in input_mat: s=' + str(s)))
         for i in range(min,m) :
             line = file.readline().split()
             if s == 'N':
@@ -157,7 +157,7 @@ class IO:
                 elif type == 'real':
                     datum = float(line[j])
                 else:
-                    raise('Illegal type in input_mat')
+                    raise(IOException('Illegal type in input_mat'))
                 data[i][j] = datum
                 if s == 'S' or s == 'L':
                     data[j][i] = datum
@@ -186,7 +186,7 @@ class IO:
                 data = 'F'
             return "%20s" % data 
         else:
-            raise('Illegal type in format_var')
+            raise(IOException('Illegal type in format_var'))
       
     def output_comment(self, file,  comment, n=20):
         """
@@ -291,7 +291,7 @@ def strip_quotes(q_string):
     else:
         return q_string
 
-class IoException(Exception):
+class IOException(Exception):
     """
     Exception for a file syntax error.
     """
@@ -300,4 +300,4 @@ class IoException(Exception):
         """
         Constructor, which stores a comment.
         """
-        super(IoException, self).__init__(message)
+        super(IOException, self).__init__(message)

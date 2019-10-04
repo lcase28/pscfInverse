@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .iotools import IO, IoException
+from .iotools import IO, IOException
 import numpy as np
 from .version import Version
 import string
@@ -187,12 +187,12 @@ class FieldFile(ABC):
 
     # Output methods (output by name)
     def _output_var(self, type, name, f='A'):
-        if self.__dict__.has_key(name):
+        if name in self.__dict__:#.has_key(name):
             data = self.__dict__[name]
             self._io.output_var(self.file, type, data, name, f)
 
     def _output_vec(self, type, name, n=None, s='R', f='A'):
-        if self.__dict__.has_key(name):
+        if name in self.__dict__:#.has_key(name):
             data = self.__dict__[name]
             self._io.output_vec(self.file, type, data, n, name, s, f)
 
@@ -271,7 +271,7 @@ class SymFieldFile(FieldFile):
         COMMENT
            if file is a field object, it must be open for writing
         '''
-        super().write(fiel, major, minor)
+        super().write(file, major, minor)
 
     def addMonomer(self, value = 0.0, **kwargs):
         ''' 
@@ -318,9 +318,9 @@ class SymFieldFile(FieldFile):
     def _readField(self):
         self.N_star = self._input_var('int')
         for i in range(self.N_star):
-            data = file.readline().split()
+            data = self.file.readline().split()
             if len(data) != self.N_monomer + self.dim + 1:
-                raise IoException('Incorrect number of elements in field line')
+                raise(IoException('Incorrect number of elements in field line'))
             j = 0
 
             # Read field coefficients
@@ -340,7 +340,7 @@ class SymFieldFile(FieldFile):
             # Read star_count
             self.counts.append(int(data[j]))
     
-    def _writeField(self):
+    def _outputField(self):
         self._output_var( 'int', 'N_star')
         for i in range(self.N_star):
             for k in range(self.N_monomer):
@@ -449,20 +449,20 @@ class CoordFieldFile(FieldFile):
     # "Private" methods
     
     # overriding inherited private abstract methods
-    def _readField():
+    def _readField(self):
         self.ngrid = self._input_vec('int', n=self.dim, comment='ngrid')
         self.gridPoints = np.prod(self.ngrid)
         self.fields = np.zeros((self.gridPoints,self.N_monomer))
         for i in range(self.gridPoints):
-            self.fields[i,:] = np.array(self._input_vec('float', n=self.dim, comment = None, s = 'R', f = 'N'))
+            self.fields[i,:] = np.array(self._input_vec('real', n=self.dim, comment = None, s = 'R', f = 'N'))
     
-    def _writeField():
-        self._output_vec('int', 'ngrid', n=3, s='R', f='A')
+    def _outputField(self):
+        self._output_vec('int', 'ngrid', n=self.dim, s='R', f='A')
         self._nextFieldLine = []
         for i in range(self.gridPoints):
             self._nextFieldLine = self.fields[i,:]
-            self._output_vec('float', '_nextFieldLine', n=self.N_monomer, s='R', f='N')
-        delattr(self._nextFieldLine)
+            self._output_vec('real', '_nextFieldLine', n=self.N_monomer, s='R', f='N')
+        delattr(self, '_nextFieldLine')
             
 class WaveVectFieldFile(FieldFile):
     '''
@@ -564,22 +564,22 @@ class WaveVectFieldFile(FieldFile):
     # "Private" methods
     
     # overriding inherited private abstract methods
-    def _readField():
+    def _readField(self):
         self.ngrid = self._input_vec('int', n=self.dim, comment='ngrid')
-        redgrid = np.ones_like(self.ngrid)
-        redgrid[0] = 0.5
-        redgrid = np.multiply(self.ngrid, redgrid)
-        self.gridPoints = np.prod(redgrid)
+        gp = int(self.ngrid[0] / 2)
+        for i in range(self.dim-1):
+            gp = gp * self.ngrid[1+i]
+        self.gridPoints = gp
         self.fields = np.zeros((self.gridPoints,self.N_monomer))
         for i in range(self.gridPoints):
-            self.fields[i,:] = np.array(self._input_vec('float', n=self.dim, comment = None, s = 'R', f = 'N'))
+            self.fields[i,:] = np.array(self._input_vec('real', n=self.dim, comment = None, s = 'R', f = 'N'))
     
-    def _writeField():
-        self._output_vec('int', 'ngrid', n=3, s='R', f='A')
+    def _outputField(self):
+        self._output_vec('int', 'ngrid', n=self.dim, s='R', f='A')
         self._nextFieldLine = []
         for i in range(self.gridPoints):
             self._nextFieldLine = self.fields[i,:]
-            self._output_vec('float', '_nextFieldLine', n=self.N_monomer, s='R', f='N')
-        delattr(self._nextFieldLine)
+            self._output_vec('real', '_nextFieldLine', n=self.N_monomer, s='R', f='N')
+        delattr(self,'_nextFieldLine')
             
 

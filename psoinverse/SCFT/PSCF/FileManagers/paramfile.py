@@ -1,4 +1,4 @@
-from .iotools import IO, IoException
+from .iotools import IO, IOException
 from .version import Version
 import string
 import sys
@@ -194,7 +194,7 @@ class ParamFile(object):
             next = 0
         else:
             msg = "Unrecognized parameter file section name: " + flag
-            raise IoException(msg)
+            raise(IOException(msg))
 
         return next
 
