@@ -1,6 +1,5 @@
 # Imports
-from abc import ABC, abstractmethod
-from crystals import Lattice, LatticeSystem
+from crystals import affine, Lattice, LatticeSystem
 import numpy as np
 import scipy as sp
 from psoinverse.util.stringTools import str_to_num, wordsGenerator
@@ -34,7 +33,7 @@ def cylinder_form_factor(qR):
     return out
 
 class FieldGenerator(object):
-    """ Generator class for 3D k-grid density fields of diblock systems """
+    """ Generator class for 3D k-grid density fields of n-monomer systems """
     
     # sentinel of -1 indicates value must be dynamic
     readCounts =   {"dim" : 1,
@@ -89,7 +88,8 @@ class FieldGenerator(object):
         output_filename : string
             Name to use when generating initial guess kgrid file.
         """
-        self.lattice = kwargs.get("lattice", Lattice.from_parameters(1,1,1,90,90,90))
+        self.lattice = kwargs.get("lattice_const", Lattice.from_parameters(1,1,1,90,90,90))
+        self.reciprocal_lattice = self.lattice.reciprocal
         self.particles = kwargs.get("particlePositions",None)
         self.nparticles = kwargs.get("N_particles")
         self.nspecies = kwargs.get("N_monomer")
@@ -115,6 +115,7 @@ class FieldGenerator(object):
         fname : string, filename
             Name of the file to instantiate from
         """
+        print("Reading Input File")
         with open(fname) as f:
             kwargs = {}
             words = wordsGenerator(f)
@@ -155,8 +156,10 @@ class FieldGenerator(object):
                                     nconst = 6
                                 else:
                                     raise(ValueError("dim may not exceed 3"))
-                                constants = np.array([str_to_num(next(words)) for i in range(nconst)])
+                                constants = [str_to_num(next(words)) for i in range(nconst)]
+                                print("Constants: ",constants)
                                 data = Lattice.from_parameters(*constants)
+                                print("Lattice: ",data)
                             else:
                                 raise(IOError("Dim must be specified before lattice constants"))
                         elif key == "particlePositions":
@@ -228,7 +231,7 @@ class FieldGenerator(object):
         # primary loop for n-dimensional generation
         t = -1
         for G in itertools.product(*[range(x+1) for x in kgrid]):
-            # fill in loop operations - G is miller indices in n-dimensions.
+            # G is wave-vector in n-dimensions.
             G = np.array(G) #convert tuple to array
             brillouin = self.miller_to_brillouin(G, ngrid)
             t = t + 1
@@ -236,15 +239,32 @@ class FieldGenerator(object):
             print("miller: ", G)
             print("brillouin: ", brillouin)
             if np.array_equiv(brillouin, np.zeros_like(brillouin)):
-                rho[t,:] = frac[:] # not sure if this will work correctly
+                # 0-th wave-vector -- corresponds to volume fractions
+                rho[t,:] = frac[:] 
             else:
-                # Actual wave-form calculations needed here.
+                # sum of wave-vector dot particle positions
                 R, I = self.sum_ff(brillouin)
                 print("R = ", R)
-                GdotR = np.multiply(brillouin, [1/a, 1/b, 1/c])
-                print("GdotR = ", GdotR)
-                qR = 2 * np.pi * Rsph * np.dot(GdotR, GdotR)**0.5
-                print("qR = ", qR)
+                ##   Here, [1/a, 1/b, 1/c] effectively acts as the reciprocal
+                ##     metric tensor for orthorhombic system.
+                ##   To generalize to non-orthogonal basis, replace this step
+                ##     and next with formal metric tensor calculation.
+                #GdotR = np.multiply(brillouin, [1/a, 1/b, 1/c])
+                #print("GdotR = ", GdotR)
+                ##   In following line, (2*np.pi) term is residual from reciprocal
+                ##     vectors being defined as b_i = 2*pi*(a_j x a_k)/V
+                ##   Formally, this 2*pi is not part of reciprocal space, and does
+                ##     not figure in to metric tensor. -- this is normalizing constant
+                ##   In effect, q = 2*pi * (g*), where g* is the direction-defining wave-vector
+                #qR = 2 * np.pi * Rsph * np.dot(GdotR, GdotR)**0.5
+                #print("qR = ", qR)
+                
+                #   Should return same thing as above
+                recipBasis = np.asarray(self.reciprocal_lattice) # reciprocal basis vectors in [1 1 1 90 90 90] basis
+                q_norm = np.dot(brillouin, recipBasis) # wave-vector in unit cartesian basis
+                qR = Rsph * np.linalg.norm(q_norm) # 2*pi factor included by reciprocal_lattice
+                print("qR = ",qR)
+                
                 rho[t, coreindex] = const * R * self.formfactor(qR) * np.exp(-(self.smear**2 * qR**2 / 2))
                 rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
                 for i in range(self.nspecies-1):
@@ -309,19 +329,35 @@ class FieldGenerator(object):
                 f.write(rowString.format(*rho[i,:]))
         return 0
         
-    def sum_ff(self, G):
+    def sum_ff(self, q):
         """
-        Return sum of the form factors.
+        Returns real and imaginary components of 
+        
+        .. math::
+        
+            $$\sum_{n=1}^{N_particles} exp{i\mathbf{q}\dot\mathbf{r}_{n}}$$
+        
+        Where :math:$\mathbf{r}_{n}$ is the position of particle :math:$n$
         
         Parameters
         ----------
-        G : array-like
-            reciprocal space indices (first brillouin zone wave vector).
+        q : array-like
+            Reciprocal space indices (first brillouin zone wave vector).
+        
+        Returns
+        -------
+        R : real, floating point
+            Real component of sum(exp(i * (q dot r)))
+        I : real, floating point
+            Imaginary component of sum(exp(i * (q dot r)))
         """
         R = 0
         I = 0
         for i in range(self.nparticles):
-            qR = 2 * np.pi * np.dot(G, self.particles[i,:])
+            # By definition of reciprocal space lattice,
+            #   dot product of q (recip) and r (real) 
+            #   calculated same as normal (b/c a_i dot a*_j = delta_ij )
+            qR = 2 * np.pi * np.dot(q, self.particles[i,:])
             R = R + np.cos(qR)
             I = I + np.sin(qR)
         
