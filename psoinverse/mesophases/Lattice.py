@@ -22,11 +22,9 @@ class LatticeSystem3D(Enum):
     monoclinic = 6
     triclinic = 7
 
-    
-class Lattice(Lattice):
+class Lattice(object):
     """ Object representing a crystallographic basis vector lattice"""
     
-    ## TODO: Scrub inputs for value/type constraints
     def __init__(self, dim, basis, **kwargs):
         """
         Generate a lattice object.
@@ -38,11 +36,12 @@ class Lattice(Lattice):
         basis: numpy.ndarray
             Matrix (size: dim-by-dim) representation of basis vectors.
             Coordinates of each vector are defined relative to the
-            'dim'-dimensional standard basis
+            standard basis (mutually orthogonal unit vectors).
+            Row i ( elements in basis[i,:] ) corresponds to lattice basis
+            vector i.
         """
         self.dim = dim;
         self.basis = basis;
-        self.reciprocal
     
     @classmethod
     def latticeFromParameters(cls, dim, **kwargs):
@@ -85,37 +84,52 @@ class Lattice(Lattice):
     @classmethod
     def basisFromParameters(cls, dim, **kwargs):
         """
-        Return a set of basis vectors.
-        
-        Params:
-        -------
-        dim: int, in set {2, 3}
-            The dimensionality of the resulting lattice
-        
-        Keyword Params:
-        ---------------
-        a:  float, required
-            Magnitude of first basis vector.
-        b:  float, required
-            Magnitude of second basis vector.
-        c:  float, (only if dim == 3)
-            Magnitude of third basis vector.
-        alpha:  float, only if dim == 3
-            Angle (in degrees, range (0, 180) ) between vector b and c.
-        beta:   float, only if dim == 3
-            Angle (in degrees, range (0, 180) ) between vector a and c.
-        gamma:  float, required
-            Angle (in degrees, range (0, 180) ) between vectors a and b.
-        
-        Returns:
-        --------
-        basis: numpy.ndarray, 'dim'-by-'dim'
-            Lattice defined by given parameters.
+            Return a set of basis vectors.
             
-        Raises:
-        -------
-        TypeError: If input arguments are non-numeric.
-        ValueError: If dim not one of {2, 3}, or invalid lattice parameters.
+            Params:
+            -------
+            dim: int, in set {2, 3}
+                The dimensionality of the resulting lattice
+            
+            Keyword Params:
+            ---------------
+            a:  float, required
+                Magnitude of first basis vector.
+            b:  float, required
+                Magnitude of second basis vector.
+            c:  float, (only if dim == 3)
+                Magnitude of third basis vector.
+            alpha:  float, only if dim == 3
+                Angle (in degrees, range (0, 180) ) between vector b and c.
+            beta:   float, only if dim == 3
+                Angle (in degrees, range (0, 180) ) between vector a and c.
+            gamma:  float, required
+                Angle (in degrees, range (0, 180) ) between vectors a and b.
+            
+            Returns:
+            --------
+            basis: numpy.ndarray, 'dim'-by-'dim'
+                Lattice defined by given parameters. See 'Convention' below
+                for details on orientation conventions used.
+            
+            Convention:
+            -----------
+            Notation:
+                a, b, c - 1st, 2nd, 3rd lattice basis vectors
+                x, y, z - 1st, 2nd, 3rd standard basis vectors
+            a: First lattice vector
+                Taken to lie on x such that its components are [a 0 0]
+            b: Second Lattice vector
+                Taken to lie in the x-y plane along with a.
+                Its components then become: [b_x b_y, 0]
+            c: Third lattice vector
+                Taken to lie outside of x-y plane.
+                Only (3D) basis vector with component in z-direction
+                
+            Raises:
+            -------
+            TypeError: If input arguments are non-numeric.
+            ValueError: If dim not one of {2, 3}, or invalid lattice parameters.
         """
         # extract all parameters
         a = kwargs.get("a",None)
@@ -136,7 +150,7 @@ class Lattice(Lattice):
         basis = np.zeros((dim,dim))
         
         # Complete common calculations
-        gammaRad = deg2rad(gamma)
+        gammaRad = np.deg2rad(gamma)
         basis[0,0] = a
         basis[1,0] = b*np.cos(gammaRad)
         basis[1,1] = b*np.sin(gammaRad)
@@ -151,6 +165,7 @@ class Lattice(Lattice):
         return basis
     
     ## Properties
+    
     @property
     def latticeParameters(self):
         """
@@ -164,14 +179,14 @@ class Lattice(Lattice):
         bMag = np.linalg.norm(b)
         gamma = np.rad2deg( np.arccos( np.dot(a,b) / (aMag*bMag) ) )
         if self.dim == 2:
-            return [aMag, bMag, gamma]
+            return np.asarray([aMag, bMag, gamma])
         elif self.dim == 3:
             c = self.basis[2,:]
             cMag = np.linalg.norm(c)
             alpha = np.rad2deg( np.arccos( np.dot(b,c) / (bMag*cMag) ) )
             beta = np.rad2deg( np.arccos( np.dot(a,c) / (aMag*cMag) ) )
-            return [aMag, bMag, cMag, alpha, beta, gamma]
-        else
+            return np.asarray([aMag, bMag, cMag, alpha, beta, gamma])
+        else:
             return NotImplemented
     
     @latticeParameters.setter
@@ -214,7 +229,7 @@ class Lattice(Lattice):
     @property
     def reciprocal(self):
         """ Lattice object for reciprocal lattice. """
-        return self.__class__.(self.dim, self.reciprocalBasis)
+        return self.__class__(self.dim, self.reciprocalVectors)
     
     @property
     def reciprocalVectors(self):
@@ -224,9 +239,59 @@ class Lattice(Lattice):
         return np.matmul(reciprocalMetricTensor, self.basis)
     
     ## Instance Methods
+    
+    def toStandardBasis(self, vect):
+        """
+            Convert the given fractional coordinates to its
+            coordinates in the standard basis.
+            
+            Params
+            ------
+            vect: array-like, list-like
+                Fractional coordinates (in THIS basis) of the vector.
+            
+            Returns
+            -------
+            newVect : numpy array, (dim-by-1)
+                Original vector, expressed in terms of the standard basis.
+        """
+        v = np.reshape( np.asarray(vect), (self.dim,1))
+        newVect = np.matmul(self.basis.T, v)
+        return newVect
+    
+    def fromStandardBasis(self, vect):
+        """
+            Convert the vector from the stanard basis to this lattice basis.
+            
+            Params
+            ------
+            vect: array-like, list-like
+                Fractional coordinates (in THIS basis) of the vector.
+            
+            Returns
+            -------
+            newVect : numpy array, (dim-by-1)
+                Original vector, expressed in terms of the standard basis.
+        """
+        v = np.reshape( np.asarray(vect), (self.dim,1))
+        transformMatrix = np.linalg.inv(self.basis.T)
+        newVect = np.matmul(transformMatrix, v)
+        return newVect
+        
+    ## Implementation Note:
+    ## The following methods are implemented based on
+    ## the methods 'toStandardBasis' and 'fromStandardBasis'.
+    ## Thus, they all assume that both lattices are defined 
+    ## relative to the *same* "standard basis"
     def changeFromBasis(self, vect, reference):
         """
             Return vector coordinates relative to THIS lattice basis.
+            
+            Note: Method assumes current basis and reference are defined
+            relative to the **same** standard basis. As such, if both
+            were instantiated using the Lattice.latticeFromParameters method,
+            the 'a' vectors in both lattices will be coincident, and will be
+            coplanar with both Lattices' 'b' vectors.
             
             Parameters
             ----------
@@ -244,12 +309,19 @@ class Lattice(Lattice):
                 of THIS lattice.
         """
         v = np.reshape( np.asarray(vect, dtype=np.float64), (self.dim, 1) )
-        COB = np.matmul(self.basis, reference.basis.T)
-        return np.matmul(COB, v)
+        vectInStandardBasis = reference.toStandardBasis(vect)
+        newVect = self.fromStandardBasis(vectInStandardBasis)
+        return newVect
     
     def changeToBasis(self, vect, target):
         """
             Return vector coordinates relative to target lattice basis.
+            
+            Note: Method assumes current basis and reference are defined
+            relative to the **same** standard basis. As such, if both
+            were instantiated using the Lattice.latticeFromParameters method,
+            the 'a' vectors in both lattices will be coincident, and will be
+            coplanar with both Lattices' 'b' vectors.
             
             Parameters
             ----------
@@ -268,18 +340,67 @@ class Lattice(Lattice):
         """
         return target.changeFromBasis(vect, self)
         
+    def toReciprocalBasis(self, vect):
+        """
+            Return the Reciprocal Basis coordinates of the vector
+            currently expressed in Real Space coordinates
+            
+            Note: Method assumes current basis and reference are defined
+            relative to the **same** standard basis. As such, if both
+            were instantiated using the Lattice.latticeFromParameters method,
+            the 'a' vectors in both lattices will be coincident, and will be
+            coplanar with both Lattices' 'b' vectors.
+            
+            Params
+            ------
+            vect: array-like, list-like
+                Fractional coordinates (in THIS basis) of the vector.
+            
+            Returns
+            -------
+            newVect : numpy array, (dim-by-1)
+                Original vector, expressed in terms of the reciprocal basis.
+        """
+        newVect = self.changeToBasis(vect, self.reciprocal)
+        return newVect
+    
+    def fromReciprocalBasis(self, vect):
+        """
+            Return the Real space coordinates of the vector
+            currently expressed in Reciprocal Space coordinates
+            
+            Note: Method assumes current basis and reference are defined
+            relative to the **same** standard basis. As such, if both
+            were instantiated using the Lattice.latticeFromParameters method,
+            the 'a' vectors in both lattices will be coincident, and will be
+            coplanar with both Lattices' 'b' vectors.
+            
+            Params
+            ------
+            vect: array-like, list-like
+                Fractional coordinates (in reciprocal basis) of the vector.
+            
+            Returns
+            -------
+            newVect : numpy array, (dim-by-1)
+                Original vector, expressed in terms of the real space basis.
+        """
+        newVect = self.changeFromBasis(vect, self.reciprocal)
+        return newVect
+        
     
     ## "Private" internal methods
+    
     def __repr__(self):
         s = "< Lattice object with parameters {:.3f}A, {:.3f}, {:.3f}, {:.3f}, {:.3f} >"
-        return s.format(*self.lattice_parameters)
+        return s.format(*self.latticeParameters)
     
     def __hash__(self):
-        return hash(self.lattice_parameters) | super().hash()
+        return hash(self.latticeParameters) | super().hash()
         
     def __array__(self, *args, **kwargs):
-        """ returns a 3x3 float array. Each row is a lattice vector. """
-        return np.array(self.lattice_vectors, *args, *kwargs)
+        """ returns an ndarray. Each row is a lattice vector. """
+        return np.array(self.latticeVectors, *args, *kwargs)
     
     
 #class Lattice(ABC):
