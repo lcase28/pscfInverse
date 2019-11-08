@@ -1,0 +1,15 @@
+Updated 8 November 2019:
+
+VERIFICATION
+-- Verify sphere form factor class
+-- Verify proper operation of FieldGenerator using Internal Lattice class over Crystals.Lattice
+-- Finish unit tests on Lattice
+
+WRITE
+-- Circle (2D cylinder) Form Factor Class
+
+UPDATE
+-- Update FieldGenerator to use Form Factor classes (For generic handling of all forms)
+-- Remove file handling from FieldGenerator -- make that class focused solely on calculation of concentration fields.
+
+

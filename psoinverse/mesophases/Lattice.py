@@ -1,7 +1,7 @@
 # Lattice Module. 
 # Partially derived from crystals package available at:
 #   https://github.com/LaurentRDC/crystals.git
-# Generallized to handle 1-, 2-, or 3-dimensional systems
+# Generallized to handle 2-, or 3-dimensional systems
 
 # Imports
 from abc import ABC, abstractmethod
@@ -388,6 +388,30 @@ class Lattice(object):
         newVect = self.changeFromBasis(vect, self.reciprocal)
         return newVect
         
+    def vectorDot(self, v1, v2):
+        """
+            Return the dot product of vectors, v1 and v2, both
+            expressed in the basis of this lattice.
+            
+            Parameters
+            ----------
+            v1 : float, 1-D list-like
+                The first vector, in fractional coordinates.
+            v2 : float, 1-D list-like
+                The second vector, in fractional coordinates.
+            
+            Returns
+            -------
+            v1_dot_v2 : float
+                The dot product of v1 and v2
+        """
+        v1 = np.reshape( np.asarray(v1), (1, self.dim) )
+        v2 = np.reshape( np.asarray(v2), (self.dim, 1) )
+        return np.matmul( v1, np.matmul( self.metricTensor, v2 ) )
+    
+    def vectorNorm(self, vect):
+        """ Returns the magnitude of a vector expressed in this basis """
+        return np.sqrt( self.vectorDot( vect, vect ) )
     
     ## "Private" internal methods
     

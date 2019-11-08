@@ -1,5 +1,6 @@
 # Imports
-from crystals import affine, Lattice, LatticeSystem
+#from crystals import affine, Lattice, LatticeSystem
+from psoinverse.mesophases.Lattice import Lattice
 import numpy as np
 import scipy as sp
 from psoinverse.util.stringTools import str_to_num, wordsGenerator
@@ -50,6 +51,10 @@ class FieldGenerator(object):
                     "ngrid" : -1,
                     "output_filename" : 1}
     
+    __defaultParams = { "a" : 1, "b" : 1, "c" : 1 \
+                        "alpha" : 90, "beta" : 90, "gamma" : 90 }
+    
+    
     def __init__(self, **kwargs):
         """
         Initialize a new FieldGenerator.
@@ -88,13 +93,16 @@ class FieldGenerator(object):
         output_filename : string
             Name to use when generating initial guess kgrid file.
         """
-        self.lattice = kwargs.get("lattice_const", Lattice.from_parameters(1,1,1,90,90,90))
+        #self.lattice = kwargs.get("lattice_const", Lattice.from_parameters(1,1,1,90,90,90))
+        #self.reciprocal_lattice = self.lattice.reciprocal
+        self.dim = kwargs.get("dim", 3)
+        self.lattice = kwargs.get("lattice_const", \
+            Lattice.latticeFromParameters(dim = self.dim, **self.__defaultParams)
         self.reciprocal_lattice = self.lattice.reciprocal
         self.particles = kwargs.get("particlePositions",None)
         self.nparticles = kwargs.get("N_particles")
         self.nspecies = kwargs.get("N_monomer")
         self.smear = kwargs.get("sigma_smear")
-        self.dim = kwargs.get("dim")
         self.crystal_system = kwargs.get("crystal_system")
         self.nCellParam = kwargs.get("N_cell_param")
         self.cellParam = kwargs.get("cell_param")
@@ -225,7 +233,7 @@ class FieldGenerator(object):
         Rsph = ((3 * frac[coreindex] * vol) / (4 * np.pi * self.nparticles))**(1./3)
         Rsph = self.particleScale * Rsph
         print("Rsph = ", Rsph)
-        a, b, c, alpha, beta, gamma = self.lattice.lattice_parameters
+        a, b, c, alpha, beta, gamma = self.lattice.latticeParameters
         print("Lattice params: ", a, b, c, alpha, beta, gamma)
         
         # primary loop for n-dimensional generation
@@ -260,9 +268,11 @@ class FieldGenerator(object):
                 #print("qR = ", qR)
                 
                 #   Should return same thing as above
-                recipBasis = np.asarray(self.reciprocal_lattice) # reciprocal basis vectors in [1 1 1 90 90 90] basis
-                q_norm = np.dot(brillouin, recipBasis) # wave-vector in unit cartesian basis
-                qR = Rsph * np.linalg.norm(q_norm) # 2*pi factor included by reciprocal_lattice
+                #recipBasis = np.asarray(self.reciprocal_lattice) # reciprocal basis vectors in [1 1 1 90 90 90] basis
+                #q_norm = np.dot(brillouin, recipBasis) # wave-vector in unit cartesian basis
+                #qR = Rsph * np.linalg.norm(q_norm) # 2*pi factor included by reciprocal_lattice
+                q_norm = 2 * pi * self.reciprocal_lattice.vectorNorm(brillouin)
+                qR = Rsph * q_norm
                 print("qR = ",qR)
                 
                 rho[t, coreindex] = const * R * self.formfactor(qR) * np.exp(-(self.smear**2 * qR**2 / 2))

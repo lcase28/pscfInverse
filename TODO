@@ -1,3 +1,15 @@
+Updated 8 November 2019
+
+WRITE
+-- Swarm log generation
+    -- Record Agent positions / fitnesses at each step
+    -- Neighbors Lists
+-- Agent Logging
+    -- Update Agent to accept "root" directory at each update to write out logs
+
+-- Determine other structures needed for minimum functionality.
+
+
 Updated: 14 June 2019
 
 Next Tasks:
