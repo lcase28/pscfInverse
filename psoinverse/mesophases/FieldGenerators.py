@@ -1,6 +1,7 @@
 # Imports
 #from crystals import affine, Lattice, LatticeSystem
 from psoinverse.mesophases.Lattice import Lattice
+from psoinverse.mesophases.ParticleForms import ParticleForm, SphereForm, Circle2DForm
 import numpy as np
 import scipy as sp
 from psoinverse.util.stringTools import str_to_num, wordsGenerator
@@ -228,13 +229,14 @@ class FieldGenerator(object):
         print("rho init size: ", rho.size)
         vol = self.lattice.volume
         print("volume = ", vol)
-        const = frac[coreindex] / self.nparticles
-        print("frac / nparticles = ", const)
-        Rsph = ((3 * frac[coreindex] * vol) / (4 * np.pi * self.nparticles))**(1./3)
-        Rsph = self.particleScale * Rsph
-        print("Rsph = ", Rsph)
-        a, b, c, alpha, beta, gamma = self.lattice.latticeParameters
-        print("Lattice params: ", a, b, c, alpha, beta, gamma)
+        particleVol = frac[coreindex] * vol / self.nparticles
+        #const = frac[coreindex] / self.nparticles
+        #print("frac / nparticles = ", const)
+        #Rsph = ((3 * frac[coreindex] * vol) / (4 * np.pi * self.nparticles))**(1./3)
+        #Rsph = self.particleScale * Rsph
+        #print("Rsph = ", Rsph)
+        #a, b, c, alpha, beta, gamma = self.lattice.latticeParameters
+        #print("Lattice params: ", a, b, c, alpha, beta, gamma)
         
         # primary loop for n-dimensional generation
         t = -1
@@ -272,10 +274,12 @@ class FieldGenerator(object):
                 #q_norm = np.dot(brillouin, recipBasis) # wave-vector in unit cartesian basis
                 #qR = Rsph * np.linalg.norm(q_norm) # 2*pi factor included by reciprocal_lattice
                 q_norm = 2 * pi * self.reciprocal_lattice.vectorNorm(brillouin)
-                qR = Rsph * q_norm
-                print("qR = ",qR)
+                #qR = Rsph * q_norm
+                #print("qR = ",qR)
+                ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
                 
-                rho[t, coreindex] = const * R * self.formfactor(qR) * np.exp(-(self.smear**2 * qR**2 / 2))
+                #rho[t, coreindex] = const * R * self.formfactor(qR) * np.exp(-(self.smear**2 * qR**2 / 2))
+                rho[t, coreindex] = (1/vol) * R * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
                 rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
                 for i in range(self.nspecies-1):
                     rho[t, i+1] = rhoTemp * frac[i+1]
