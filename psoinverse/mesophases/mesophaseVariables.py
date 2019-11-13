@@ -9,13 +9,11 @@ import re
 
 @unique
 class VariableTypes(Enum):
-    
     BlockFraction = 1
     BlockLength = 2
     ChainLength = 3
     Chi = 4
     
-
 class MesophaseVariable(ABC):
     """ abstract base for a mesophase variable """
     
@@ -39,6 +37,26 @@ class MesophaseVariable(ABC):
     @scftValue.setter
     def scftValue(self,val):
         pass
+    
+    @abstractmethod
+    @property
+    def psoBounds(self):
+        pass
+    
+    @abstractmethod
+    @psoBounds.setter
+    def psoBounds(self, val):
+        pass
+    
+    @abstractmethod
+    @property
+    def scftBounds(self):
+        pass
+    
+    @abstractmethod
+    @scftBounds.setter
+    def scftBounds(self, val):
+        pass
         
     @abstractmethod
     @property
@@ -59,10 +77,25 @@ class BlockFractionVariable(MesophaseVariable):
     
     __keywordForm = "BlockFraction[(](?P<PNum>[0-9]+)[)][(](?P<BNum>[0-9]+)[)]"
     
-    def __init__(self, polyNum, blockNum, val = 0.0):
+    def __init__(self, polyNum, blockNum, val = 0.0, **kwargs):
         self.PolymerNumber = polyNum
         self.BlockNumber = blockNum
         self.value = val
+        
+        lower = kwargs.get("lower", 0.0)
+        upper = kwargs.get("upper", 1.0)
+        bnds = kwargs.get("bounds", None)
+        if bnds is None:
+            self.lowBnd = lower
+            self.hiBnd = upper
+        else:
+            try:
+                lower, upper = bnds
+            except(ValueError):
+                raise(ValueError("Bounds must contain a lower and upper value"))
+            else:
+                self.lowBnd = lower
+                self.hiBnd = upper
     
     @property
     def polymer(self):
@@ -88,6 +121,32 @@ class BlockFractionVariable(MesophaseVariable):
     def scftValue(self):
         self.value = val
     
+    @abstractmethod
+    @property
+    def psoBounds(self):
+        return np.array([self.lowBnd, self.hiBnd])
+    
+    @abstractmethod
+    @psoBounds.setter
+    def psoBounds(self, val):
+        self.scftBounds = val
+    
+    @abstractmethod
+    @property
+    def scftBounds(self):
+        return np.array([self.lowBnd, self.hiBnd])
+    
+    @abstractmethod
+    @scftBounds.setter
+    def scftBounds(self, val):
+        try:
+            lower, upper = val
+        except ValueError:
+            raise(ValueError("Pass an iterable with a lower and upper bound."))
+        else:
+            self.lowBnd = max(lower, 0.0)
+            self.hiBnd = min(upper, 1.0)
+        
     @property
     def keyword(self):
         return "BlockFraction(" + str(self.PolymerNumber) + ")(" + str(self.BlockNumber) + ")"
@@ -108,8 +167,8 @@ class ChiVariable(MesophaseVariable):
     __keywordForm = "Chi[(](?P<Mon1>[0-9]+)[)][(](?P<Mon2>[0-9]+)[)]"
     
     def __init__(self, Monomer1, Monomer2, val = 0.0):
-        self.Monomer1 = Monomer1
-        self.Monomer2 = Monomer2
+        self.Monomer1 = min(Monomer1,Monomer2)
+        self.Monomer2 = max(Monomer1,Monomer2)
         self.value = val
     
     @property
@@ -132,6 +191,33 @@ class ChiVariable(MesophaseVariable):
     def scftValue(self):
         self.value = val
     
+    @abstractmethod
+    @property
+    def psoBounds(self):
+        return np.array([self.lowBnd, self.hiBnd])
+    
+    @abstractmethod
+    @psoBounds.setter
+    def psoBounds(self, val):
+        self.scftBounds = val
+    
+    @abstractmethod
+    @property
+    def scftBounds(self):
+        return np.array([self.lowBnd, self.hiBnd])
+    
+    @abstractmethod
+    @scftBounds.setter
+    def scftBounds(self, val):
+        try:
+            lower, upper = val
+        except ValueError:
+            raise(ValueError("Pass an iterable with a lower and upper bound."))
+        else:
+            self.lowBnd = lower
+            self.hiBnd = upper
+        
+    
     @property
     def keyword(self):
         return "Chi(" + str(self.Monomer1) + ")(" + str(self.Monomer2) + ")"
@@ -144,7 +230,20 @@ class ChiVariable(MesophaseVariable):
     
     @property
     def flag(self):
-        return VariableTypes.BlockFraction
-        
+        return VariableTypes.Chi
 
+class VariableSet(object):
+    """ A collection for Mesophase variables """
+    
+    def __init__(self, Vars, **kwargs):
+        """
+            Parameters
+            ----------
+            Vars : iterable of MesophaseVariable Objects
+                The variables in the set
+        """
+        
+        self.Variables = OrderedDict( [ (v.keyword, v) for v in Vars ] )
+        
+    def getPoint
 

@@ -52,6 +52,8 @@ class ParamFile(object):
 
         # List sections lists section names (flags) in order read
         self.sections = []
+        
+        self.fieldTransforms = []
 
         # Read version line
         self.version = Version(self.file)
@@ -88,38 +90,44 @@ class ParamFile(object):
         self.version.major = major
         self.version.minor = minor
         self.version.write(file)
-        if self.flags.has_key('MONOMERS'):
-            file.write("\n%-20s\n" % 'MONOMERS')
-            self.output_monomers()
-        if self.flags.has_key('CHAINS'):
-            file.write("\n%-20s\n" % 'CHAINS')
-            self.output_chains()
-        if self.flags.has_key('SOLVENTS'):
-            file.write("\n%-20s\n" % 'SOLVENTS')
-            self.output_solvents()
-        if self.flags.has_key('COMPOSITION'):
-            file.write("\n%-20s\n" % 'COMPOSITION')
-            self.output_composition()
-        if self.flags.has_key('INTERACTION'):
-            file.write("\n%-20s\n" % 'INTERACTION')
-            self.output_interaction()
-        if self.flags.has_key('UNIT_CELL'):
-            file.write("\n%-20s\n" % 'UNIT_CELL')
-            self.output_unit_cell()
-        if self.flags.has_key('DISCRETIZATION'):
-            file.write("\n%-20s\n" % 'DISCRETIZATION')
-            self._output_vec( 'int', 'ngrid', self.dim)
-            self._output_var( 'real', 'chain_step')
-        if self.flags.has_key('BASIS'):
-            file.write("\n%-20s\n" % 'BASIS')
-            self._output_var('char', 'group_name')
-        if self.flags.has_key('ITERATE'):
-            file.write("\n%-20s\n" % 'ITERATE')
-            self.output_iterate()
-        if self.flags.has_key('SWEEP'):
-            file.write("\n%-20s\n" % 'SWEEP')
-            self._output_var( 'real', 's_max')
-            self.output_increments()
+        nFieldTrans = 0
+        for s in self.sections:
+            if s == 'MONOMERS': #self.flags.has_key('MONOMERS'):
+                file.write("\n%-20s\n" % 'MONOMERS')
+                self.output_monomers()
+            if s == 'CHAINS': #self.flags.has_key('CHAINS'):
+                file.write("\n%-20s\n" % 'CHAINS')
+                self.output_chains()
+            if s == 'SOLVENTS': #self.flags.has_key('SOLVENTS'):
+                file.write("\n%-20s\n" % 'SOLVENTS')
+                self.output_solvents()
+            if s == 'COMPOSITION': #self.flags.has_key('COMPOSITION'):
+                file.write("\n%-20s\n" % 'COMPOSITION')
+                self.output_composition()
+            if s == 'INTERACTION': #self.flags.has_key('INTERACTION'):
+                file.write("\n%-20s\n" % 'INTERACTION')
+                self.output_interaction()
+            if s == 'UNIT_CELL': #self.flags.has_key('UNIT_CELL'):
+                file.write("\n%-20s\n" % 'UNIT_CELL')
+                self.output_unit_cell()
+            if s == 'DISCRETIZATION': #self.flags.has_key('DISCRETIZATION'):
+                file.write("\n%-20s\n" % 'DISCRETIZATION')
+                self._output_vec( 'int', 'ngrid', self.dim)
+                self._output_var( 'real', 'chain_step')
+            if s == 'BASIS': #self.flags.has_key('BASIS'):
+                file.write("\n%-20s\n" % 'BASIS')
+                self._output_var('char', 'group_name')
+            if s == 'ITERATE': #self.flags.has_key('ITERATE'):
+                file.write("\n%-20s\n" % 'ITERATE')
+                self.output_iterate()
+            if s == 'SWEEP': #self.flags.has_key('SWEEP'):
+                file.write("\n%-20s\n" % 'SWEEP')
+                self._output_var( 'real', 's_max')
+                self.output_increments()
+            if s == 'FIELD_TO_RGRID' or s == 'RGRID_TO_FIELD' \
+                or s == 'KGRID_TO_RGRID' or s == 'RHO_TO_OMEGA':
+                nFieldTrans = self.output_field_transform(s, nFieldTrans + 1)
+                
         file.write("\n%-20s\n" % 'FINISH')
 
         file.close()
@@ -188,6 +196,14 @@ class ParamFile(object):
             self.chain_step = self._input_var('real')
         elif flag == 'BASIS':
             self.group_name = self._input_var('char')
+        elif flag == 'FIELD_TO_RGRID':
+            self.input_field_transform(flag)
+        elif flag == 'RGRID_TO_FIELD':
+            self.input_field_transform(flag)
+        elif flag == 'KGRID_TO_RGRID':
+            self.input_field_transform(flag)
+        elif flag == 'RHO_TO_OMEGA':
+            self.input_field_transform(flag)
         elif flag == 'ITERATE':
             self.input_iterate()
         elif flag == 'FINISH':
@@ -197,7 +213,22 @@ class ParamFile(object):
             raise(IOException(msg))
 
         return next
-
+    
+    def input_field_transform(self, flag):
+        infile = self._input_var('char',f='A')
+        outfile = self._input_var('char',f='A')
+        self.fieldTransforms.append( [ flag, infile, outfile ] )
+        
+    def output_field_transform(self, flag, n):
+        flagrec, infile, outfile = self.fieldTransforms[n]
+        if not flagrec == flag:
+            return n #raise(ValueError("Improper field transform flag found"))
+        else:
+            self.file.write("\n%-20s\n" % flagrec)
+            self._io.output_var(self.file, 'char', infile, 'input_filename', f='A')
+            self._io.output_var(self.file, 'char', outfile, 'output_filename', f='A')
+            return n+1
+        
     def input_monomers(self):
         """ Analog of subroutine input_monomers in chemistry_mod.f """
         # Monomers

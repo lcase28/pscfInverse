@@ -16,8 +16,15 @@ class MesophaseBase(ABC):
     Abstract base class for mesophase wrapper classes.
     Derived classes manage a single mesophase for a single SCFT simulator.
     """
-    AvailableVariables = [ "BlockLengths"
     
+    @abstractmethod
+    def __init__(self, ID, *args, **kwargs):
+        """
+            All inheriting classes should define their own __init__
+            but should call the base class constructor to set the ID/name
+            of the phase.
+        """
+        self.name = ID
     
     @abstractmethod
     def update(self, root, **kwargs):
@@ -67,6 +74,9 @@ class MesophaseBase(ABC):
         """
         pass
     
+    @property
+    def phaseName(self):
+        return self.name
 
 class MesophaseManager(object):
     """
