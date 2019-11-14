@@ -1,11 +1,12 @@
 # LIBRARY IMPORTS
-from psoinverse.mesophases.phaseManagement import MesophaseBase
-from psoinverse.mesophases.mesophaseVariables import MesophaseVariable
-from psoinverse.mesophases.mesophaseVariables import VariableTypes as varType
 import psoinverse.SCFT.PSCF.FileManagers as filemanagers
 from filemanagers.fieldfile import CoordFieldFile, WaveVectFieldFile
 from filemanagers.paramfile import ParamFile
 from filemanagers.outfile import OutFile
+from psoinverse.mesophases.FieldGenerators import FieldCalculator
+from psoinverse.mesophases.phaseManagement import MesophaseBase
+from psoinverse.mesophases.mesophaseVariables import MesophaseVariable
+from psoinverse.mesophases.mesophaseVariables import VariableTypes as varType
 
 # EXTERNAL IMPORTS
 import io
@@ -15,7 +16,7 @@ import os
 class PSCFMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
-    def __init__(self, ID, kgrid, param, **kwargs):
+    def __init__(self, ID, kgrid, param, fieldGen, **kwargs):
         """
             Initialize the PSCF Mesophase using pre-formatted files.
             
@@ -35,13 +36,46 @@ class PSCFMesophase(MesophaseBase):
             param : filemanager.paramfile.ParamFile
                 A pre-populated param file. Should minimally contain definitional
                 fields (format, MONOMERS, CHAINS, SOLVENTS, ..., BASIS) as well as
-                the desired ITERATE fields. It should contain no other fields.
-            
-            
+                the desired ITERATE fields.
+            fieldGen : psoinverse.mesophases.FieldGenerators.FieldGenerator
+                A pre-initialized FieldGenerator object, set to generate fields
+                for this phase.
         """
         self.kgrid = kgrid
         self.param = param
+        self.fieldGen = fieldGen
         super().__init__(ID)
+    
+    @classmethod
+    def instanceFromFiles(cls, ID, kgridFile, paramFile, fieldGenFile, **kwargs):
+        """
+            Return an instance of PSCFMesophase initialized from given files.
+            
+            NOTE: No checks are done to ensure the specified files exist.
+            If file-related exceptions occur, these will cascade.
+            
+            IMPLEMENTATION NOTE: Presently, no checks are done to ensure 
+            that all template files are compatible (that system definitions match).
+            These checks are assumed to have been done by the user.
+            
+            In parameter definitions, 'fileManager' refers to psoinverse.SCFT.PSCF.FileManagers
+            
+            Parameters
+            ----------
+            ID : string
+                The name of the phase (should be unique within the run, 
+                but this is not enforced)
+            kgrid : pathlib.Path
+                An already-resolved path object to a kgrid field file.
+            param : pathlib.Path
+                An already-resolved path object to a param file.
+            fieldGen : pathlib.path
+                An already-resolved path object to a fieldGen source file.
+        """
+        kgrid = WaveVectFieldFile(kgridFile.resolve())
+        param = ParamFile(paramFile.resolve())
+        fieldGen = FieldCalculator.from_file(fieldGenFile)
+        return cls(ID, kgrid, param, fieldGen)
     
     def update(self, VarSet, root, **kwargs):
         """ 
@@ -116,7 +150,55 @@ class PSCFMesophase(MesophaseBase):
         return True
         
     def _evaluate(self, root):
-        
+        """
+            Launch a pscf simulation of the phase using current parameters.
+            Parse the results and return the energy.
+            
+            ** Presently will not handle multiple blocks of same monomer
+            type. i.e. will not handle ABA-type structures.
+            
+            Parameters
+            ----------
+            root : pathlib.Path
+                The root directory of the run. All simulation files are
+                placed in this location. It is assumed that path has 
+                already been resolved.
+            
+            Returns
+            -------
+            energy : real
+                The energy returned by the simulation.
+            flag : bool
+                True if simulation converged without issue.
+                False if an error occurred and no energy found.
+        """
+        monFrac = self._getMonomerFractions()
+        ngrid = self.param.ngrid
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid)
+        self.kgrid.fields = newFields
+        kgridFile = root / 'rho_kgrid_in'
+        self.kgrid.write(kgridFile.open(mode='x'))
+        paramFile = root / 'param'
+        self.param.write(paramFile.open(mode='x'))
+        # TODO: Implement actual pscf launch and output parsing
+        return 1.0, True
+    
+    def _getMonomerFractions(self):
+        """ Return the volume fraction of all monomers """
+        nmonomer = self.param.N_monomer
+        nchain = self.param.N_chain
+        frac = np.zeros(nmonomer)
+        Ntot = 0.0
+        for i in range(nchain):
+            nblock = self.param.N_block[i]
+            for j in range(nblock):
+                mon = self.param.block_monomer[i][j] - 1
+                Nb = self.param.block_length[i][j]
+                Ntot += Nb
+                frac[mon] += Nb
+        for i in range(nmonomer):
+            frac[i] = frac[i] / Ntot
+        return frac
         
     @property
     def energy(self):

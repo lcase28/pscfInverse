@@ -14,7 +14,6 @@ import os
 from pathlib import Path
 import io
 
-
 def checkPath(self, root):
     """
         Checks if path exists, creates it if not.
@@ -26,6 +25,17 @@ def checkPath(self, root):
         ----------
         root : pathlib.Path
             The directory path to be resolved.
+        
+        Returns
+        -------
+        resolvedRoot : pathlib.Path
+            The resolved path to the specified directory.
+        flag : bool
+            True if the path resolved without error.
+            False if path resolution threw one of:
+            FileNotFoundError, FileExistsError, RuntimeError,
+            which capture the expected throws from the Path
+            object during resolution.
     """
     root = root.resolve()
     if root.exists() and root.is_dir():
@@ -40,7 +50,6 @@ def checkPath(self, root):
     except (FileNotFoundError, FileExistsError, RuntimeError):
         return None, False
     
-
 class MesophaseBase(ABC):
     """ 
     Abstract base class for mesophase wrapper classes.
@@ -167,9 +176,8 @@ class MesophaseBase(ABC):
             by a derived Mesophase. See derived classes for details.
         """
         pass
-        
+    
     @property
-    @abstractmethod
     def energy(self):
         """
             The energy of the mesophase as of the most recent simulation.
@@ -180,7 +188,10 @@ class MesophaseBase(ABC):
                 If the simulation failed to converge, returns np.NaN.
                 Else returns the simulated energy.
         """
-        pass
+        if self.validState:
+            return self._energy
+        else:
+            return np.nan
     
     @property
     def phaseName(self):
@@ -235,12 +246,16 @@ class MesophaseManager(object):
         
     @property
     def psoPoint(self):
-        return variables.psoPoint
+        return self.variables.psoPoint
         
     @psoPoint.setter
     def psoPoint(self, val):
         self.variables.psoPoint = val
         self._consistent = False
+    
+    @property
+    def psoBounds(self):
+        return self.variables.psoBounds
     
     def update(self, root, newPoint = None, **kwargs):
         """
