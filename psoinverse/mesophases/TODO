@@ -5,9 +5,9 @@ VERIFICATION
 -- Verify proper operation of FieldGenerator using Internal Lattice class over Crystals.Lattice
 -- Finish unit tests on Lattice
 -- Circle (2D cylinder) Form Factor Class
--- Update FieldGenerator to use Form Factor classes (For generic handling of all forms)
--- Operation of mesophaseVariable Module
+-- Operation of Update FieldGenerator to use Form Factor classes (For generic handling of all forms)
 -- Operation of phaseManagement Module
+-- Operation of VariableSet Objects (full... partial done)
 
 UPDATE
 -- Remove file handling from FieldGenerator -- make that class focused solely on calculation of concentration fields.
@@ -21,7 +21,7 @@ EXTEND/WRITE
         -- Extend file manager to generate a FieldGenerator object??
         -- FIGURE THIS OUT LATER
 -- Finish Update method for pscfMesophase class (w/o actual pscf launch)
--- Finish writing VariableSet object definition
-    -- Have this generate Point and Bounds classes for passing to PSO
+-- Link PscfMesophase class to a derived class of Agent
+-- Set up directory structure for output. Establish regular output of swarm, agent, mesophaseManager statuses.
 
 
