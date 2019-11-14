@@ -2,6 +2,7 @@
 
 # Third-party imports
 from abc import ABC, abstractmethod
+from copy import deepcopy
 import numpy as np
 
 # Project imports
@@ -13,7 +14,7 @@ class Agent(ABC):
     
     __NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, **kwargs):
+    def __init__(self, boundaries, ptSrc, velSrc, randGen = None, **kwargs):
         """
         Constructor for Agent base class.
         
@@ -21,24 +22,13 @@ class Agent(ABC):
         ----------
         boundaries : SearchSpace.SearchBounds or sub-class
             The desired search space.
-        
-        Keyword Arguments
-        -----------------
-        v0 : 1D list-like, numerical values, optional
-            Initial velocity scale; all velocities will be
-            randomized [-v0, v0].
-            If v0 is None, the initial velocity will be set
-            to 1/10 of the boundary range in each direction.
-        spawnRange : SearchSpace.SearchBounds or sub-class, optional
-            The range in which to spawn (initialize) the agent.
-        useScale : 1D list-like, numerical values, optional
-            The scaling to use on the Agent's positions.
-        initPosition : SearchSpace.Point or subclass, or 1D list-like, optional
-            A forced initial position for Agent. Intended for use
-            in test and validation cases. spawnRange will be ignored.
-        initVelocity : 1D list-like, optional
-            A forced initial velocity for Agent. Intended for use
-            in test and validation cases. v0 will be ignored.
+        ptSrc : psoinverse.PSO.SearchSpace.Point or derivative
+            A point to use as template for agent's point
+        velSrc : 1-D list-like
+            Template for velocities variable.
+        randGen : numpy.random.RandomState, optional
+            A RandomState object to use to initialize positions.
+            If not included, values in ptSrc and velSrc are used.
         """
         # Initialize to zero steps taken
         self.steps = 0
@@ -48,64 +38,44 @@ class Agent(ABC):
         Agent.__NextID += 1 # Update the static counter to deliver unique IDs
 
         self.boundaries = boundaries
-        
-        # Parse kwargs
-        useScale = kwargs.get("useScale",None)
-        spawnRange = kwargs.get("spawnRange",None)
-        v0 = kwargs.get("v0", None)
         self.seekMax = kwargs.get("seekMax",True)
-        # optional arguments to enable fixed-starting position initialization for debugging
-        # and unit tests -- Not intended for general use.
-        initPosition = kwargs.get("position", None)
-        initVelocity = kwargs.get("velocity",None)
+        self.Location = deepcopy(ptSrc)
+        self.Velocity = np.array(velSrc)
         
-        # determine scaling of point
-        scale = self.__choose_scaling_source(boundaries, spawnRange, useScale)
+        if randGen is None:
+            randomizeValues = False
+        else:
+            randomizeValues = True
         
         # Initialize Position
-        if initPosition is None:
+        if randomizeValues:
             # general case
+            spawnRange = None
             rng = self.__choose_spawn_range(boundaries, spawnRange)
             dims = len(self.boundaries.upper)
             LB = self.boundaries.lower
-            initCoords = (np.random.rand(dims) * rng + LB) / scale
-            self.Location = Point(Coords=initCoords, Fitness= -1e8, Scale=scale)
-        else:
-            # debug / testing case
-            if isinstance(initPosition, Point):
-                self.location = Point()
-                self.location.fill_from(initPosition)
-            else:
-                try:
-                    initCoords = np.array(initPosition)
-                except:
-                    raise
-                if not len(initCoords) == len(self.boundaries.upper):
-                    raise(ValueError("initPosition does not match dimension of boundaries"))
-                
-                self.Location = Point(Coords=initCoords, Fitness=-1e8, Scale=scale)
+            initCoords = (randGen.rand(dims) * rng + LB)
+            self.Location.Coords = initCoords
         
         # Initialize Velocity
-        if initVelocity is None:
-            # general case
-            if v0 is None:
-                self.Velocity = 2. * (np.random.rand(dims) - 0.5)
-                self.Velocity *= 0.1 * rng / scale
-            else:
-                self.Velocity = 2 * v0 * (np.random.rand(dims) - 0.5) / scale
-        else:
-            # debug / testing case
-            try:
-                self.Velocity = np.array(initVelocity)
-            except:
-                raise
-            
-            if not len(self.Velocity) == len(self.boundaries.upper):
-                raise(ValueError("initVelocity does not match dimension of boundaries"))
+        if randomizeValues:
+            self.Velocity = 2. * (randGen.rand(dims) - 0.5)
+            self.Velocity *= 0.1 * rng
 
         # Store PBest - best Point() location discovered in all history
-        self.PBest = Point()
-        self.PBest.fill_from(self.Location)
+        self.PBest = None
+        self.evaluate()
+        self._inerror = False
+        
+    @property
+    def inErrorState(self):
+        return self._inerror
+        
+    def _startErrorState(self):
+        self._inerror = True
+        
+    def _endErrorState(self):
+        self._inerror = False
         
     def __choose_scaling_source(self, boundaries, spawnRange, useScale):
         # Select scaling source
@@ -159,19 +129,17 @@ class Agent(ABC):
         # Replace internal Location and Velocity with new values
         move = True
         if move:
-            from copy import deepcopy
             vtemp = deepcopy(self.Velocity)
             ltemp = deepcopy(self.Location.Coords)
 
             self.Velocity = new_velocity
-            #output("Agent {}: V = {}".format(self.id, self.Velocity))
             self.Location.Coords = attempt.Coords
 
-            # Fitness is incremented during Evaluate() since we use super() calls to generate the MRO
+            # Fitness is incremented during Evaluate()
             self.Location.Fitness = 0
             # Use self.Evaluate as a validator
             if not self.evaluate():
-                debug("Agent {} Resetting!".format(self.id))
+                debug("Agent {} Failed!".format(self.id))
                 self.Velocity = vtemp
                 self.Location.Coords = ltemp
                 return False
@@ -181,6 +149,9 @@ class Agent(ABC):
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
     @abstractmethod
     def evaluate(self):
+        if self.PBest is None:
+            # Initialization condition
+            self.PBest = deepcopy(self.Location)
         # Now that fitness has been updated, compare to PBest
         if self.Location > self.PBest and self.seekMax:
             self.PBest.fill_from(self.Location)

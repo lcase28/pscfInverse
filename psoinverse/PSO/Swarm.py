@@ -1,5 +1,7 @@
+from copy import deepcopy
 import numpy as np
 import networkx as nx
+import pathlib
 #from functools import total_ordering
 import time
 import traceback
@@ -10,7 +12,7 @@ import shutil
 # This should allow identical functionality throughout this module
 #  because functionality was fully recreated in SearchSpace Module
 from .SearchSpace import Point #SimulationPoint as Point
-from .SearchSpace import SearchBounds
+#from .SearchSpace import SearchBounds
 from .Integrators import Integrator
 from .Agent import Agent
 
@@ -28,31 +30,61 @@ def output(line):
 def log_exception():
     debug("Exception raised: {}".format(traceback.format_exc()))
 
+def checkPath(root):
+    root = root.resolve()
+    if root.exists() and root.is_dir():
+        return root.resolve(), True
+    try:
+        if not root.exists():
+            root.mkdir(parents=True)
+        if not root.is_dir():
+            root = root.parent
+        return root.resolve(), True
+    except (FileNotFoundError, FileExistsError, RuntimeError):
+        return None, False
+
 # =========================================================
 #
 # Swarm Class
 #
 # =========================================================
 class Swarm(object):
-    def __init__(self, graph, agents, integrator):
+    def __init__(self, graph, agents, integrator, root = None, logName = "swarm_log", autoLog = True):
         assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
-        
         self.Agents = agents
         self.Graph = graph
         self.integrator = integrator
         self.stepsTaken = 0
-        
         # record-keeping
-        self.History, self.Best = [], []
-        
+        self.autoLog = autoLog
+        if root is None:
+            self.root = pathlib.Path.cwd()
+            flag = True
+        else:
+            self.root, flag  = checkPath(root)
+        if flag:
+            self.logFile = self.root / logName
+        else:
+            raise(ValueError("Invalid root passed to swarm"))
+        #self.History, self.Best = [], []
         # switch
         self.SeekMax = integrator.seekMax
+        if self.autoLog:
+            self.logStatus(True)
+        self._inerror = False
+        self.bestAgent = self.get_gbest()
+    
+    @property
+    def inErrorState(self):
+        return self._inerror
     
     def step(self):
+        self.stepsTaken += 1
         for i in range(len(self.Agents)):
             neighbors = [self.Agents[a] for a in self.Graph.neighbors(i)]
             self.Agents[i].update(neighbors, self.integrator)
-        self.stepsTaken += 1
+        if self.autoLog:
+            self.logStatus(False)
     
     def printState(self):
         for a in self.Agents:
@@ -60,18 +92,25 @@ class Swarm(object):
     
     # Return global best of whole swarm
     def get_gbest(self):
-        gbest_pt = self.Agents[0].PBest
-        best_agent = self.Agents[0]
+        """ Returns the agent with the best historical best. None if all in error. """
+        gbest_pt = None #self.Agents[0].PBest
+        best_agent = None #self.Agents[0]
 
         for a in self.Agents:
-            if self.SeekMax and a.PBest > gbest_pt:
-                gbest_pt = a.PBest
-                best_agent = a
-            elif not self.SeekMax and a.PBest < gbest_pt:
-                gbest_pt = a.PBest
-                best_agent = a
-            else:
-                pass
+            if not a.inErrorState:
+                if best_agent is not None:
+                    if self.SeekMax and a.PBest > gbest_pt:
+                        gbest_pt = a.PBest
+                        best_agent = a
+                    elif not self.SeekMax and a.PBest < gbest_pt:
+                        gbest_pt = a.PBest
+                        best_agent = a
+                else:
+                    gbest_pt = a.PBest
+                    best_agent = a
+                    
+        if best_agent is None:
+            self._inerror = True
 
         return best_agent
 
@@ -92,8 +131,6 @@ class Swarm(object):
         py.savefig(fname)
 
     def write_output(self, outputbasedir):
-        from copy import deepcopy
-
         # Maintain a history of the entire set of coordinates and fitnesses for all agents
         #self.History.append([list(agent.get_coords()) + [agent.Location.Fitness] for agent in self.Agents])
 
@@ -136,5 +173,40 @@ class Swarm(object):
                                 ))
         f.close()
 
-
+    @property
+    def statusString(self, includeDefinitions = False):
+        s = ""
+        if includeDefinitions:
+            s += "Swarm Characteristics:\n"
+            s += "\tNumber Agents : {}\n".format(len(self.Agents))
+            s += "\tGraph Type : {}\n".format(self.graph)
+            s += "\tIntegrator : {}\n".format(self.integrator)
+            s += "\tSeek Max : {}\n".format(self.SeekMax)
+            s += "\tRoot Path : {}\n".format(self.root)
+            s += "\tLog File : {}\n".format(self.logFile)
+        # Output status
+        s += "Swarm Status:\n"
+        s += "\tStep Number : {}\n".format(self.stepsTaken)
+        s += "\tIn Error State : {}\n".format(self.inErrorState)
+        if self.inErrorState:
+            s += "\tBest Agent ID : {}\n".format(self.bestAgent)
+        else:
+            s += "\tBest Agent ID : {}\n".format(self.bestAgent.id)
+        s += "\tAgent Data (Current):\n"
+        s += "\tID_Num\t\tFitness\t\tPosition\n"
+        formstring = "\t{}\t\t{}\t\t{}\n"
+        for a in self.Agents:
+            posStr = "".join(["{:.4f}, ".format(i) for i in a.Location.Coords])
+            s += formstring.format(a.id, a.Location.Fitness, posStr)
+        s += "\tAgent Data (P_Best):\n"
+        s += "\tID_Num\t\tFitness\t\tPosition\n"
+        formstring = "\t{}\t\t{}\t\t{}\n"
+        for a in self.Agents:
+            posStr = "".join(["{:.4f}, ".format(i) for i in a.PBest.Coords])
+            s += formstring.format(a.id, a.PBest.Fitness, posStr)
+    
+    def logStatus(self, includeDefinitions = False):
+        with self.logFile.open(mode='a') as f:
+            f.write(self.statusString(includeDefinitions))
+        
 
