@@ -1,13 +1,27 @@
-Updated 8 November 2019:
+Updated 12 November 2019:
 
 VERIFICATION
 -- Verify sphere form factor class
 -- Verify proper operation of FieldGenerator using Internal Lattice class over Crystals.Lattice
 -- Finish unit tests on Lattice
 -- Circle (2D cylinder) Form Factor Class
--- Update FieldGenerator to use Form Factor classes (For generic handling of all forms)
+-- Operation of Update FieldGenerator to use Form Factor classes (For generic handling of all forms)
+-- Operation of phaseManagement Module
+-- Operation of VariableSet Objects (full... partial done)
 
 UPDATE
 -- Remove file handling from FieldGenerator -- make that class focused solely on calculation of concentration fields.
+    -- Simply have utility to output kgrid as numpy ndarray
+
+EXTEND/WRITE
+-- Enable FieldGenerator to recognize lattice systems and accept fewer lattice parameters
+    -- Initialize it from kgrid field file ???
+        -- Use same file ???
+            -- Possible issues with formatting changes between scft versions
+        -- Extend file manager to generate a FieldGenerator object??
+        -- FIGURE THIS OUT LATER
+-- Finish Update method for pscfMesophase class (w/o actual pscf launch)
+-- Link PscfMesophase class to a derived class of Agent
+-- Set up directory structure for output. Establish regular output of swarm, agent, mesophaseManager statuses.
 
 
