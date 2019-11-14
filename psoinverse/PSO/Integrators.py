@@ -13,7 +13,7 @@ import numpy as np
 
 # Local Library imports
 from .SearchSpace import Point
-#from .Swarm import Agent
+from .Agent import Agent
 
 # Inheriting classes must override method Update
 class Integrator(ABC):

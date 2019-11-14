@@ -1,6 +1,6 @@
 
 from context import psoinverse
-from psoinverse.PSO.Swarm import FunctionAgent
+from psoinverse.PSO.Agent import FunctionAgent
 from psoinverse.PSO.Integrators import StandardIntegrator
 from psoinverse.PSO.SearchSpace import SearchBounds as Bounds
 from psoinverse.PSO.SearchSpace import Point
