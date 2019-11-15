@@ -572,14 +572,31 @@ class WaveVectFieldFile(FieldFile):
         self.gridPoints = gp
         self.fields = np.zeros((self.gridPoints,self.N_monomer))
         for i in range(self.gridPoints):
-            self.fields[i,:] = np.array(self._input_vec('real', n=self.dim, comment = None, s = 'R', f = 'N'))
+            self.fields[i,:] = self._nextFieldLine()
+    
+    def _nextFieldLine(self):
+        s = self.file.readline() # get next line
+        sMon = s.split()
+        vals = []
+        for i in range(self.N_monomer):
+            vals.append(self._getRealComponent(sMon[i]))
+        return np.array(vals)
+        
+    def _getRealComponent(self, s):
+        s = s.strip()
+        s = s.strip('()')
+        slist = s.split(',')
+        return float(slist[1].strip())
+        
     
     def _outputField(self):
         self._output_vec('int', 'ngrid', n=self.dim, s='R', f='A')
-        self._nextFieldLine = []
+        formstr = "({:.4E},{:.4E}) "
         for i in range(self.gridPoints):
-            self._nextFieldLine = self.fields[i,:]
-            self._output_vec('real', '_nextFieldLine', n=self.N_monomer, s='R', f='N')
-        delattr(self,'_nextFieldLine')
+            s = ""
+            for j in range(self.N_monomer):
+                s += formstr.format(self.fields[i,j],0.0)
+            s += "\n"
+            self.file.write(s)
             
 

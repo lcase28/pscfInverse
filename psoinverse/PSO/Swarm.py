@@ -69,10 +69,11 @@ class Swarm(object):
         #self.History, self.Best = [], []
         # switch
         self.SeekMax = integrator.seekMax
-        if self.autoLog:
-            self.logStatus(True)
         self._inerror = False
         self.bestAgent = self.get_gbest()
+        if self.autoLog:
+            self.logStatus(True)
+        
     
     @property
     def inErrorState(self):
@@ -98,7 +99,7 @@ class Swarm(object):
 
         for a in self.Agents:
             if not a.inErrorState:
-                if best_agent is not None:
+                if best_agent is not None and gbest_pt is not None:
                     if self.SeekMax and a.PBest > gbest_pt:
                         gbest_pt = a.PBest
                         best_agent = a
@@ -173,13 +174,12 @@ class Swarm(object):
                                 ))
         f.close()
 
-    @property
     def statusString(self, includeDefinitions = False):
         s = ""
         if includeDefinitions:
             s += "Swarm Characteristics:\n"
             s += "\tNumber Agents : {}\n".format(len(self.Agents))
-            s += "\tGraph Type : {}\n".format(self.graph)
+            s += "\tGraph Type : {}\n".format(self.Graph)
             s += "\tIntegrator : {}\n".format(self.integrator)
             s += "\tSeek Max : {}\n".format(self.SeekMax)
             s += "\tRoot Path : {}\n".format(self.root)
@@ -204,6 +204,7 @@ class Swarm(object):
         for a in self.Agents:
             posStr = "".join(["{:.4f}, ".format(i) for i in a.PBest.Coords])
             s += formstring.format(a.id, a.PBest.Fitness, posStr)
+        return s
     
     def logStatus(self, includeDefinitions = False):
         with self.logFile.open(mode='a') as f:

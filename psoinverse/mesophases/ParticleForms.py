@@ -1,4 +1,4 @@
-from abc import ABC, AbstractMethod
+from abc import ABC, abstractmethod
 import numpy as np
 import scipy as sp
 

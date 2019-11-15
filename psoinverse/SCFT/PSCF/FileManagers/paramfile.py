@@ -67,8 +67,8 @@ class ParamFile(object):
         self.file = None
 
         # Make sorted list of attribute names
-        self.att_names = self.__dict__.keys()
-        self.att_names.sort()
+        #self.att_names = self.__dict__.keys()
+        #self.att_names.sort()
 
     def write(self, file, major=1, minor=0):
         '''
@@ -126,7 +126,7 @@ class ParamFile(object):
                 self.output_increments()
             if s == 'FIELD_TO_RGRID' or s == 'RGRID_TO_FIELD' \
                 or s == 'KGRID_TO_RGRID' or s == 'RHO_TO_OMEGA':
-                nFieldTrans = self.output_field_transform(s, nFieldTrans + 1)
+                nFieldTrans = self.output_field_transform(s, nFieldTrans)
                 
         file.write("\n%-20s\n" % 'FINISH')
 
@@ -461,19 +461,19 @@ class ParamFile(object):
 
     def _output_var(self, type, name, f='A'):
         """Output single variable by variable name."""
-        if self.__dict__.has_key(name):
+        if name in self.__dict__:
             data = self.__dict__[name]
             self._io.output_var(self.file, type, data, name, f)
 
     def _output_vec(self, type, name, n=None, s='R', f='A'):
         """Output vector-valued variable by variable name."""
-        if self.__dict__.has_key(name):
+        if name in self.__dict__:
             data = self.__dict__[name]
             self._io.output_vec(self.file, type, data, n, name, s, f)
 
     def _output_mat(self, type, name, m, n=None, s='L', f='A'):
         """Output matrix-valued variable by name."""
-        if self.__dict__.has_key(name):
+        if name in self.__dict__:
             data = self.__dict__[name]
             self._io.output_mat(self.file, type, data, m, n, name, s, f)
 
@@ -482,7 +482,7 @@ class ParamFile(object):
 
     def __str__(self):
         s = []
-        for key in self.att_names:
+        for key in self__dict__.keys(): #.att_names:
             s.append( key +  ' : ' + str( self[key] ) )
         return string.join(s, '\n')
 

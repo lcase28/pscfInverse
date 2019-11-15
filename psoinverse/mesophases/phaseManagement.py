@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 import io
 
-def checkPath(self, root):
+def checkPath(root):
     """
         Checks if path exists, creates it if not.
         Checks if path is a directory, if not takes the
@@ -287,17 +287,18 @@ class MesophaseManager(object):
         
         ft, flag = self._evaluate(root)
         if not flag:
+            print("PhaseManage eval Fail")
             self._errstate()
         
         return flag
         
     # TODO: Revise to allow parallelization of phases??
     def _evaluate(self, root):
-        root, success = CheckPath(root) # resolve root path
+        root, success = checkPath(root) # resolve root path
         if not success:
             return np.nan, False
-        phaseRoot = root/target.phaseName
-        success = target.update( VarSet = self.variables, \
+        phaseRoot = root/self.target.phaseName
+        success = self.target.update( VarSet = self.variables, \
                                  root = phaseRoot )
         if not success:
             return np.nan, False  # if target fails, error state
@@ -308,8 +309,10 @@ class MesophaseManager(object):
                                 root = phaseRoot )
             ovrSuccess = ovrSuccess or success
         if not ovrSuccess:
+            print("phaseManager ovrSuccess Fail")
             return np.nan, False # error state if all candidates fail
         fit = self.fitness
+        self._errstate(False)
         return fit, True
     
     def _errstate(self, flag=True):

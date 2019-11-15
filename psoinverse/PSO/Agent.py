@@ -111,6 +111,7 @@ class Agent(ABC):
             ::Returns:: the agent's personal best fitness value (not Position)
         """
         ## Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
+        self.steps += 1
         attempt = Point()
         attempt.fill_from(self.Location)
         attempt.Coords, new_velocity = integrator.update(self, neighbors)
@@ -150,6 +151,7 @@ class Agent(ABC):
     @abstractmethod
     def evaluate(self):
         if self.PBest is None:
+            print("Agent init PBest")
             # Initialization condition
             self.PBest = deepcopy(self.Location)
         # Now that fitness has been updated, compare to PBest
@@ -157,11 +159,6 @@ class Agent(ABC):
             self.PBest.fill_from(self.Location)
         elif self.Location < self.PBest and not self.seekMax:
             self.PBest.fill_from(self.Location)
-        else:
-            pass
-            # When we store the PBest point, it gets a reference to self.Location.sim
-            # If sim_tmp = None (PBest never set), then a new record will be generated automatically in Agent.Evaluate()
-            #self.Location.simulations = sim_tmp
         return True
     
     def __str__(self):

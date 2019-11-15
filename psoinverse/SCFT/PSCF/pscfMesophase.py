@@ -1,14 +1,14 @@
 # LIBRARY IMPORTS
-import psoinverse.SCFT.PSCF.FileManagers as filemanagers
-from filemanagers.fieldfile import CoordFieldFile, WaveVectFieldFile
-from filemanagers.paramfile import ParamFile
-from filemanagers.outfile import OutFile
+from psoinverse.SCFT.PSCF.FileManagers.fieldfile import CoordFieldFile, WaveVectFieldFile
+from psoinverse.SCFT.PSCF.FileManagers.paramfile import ParamFile
+from psoinverse.SCFT.PSCF.FileManagers.outfile import OutFile
 from psoinverse.mesophases.FieldGenerators import FieldCalculator
 from psoinverse.mesophases.phaseManagement import MesophaseBase
 from psoinverse.mesophases.mesophaseVariables import MesophaseVariable
 from psoinverse.mesophases.mesophaseVariables import VariableTypes as varType
 
 # EXTERNAL IMPORTS
+from copy import deepcopy
 import io
 import numpy as np
 import os
@@ -102,7 +102,7 @@ class PSCFMesophase(MesophaseBase):
                 True if updated without error.
                 False otherwise.
         """
-        super().update(VarSet,root)
+        return super().update(VarSet,root)
     
     def setParams(self, VarSet):
         """
@@ -143,7 +143,8 @@ class PSCFMesophase(MesophaseBase):
             elif f == varType.Chi:
                 # TODO: Add capability to handle T-dependent chi
                 m1, m2 = v.monomerIDs
-                self.param.chi[m2][m1] = v.scftValue
+                #print(self.param.chi,m1,m2)
+                self.param.chi[m2-1][m1-1] = v.scftValue
             else:
                 # TODO: Adjust this to return False rather than raising error for unknowns
                 raise(NotImplementedError("Variable of Type " + str(f) + " not implemented"))
@@ -175,7 +176,7 @@ class PSCFMesophase(MesophaseBase):
         monFrac = self._getMonomerFractions()
         ngrid = self.param.ngrid
         newField = self.fieldGen.to_kgrid(monFrac,ngrid)
-        self.kgrid.fields = newFields
+        self.kgrid.fields = newField
         kgridFile = root / 'rho_kgrid_in'
         self.kgrid.write(kgridFile.open(mode='x'))
         paramFile = root / 'param'
@@ -216,8 +217,8 @@ class PSCFMesophase(MesophaseBase):
         """
         # TODO: Implement actual energy value.
         tot = 0.0
-        for v in self._psoVars:
-            tot = tot + v.scftVal**2
+        for v in self._psoVars.items():
+            tot = tot + v.scftValue**2
         return np.sqrt(max(tot, 0.0))
     
     

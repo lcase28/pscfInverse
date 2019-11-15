@@ -43,19 +43,25 @@ class ScftAgent(Agent):
             if not success:
                 raise(ValueError("Given root path failed to resolve."))
         self.logFile = self.root / logFileName
+        self.autoLog = autoLog
         location = self.phaseManager.psoPoint
         bounds = self.phaseManager.psoBounds
         velSrc = np.zeros_like(location.Coords)
-        super().__init__(bounds, location, velSrc, randGen)
+        # TODO: Figure out better way to force clean file on startup.
+        self._startup = True
+        super().__init__(bounds, location, velSrc, randGen, seekMax = True)
+        self._startup = False
         
     def evaluate(self):
         stepRoot = self.root / "step{}".format(self.steps)
         success = self.phaseManager.update(stepRoot, self.Location)
         if not success:
+            print("scftAgent phasemanager Fail")
             self._startErrorState()
             return False
         self._endErrorState()
         if not self.phaseManager.consistent:
+            print("scftAgent phaseManager inconsistent.")
             self._startErrorState()
             return False
         self.Location.Fitness = np.linalg.norm(self.Location.Coords)
@@ -63,7 +69,7 @@ class ScftAgent(Agent):
         superReturn = super().evaluate()
         
         if self.autoLog:
-            self.writeLog()
+            self.writeLog(self._startup)
         return superReturn
     
     @property
@@ -75,8 +81,12 @@ class ScftAgent(Agent):
         s += "Phase Manager Status:\n{}\n".format(self.phaseManager.statusString)
         return s
     
-    def writeLog(self):
+    def writeLog(self, refresh=False):
         s = self.statusString
-        with self.logFile.open(mode='a') as f:
-            f.write(s)
+        if refresh:
+            with self.logFile.open(mode='w') as f:
+                f.write(s)
+        else:
+            with self.logFile.open(mode='a') as f:
+                f.write(s)
     

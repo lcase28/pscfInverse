@@ -366,6 +366,7 @@ class VariableSet(object):
         return SearchBounds(lower=low, upper=hi)
         
     def items(self):
-        for (k,c) in deepcopy(self.Variables.items()):
+        vals = deepcopy(self.Variables)
+        for (k,c) in vals.items():
             yield c
         

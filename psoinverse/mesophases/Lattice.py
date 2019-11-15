@@ -160,7 +160,7 @@ class Lattice(object):
             alphaRad = np.deg2rad(alpha)
             betaRad = np.deg2rad(beta)
             basis[2,0] = c*np.cos(betaRad)
-            basis[2,1] = c*np.cos(alphaRad)*sin(gammaRad)
+            basis[2,1] = c*np.cos(alphaRad)*np.sin(gammaRad)
             basis[2,2] = np.sqrt( c**2 - basis[2,0]**2 - basis[2,1]**2)
         return basis
     

@@ -42,7 +42,7 @@ class Integrator(ABC):
         """
         super().__init__()
         
-        seekMax = kwargs.get("seekMax",False)
+        seekMax = kwargs.get("seekMax",True)
         try:
             self.seekMax = bool(seekMax)
         except(TypeError, ValueError):
@@ -79,7 +79,7 @@ class StandardIntegrator(Integrator):
     # @param c2 Neighbor Best weighting factor. (Default: 2.05)
     # @param seekMax (Optional, key-word) Boolean. Default: False
     #                If True, Neighbor best is the MAXIMUM neighbor value.
-    def __init__(self, chi=None, c1=None, c2=None, **kwargs):
+    def __init__(self, randGen, chi=None, c1=None, c2=None, **kwargs):
         super().__init__(**kwargs)
         try:
             self.chi = float(chi)
@@ -94,8 +94,7 @@ class StandardIntegrator(Integrator):
         except(TypeError, ValueError):
             self.c2 = 2.05
         
-        seed = kwargs.get('RandSeed',None)
-        self.__randGen = np.random.RandomState(seed)
+        self.__randGen = randGen
     
     ## Return updated position and velocity for agent with Neighbors
     #
