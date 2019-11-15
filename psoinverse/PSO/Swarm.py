@@ -49,8 +49,46 @@ def checkPath(root):
 #
 # =========================================================
 class Swarm(object):
-    def __init__(self, graph, agents, integrator, root = None, logName = "swarm_log", autoLog = True):
-        assert len(graph) == len(agents), "Number of nodes in graph doesn't match number of agents"
+    def __init__(self, graph, agents, integrator, \
+                root = None, logName = "swarm_log", autoLog = True):
+        """ 
+            Constructor for swarm class.
+            
+            Parameters
+            ----------
+            graph : networkx.Graph (undirected)
+                A graph describing the communication links in the swarm.
+                Nodes should be integers corresponding to the Agent IDs.
+            agents : list of psoinverse.PSO.Agent.Agent
+                A list containing all agents in the swarm. List indexes
+                should correspond with the Agent IDs, such that 
+                Agent_n can be accessed through agents[n].
+            integrator : psoinverse.PSO.Integrators.Integrator child class object
+                An object derived from the Integrator abstract base class
+                representing the update procedure for the swarming behavior.
+            root : pathlib.path, optional.
+                A path object pointing to the Swarm's root directory.
+                All output from Swarm will be placed in this directory
+                (or in sub-directories, if so implemented). If directory
+                does not exist, it will be created.
+                Default Value is the current working directory
+            logName : string, optional
+                A valid filename (on user's operating-system) relative to root.
+                Whenever told to write to log, swarm will append
+                to the file of this name.
+            autoLog : bool, optional
+                If True, Swarm will log status on creation and after each step.
+                If False, log will only be written to at user command.
+                Default is True.
+            
+            Raises
+            ------
+            ValueError :
+                If number of nodes in graph does not match number of agents.
+                If root is unable to be resolved or created.
+        """
+        if not len(graph) == len(agents): 
+            raise(ValueError("Number of nodes in graph doesn't match number of agents"))
         self.Agents = agents
         self.Graph = graph
         self.integrator = integrator
@@ -65,9 +103,7 @@ class Swarm(object):
         if flag:
             self.logFile = self.root / logName
         else:
-            raise(ValueError("Invalid root passed to swarm"))
-        #self.History, self.Best = [], []
-        # switch
+            raise(ValueError("Unable to resolve root in Swarm"))
         self.SeekMax = integrator.seekMax
         self._inerror = False
         self.bestAgent = self.get_gbest()
@@ -77,6 +113,12 @@ class Swarm(object):
     
     @property
     def inErrorState(self):
+        """ 
+            Returns true if the swarm is in an error state. 
+            
+            Most likely error state cause is that all agents
+            entered an error state.
+        """
         return self._inerror
     
     def step(self):
@@ -88,6 +130,7 @@ class Swarm(object):
             self.logStatus(False)
     
     def printState(self):
+        """ Depreciated. logStatus and statusString should be used. """
         for a in self.Agents:
             print("\n{}".format(a))
     
@@ -115,23 +158,8 @@ class Swarm(object):
 
         return best_agent
 
-    def print_neighbor_graph(self, fname="SwarmNetwork.png"):
-        #import networkx as nx
-        import pylab as py
-
-        g = nx.Graph()
-        [g.add_node(a.id) for a in self.Agents]
-        [[g.add_edge(a.id, b.id) for b in a.neighbors] for a in self.Agents]
-
-        # draw_graphviz doesn't work in networkx 1.11. Replace with 3 lines below.
-        #nx.draw_graphviz(g)
-        from networkx.drawing.nx_agraph import graphviz_layout
-        pos = graphviz_layout(g)
-        nx.draw(g, pos)
-
-        py.savefig(fname)
-
     def write_output(self, outputbasedir):
+        """ Legacy code. Method not currently supported. See logStatus and statusString. """
         # Maintain a history of the entire set of coordinates and fitnesses for all agents
         #self.History.append([list(agent.get_coords()) + [agent.Location.Fitness] for agent in self.Agents])
 
@@ -179,12 +207,14 @@ class Swarm(object):
         if includeDefinitions:
             s += "Swarm Characteristics:\n"
             s += "\tNumber Agents : {}\n".format(len(self.Agents))
-            s += "\tGraph Type : {}\n".format(self.Graph)
+            s += "\tGraph Type : {!s}\n".format(type(self.Graph))
             s += "\tIntegrator : {}\n".format(self.integrator)
             s += "\tSeek Max : {}\n".format(self.SeekMax)
             s += "\tRoot Path : {}\n".format(self.root)
             s += "\tLog File : {}\n".format(self.logFile)
         # Output status
+        agentTableHeader = "\tID_Num\tFitness\t\t\tPosition\n"
+        agentTableLine = "\t{}\t{:E}\t{}\n"
         s += "Swarm Status:\n"
         s += "\tStep Number : {}\n".format(self.stepsTaken)
         s += "\tIn Error State : {}\n".format(self.inErrorState)
@@ -193,17 +223,15 @@ class Swarm(object):
         else:
             s += "\tBest Agent ID : {}\n".format(self.bestAgent.id)
         s += "\tAgent Data (Current):\n"
-        s += "\tID_Num\t\tFitness\t\tPosition\n"
-        formstring = "\t{}\t\t{}\t\t{}\n"
+        s += agentTableHeader
         for a in self.Agents:
-            posStr = "".join(["{:.4f}, ".format(i) for i in a.Location.Coords])
-            s += formstring.format(a.id, a.Location.Fitness, posStr)
+            posStr = "".join(["{:E}, ".format(i) for i in a.Location.Coords])
+            s += agentTableLine.format(a.id, a.Location.Fitness, posStr)
         s += "\tAgent Data (P_Best):\n"
-        s += "\tID_Num\t\tFitness\t\tPosition\n"
-        formstring = "\t{}\t\t{}\t\t{}\n"
+        s += agentTableHeader
         for a in self.Agents:
-            posStr = "".join(["{:.4f}, ".format(i) for i in a.PBest.Coords])
-            s += formstring.format(a.id, a.PBest.Fitness, posStr)
+            posStr = "".join(["{:E}, ".format(i) for i in a.PBest.Coords])
+            s += agentTableLine.format(a.id, a.PBest.Fitness, posStr)
         return s
     
     def logStatus(self, includeDefinitions = False):

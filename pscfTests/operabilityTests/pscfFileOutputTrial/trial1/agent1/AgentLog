@@ -10,10 +10,13 @@ Chi(1)(2): 0.4863
 Fitness=0.4863
 Phase Manager Status:
 MesophaseManager
-Consistent = TrueFitness = 0.0Phase	Tgt	Valid	Energy
-BCC2	Y	True	0.4862822071067462
-BCC	N	True	0.4862822071067462
-A15	N	True	0.4862822071067462
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	4.862822E-01
+BCC	N	True	4.862822E-01
+A15	N	True	4.862822E-01
 
 Agent 1:
 Step 1:
@@ -27,10 +30,13 @@ Chi(1)(2): 1.5875
 Fitness=1.5904
 Phase Manager Status:
 MesophaseManager
-Consistent = TrueFitness = 0.0Phase	Tgt	Valid	Energy
-BCC2	Y	True	1.5904058848537481
-BCC	N	True	1.5904058848537481
-A15	N	True	1.5904058848537481
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	1.590406E+00
+BCC	N	True	1.590406E+00
+A15	N	True	1.590406E+00
 
 Agent 1:
 Step 2:
@@ -44,8 +50,11 @@ Chi(1)(2): 3.0088
 Fitness=3.0350
 Phase Manager Status:
 MesophaseManager
-Consistent = TrueFitness = 0.0Phase	Tgt	Valid	Energy
-BCC2	Y	True	3.0349571398636725
-BCC	N	True	3.0349571398636725
-A15	N	True	3.0349571398636725
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	3.034957E+00
+BCC	N	True	3.034957E+00
+A15	N	True	3.034957E+00
 

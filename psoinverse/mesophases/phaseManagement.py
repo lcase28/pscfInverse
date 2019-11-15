@@ -359,10 +359,11 @@ class MesophaseManager(object):
     @property
     def statusString(self):
         s = self.__class__.__name__ + "\n"
-        s += "Consistent = {!s}".format(self.consistent)
-        s += "Fitness = {}".format(self.fitness)
+        s += "Consistent = {!s}\n".format(self.consistent)
+        s += "Fitness = {}\n".format(self.fitness)
+        s += "Competing Phases Summary:\n"
         s += "Phase\tTgt\tValid\tEnergy\n"
-        formstring = "{}\t{}\t{!s}\t{!s}\n"
+        formstring = "{}\t{}\t{!s}\t{:E}\n"
         c = self.target
         s += formstring.format(c.phaseName, "Y", c.validState, c.energy)
         for (k, c) in self.candidates.items():
