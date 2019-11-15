@@ -151,7 +151,6 @@ class Agent(ABC):
     @abstractmethod
     def evaluate(self):
         if self.PBest is None:
-            print("Agent init PBest")
             # Initialization condition
             self.PBest = deepcopy(self.Location)
         # Now that fitness has been updated, compare to PBest
