@@ -17,9 +17,6 @@ import pathlib
 
 import cProfile
 
-# Launch time profiling trial, write results to file
-cProfile.run('trialDiblockBccA15()', filename = 'initialProf')
-
 def trialDiblockBccA15():
     bf = BlockFractionVariable(polyNum = 0, blockNum = 0, \
                             val = 0.25, lower = 0.0, upper = 0.5)
@@ -51,3 +48,8 @@ def trialDiblockBccA15():
     sm = Swarm(gr, agents, integr)
     for i in range(2):
         sm.step()
+
+
+# Launch time profiling trial, write results to file
+cProfile.run('trialDiblockBccA15()', filename = 'updateProfBin')
+

@@ -23,7 +23,40 @@ class FieldCalculator(object):
     __defaultParams = { "a" : 1, "b" : 1, "c" : 1, \
                         "alpha" : 90, "beta" : 90, "gamma" : 90 }
     
-    
+    class FieldRecord(object):
+        """ 
+            Helper class to cache reusable portions of previous 
+            calculations in the instance of same ngrid.
+        """
+        def __init__(self, **kwargs):
+            """ Generate an empty record. """
+            self.brillouin = []
+            self.real = []
+            self.imag = []
+            self.qNorm = []
+            self.nEntry = 0
+        
+        def add(self, brillouin, real, imag, qNorm):
+            self.brillouin.append(brillouin)
+            self.real.append(real)
+            self.imag.append(imag)
+            self.qNorm.append(qNorm)
+            self.nEntry += 1
+            
+        def __len__(self):
+            return self.nEntry
+            
+        def records(self):
+            if self.nEntry == 0:
+                pass
+            else:
+                for n in range(self.nEntry):
+                    b = self.brillouin[n]
+                    r = self.real[n]
+                    i = self.imag[n]
+                    q = self.qNorm[n]
+                    yield (n, b, r, i, q)
+        
     def __init__(self, **kwargs):
         """
         Initialize a new FieldGenerator.
@@ -53,6 +86,8 @@ class FieldCalculator(object):
             defPartForm = Circle2DForm
         self.partForm = kwargs.get("formfactor", defPartForm)
         self.smear = kwargs.get("sigma_smear", 0.0)
+        # Cache pre-calculated results which can be recycled whenever ngrid is same
+        self._cached_results = dict()
         super().__init__()
     
     @classmethod
@@ -137,6 +172,39 @@ class FieldCalculator(object):
                 The number of grid points in each (real-space) direction.
         """
         coreindex = 0
+        key = str(tuple(ngrid))
+        if key in self._cached_results:
+            record = self._cached_results.get(key)
+        else:
+            record = self._generateFieldRecord(ngrid)
+            self._cached_results.update({key: record})
+        
+        frac = np.array(frac)
+        nspecies = frac.size
+        nwaves = len(record)
+        rho = np.zeros((nwaves, nspecies))
+        vol = self.lattice.volume
+        particleVol = frac[coreindex] * vol / self.nparticles
+        
+        # primary loop for n-dimensional generation
+        for (t, brillouin, R, I, q_norm) in record.records():
+            if t == 0: 
+                # 0-th wave-vector -- corresponds to volume fractions
+                rho[t,:] = frac[:] 
+            else:
+                ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
+                rho[t, coreindex] = (1/vol) * R * ff * fsmear
+                rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
+                for i in range(nspecies-1):
+                    rho[t, i+1] = rhoTemp * frac[i+1]
+                for (i,r) in enumerate(rho[t,:]):
+                    if r == -0.0:
+                        rho[t,i] = 0.0
+        return rho
+    
+    def _generateFieldRecord(self, ngrid):
+        """ Populate and return a FieldRecord object """
+        f = self.__class__.FieldRecord()
         ngrid = np.array(ngrid)
         # Shift grid for k-grid
         kgrid = np.zeros_like(ngrid)
@@ -145,37 +213,23 @@ class FieldCalculator(object):
                 kgrid[i] = x/2
             else:
                 kgrid[i] = x - 1
-        
-        frac = np.array(frac)
-        nspecies = frac.size
-        nwaves = str_to_num(np.prod(kgrid + np.ones_like(kgrid)))
-        rho = np.zeros((nwaves, nspecies))
-        vol = self.lattice.volume
-        particleVol = frac[coreindex] * vol / self.nparticles
-        
-        # primary loop for n-dimensional generation
-        t = -1
         for G in itertools.product(*[range(x+1) for x in kgrid]):
             # G is wave-vector in n-dimensions.
             G = np.array(G) #convert tuple to array
             brillouin = self.miller_to_brillouin(G, ngrid)
-            t = t + 1
             if np.array_equiv(brillouin, np.zeros_like(brillouin)):
                 # 0-th wave-vector -- corresponds to volume fractions
-                rho[t,:] = frac[:] 
+                # set all but brillouin to None to ensure that, in event of
+                # logical errors regarding use of FieldRecord, run will be
+                # terminated with runtime error.
+                # TODO: clean up handling of 0th wave-vector.
+                f.add(brillouin,None,None,None)
             else:
                 # sum of wave-vector dot particle positions
                 R, I = self.sum_ff(brillouin)
                 q_norm = 2 * np.pi * self.reciprocal_lattice.vectorNorm(brillouin)
-                ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
-                rho[t, coreindex] = (1/vol) * R * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
-                rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
-                for i in range(nspecies-1):
-                    rho[t, i+1] = rhoTemp * frac[i+1]
-                for (i,r) in enumerate(rho[t,:]):
-                    if r == -0.0:
-                        rho[t,i] = 0.0
-        return rho
+                f.add(brillouin,R,I,q_norm)
+        return f
                 
     def sum_ff(self, q):
         """
