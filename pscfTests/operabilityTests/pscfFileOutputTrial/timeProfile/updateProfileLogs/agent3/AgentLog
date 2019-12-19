@@ -1,0 +1,60 @@
+Agent 3:
+Step 0:
+Location:
+BlockFraction(0)(0): 0.0927
+Chi(1)(2): 0.4335
+Fitness=0.4433
+Personal Best:
+BlockFraction(0)(0): 0.0927
+Chi(1)(2): 0.4335
+Fitness=0.4433
+Phase Manager Status:
+MesophaseManager
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	4.433006E-01
+BCC	N	True	4.433006E-01
+A15	N	True	4.433006E-01
+
+Agent 3:
+Step 1:
+Location:
+BlockFraction(0)(0): 0.0762
+Chi(1)(2): 2.0015
+Fitness=2.0030
+Personal Best:
+BlockFraction(0)(0): 0.0762
+Chi(1)(2): 2.0015
+Fitness=2.0030
+Phase Manager Status:
+MesophaseManager
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	2.002984E+00
+BCC	N	True	2.002984E+00
+A15	N	True	2.002984E+00
+
+Agent 3:
+Step 2:
+Location:
+BlockFraction(0)(0): 0.2889
+Chi(1)(2): 3.2583
+Fitness=3.2710
+Personal Best:
+BlockFraction(0)(0): 0.2889
+Chi(1)(2): 3.2583
+Fitness=3.2710
+Phase Manager Status:
+MesophaseManager
+Consistent = True
+Fitness = 0.0
+Competing Phases Summary:
+Phase	Tgt	Valid	Energy
+BCC2	Y	True	3.271035E+00
+BCC	N	True	3.271035E+00
+A15	N	True	3.271035E+00
+
