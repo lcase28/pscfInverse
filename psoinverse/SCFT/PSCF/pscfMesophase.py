@@ -12,6 +12,7 @@ from copy import deepcopy
 import io
 import numpy as np
 import os
+import subprocess as sub    # Requires Python 3.5 --> System dependence
 
 class PSCFMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
@@ -44,6 +45,11 @@ class PSCFMesophase(MesophaseBase):
         self.kgrid = kgrid
         self.param = param
         self.fieldGen = fieldGen
+        # lastLaunch will be used to hold a subprocess.CompletedProcess instance
+        #   Will store system status data for the most recent run
+        #   Previous runs currently not deemed useful.
+        self.lastLaunch = None
+        self.out = None
         super().__init__(ID)
     
     @classmethod
@@ -182,7 +188,24 @@ class PSCFMesophase(MesophaseBase):
         paramFile = root / 'param'
         self.param.write(paramFile.open(mode='x'))
         # TODO: Implement actual pscf launch and output parsing
+        self._launchSim(root)
+        self._readOutput(root)
         return 1.0, True
+    
+    def _launchSim(self, root):
+        """
+        Handle Launching of the simulation in given root directory
+        
+        Store completed process object in self.lastLaunch
+        """
+        launchTemplate = "pscf {} > simulationLog"
+        launchCmd = launchTemplate.format("param")
+        self.lastLaunch = sub.run(launchCmd, cwd=root)
+        
+        
+    def _readOutput(self, root):
+        
+        
     
     def _getMonomerFractions(self):
         """ Return the volume fraction of all monomers """
@@ -200,7 +223,7 @@ class PSCFMesophase(MesophaseBase):
         for i in range(nmonomer):
             frac[i] = frac[i] / Ntot
         return frac
-        
+    
     @property
     def energy(self):
         """
