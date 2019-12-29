@@ -15,33 +15,41 @@ import networkx as nx
 import numpy as np
 import pathlib
 
-bf = BlockFractionVariable(polyNum = 0, blockNum = 0, \
-                        val = 0.25, lower = 0.0, upper = 0.5)
-chi = ChiVariable(Monomer1 = 1, Monomer2 = 2, val = 2, \
-                        lower = 0.0, upper = 4)
-vs = VariableSet([bf,chi])
+import cProfile
 
-cwd = pathlib.Path.cwd()
-bccrt = cwd.parent / "Inputs" / "BCC"
-bccObj = PSCFMesophase.instanceFromFiles("BCC",bccrt/"rho_kgrid", \
-                        bccrt/"param",bccrt/"model_in.txt")
-a15rt = cwd.parent/"Inputs"/"A15"
-a15Obj = PSCFMesophase.instanceFromFiles("A15",a15rt/"rho_kgrid", \
-                        a15rt/"param",a15rt/"model_in.txt")
-tgt = PSCFMesophase.instanceFromFiles("BCC2",bccrt/"rho_kgrid", \
-                        bccrt/"param",bccrt/"model_in.txt")
+def trialDiblockBccA15():
+    bf = BlockFractionVariable(polyNum = 0, blockNum = 0, \
+                            val = 0.25, lower = 0.0, upper = 0.5)
+    chi = ChiVariable(Monomer1 = 1, Monomer2 = 2, val = 2, \
+                            lower = 0.0, upper = 4)
+    vs = VariableSet([bf,chi])
+    
+    cwd = pathlib.Path.cwd()
+    bccrt = cwd.parent / "Inputs" / "BCC"
+    bccObj = PSCFMesophase.instanceFromFiles("BCC",bccrt/"rho_kgrid", \
+                            bccrt/"param",bccrt/"model_in.txt")
+    a15rt = cwd.parent/"Inputs"/"A15"
+    a15Obj = PSCFMesophase.instanceFromFiles("A15",a15rt/"rho_kgrid", \
+                            a15rt/"param",a15rt/"model_in.txt")
+    tgt = PSCFMesophase.instanceFromFiles("BCC2",bccrt/"rho_kgrid", \
+                            bccrt/"param",bccrt/"model_in.txt")
+    
+    candidates = {bccObj.phaseName : bccObj, a15Obj.phaseName : a15Obj}
+    mngr = MesophaseManager(candidates, tgt, vs)
+    
+    rgen = np.random.RandomState(100)
+    agents = []
+    for i in range(4):
+        rtpath = cwd/"agent{}".format(i)
+        agents.append(ScftAgent(mngr, rgen, root=rtpath))
+    
+    integr = StandardIntegrator(rgen, seekMax = True)
+    gr = nx.cycle_graph(4)
+    sm = Swarm(gr, agents, integr)
+    for i in range(2):
+        sm.step()
 
-candidates = {bccObj.phaseName : bccObj, a15Obj.phaseName : a15Obj}
-mngr = MesophaseManager(candidates, tgt, vs)
 
-rgen = np.random.RandomState(100)
-agents = []
-for i in range(4):
-    rtpath = cwd/"agent{}".format(i)
-    agents.append(ScftAgent(mngr, rgen, root=rtpath))
+# Launch time profiling trial, write results to file
+cProfile.run('trialDiblockBccA15()', filename = 'updateProfBin')
 
-integr = StandardIntegrator(rgen, seekMax = True)
-gr = nx.cycle_graph(4)
-sm = Swarm(gr, agents, integr)
-for i in range(2):
-    sm.step()

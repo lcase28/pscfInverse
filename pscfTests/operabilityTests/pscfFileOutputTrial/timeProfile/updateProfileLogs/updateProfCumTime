@@ -1,0 +1,88 @@
+Fri Nov 22 16:32:50 2019    updateProfBin
+
+         66419547 function calls (66412650 primitive calls) in 162.065 seconds
+
+   Ordered by: cumulative time
+   List reduced from 389 to 78 due to restriction <0.2>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000  162.065  162.065 {built-in method builtins.exec}
+        1    0.558    0.558  162.065  162.065 <string>:1(<module>)
+        1    0.000    0.000  161.507  161.507 diblock_bcc_a15_trial.py:20(trialDiblockBccA15)
+       12    0.000    0.000  159.750   13.313 scftAgent.py:55(evaluate)
+       12    0.000    0.000  159.603   13.300 phaseManagement.py:260(update)
+       12    0.000    0.000  159.602   13.300 phaseManagement.py:296(_evaluate)
+       36    0.000    0.000  159.595    4.433 pscfMesophase.py:80(update)
+       36    0.000    0.000  159.595    4.433 phaseManagement.py:70(update)
+       36    0.002    0.000  159.541    4.432 pscfMesophase.py:153(_evaluate)
+       36   19.012    0.528  148.858    4.135 FieldGenerators.py:161(to_kgrid)
+        4    0.000    0.000  107.665   26.916 scftAgent.py:18(__init__)
+        4    0.000    0.000  107.630   26.907 Agent.py:17(__init__)
+       12    4.675    0.390   82.077    6.840 FieldGenerators.py:205(_generateFieldRecord)
+        2    0.000    0.000   52.137   26.069 Swarm.py:124(step)
+        8    0.000    0.000   52.136    6.517 Agent.py:108(update)
+  2212956   32.864    0.000   33.404    0.000 ParticleForms.py:45(formFactorAmplitude)
+   737652   22.636    0.000   29.121    0.000 FieldGenerators.py:234(sum_ff)
+   737652    1.184    0.000   18.962    0.000 Lattice.py:412(vectorNorm)
+   737652    7.899    0.000   17.778    0.000 Lattice.py:391(vectorDot)
+   737664    8.813    0.000   12.823    0.000 FieldGenerators.py:268(miller_to_brillouin)
+  2212992    2.222    0.000   12.700    0.000 fromnumeric.py:1966(sum)
+       36    0.000    0.000   10.610    0.295 fieldfile.py:513(write)
+       36    0.000    0.000   10.610    0.295 fieldfile.py:91(write)
+       36    3.283    0.091   10.077    0.280 fieldfile.py:592(_outputField)
+  2213008    2.834    0.000    9.995    0.000 fromnumeric.py:69(_wrapreduction)
+   737664    4.551    0.000    9.309    0.000 numeric.py:2598(array_equiv)
+  2950672    8.637    0.000    8.637    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+  1475352    1.635    0.000    7.541    0.000 numeric.py:112(zeros_like)
+  4719324    6.485    0.000    6.485    0.000 {built-in method numpy.dot}
+4265773/4265701    5.713    0.000    5.715    0.000 {method 'format' of 'str' objects}
+   737655    5.657    0.000    5.657    0.000 Lattice.py:224(metricTensor)
+   737664    0.459    0.000    3.516    0.000 {method 'all' of 'numpy.ndarray' objects}
+  1475307    0.881    0.000    3.469    0.000 fromnumeric.py:197(reshape)
+  4603903    3.178    0.000    3.178    0.000 {built-in method numpy.array}
+   737664    0.309    0.000    3.057    0.000 _methods.py:45(_all)
+  1475307    0.828    0.000    2.588    0.000 fromnumeric.py:54(_wrapfunc)
+  1475433    2.274    0.000    2.274    0.000 {built-in method numpy.zeros}
+  3688363    1.034    0.000    2.091    0.000 numeric.py:469(asarray)
+  1475352    2.029    0.000    2.029    0.000 {built-in method numpy.empty_like}
+        3    0.000    0.000    1.703    0.568 pscfMesophase.py:49(instanceFromFiles)
+   737664    1.325    0.000    1.689    0.000 FieldGenerators.py:39(add)
+  1475352    1.606    0.000    1.606    0.000 {built-in method numpy.copyto}
+  2213028    1.602    0.000    1.602    0.000 FieldGenerators.py:49(records)
+  1475307    1.400    0.000    1.400    0.000 {method 'reshape' of 'numpy.ndarray' objects}
+        3    0.000    0.000    1.338    0.446 fieldfile.py:498(__init__)
+        3    0.000    0.000    1.338    0.446 fieldfile.py:38(__init__)
+        3    0.156    0.052    1.313    0.438 fieldfile.py:567(_readField)
+   177728    0.335    0.000    1.157    0.000 fieldfile.py:577(_nextFieldLine)
+  2136711    1.082    0.000    1.082    0.000 {method 'write' of '_io.TextIOWrapper' objects}
+  2213008    0.996    0.000    0.996    0.000 fromnumeric.py:70(<dictcomp>)
+  4439376    0.542    0.000    0.542    0.000 {method 'get' of 'dict' objects}
+       78    0.533    0.007    0.533    0.007 {method 'close' of '_io.TextIOWrapper' objects}
+  2214512    0.483    0.000    0.483    0.000 {built-in method builtins.isinstance}
+   355456    0.280    0.000    0.467    0.000 fieldfile.py:585(_getRealComponent)
+  3312074    0.397    0.000    0.397    0.000 {method 'append' of 'list' objects}
+  1476719    0.360    0.000    0.360    0.000 {built-in method builtins.getattr}
+        3    0.000    0.000    0.290    0.097 FieldGenerators.py:93(from_file)
+  2213437    0.289    0.000    0.289    0.000 {method 'items' of 'dict' objects}
+        3    0.000    0.000    0.245    0.082 FieldGenerators.py:60(__init__)
+        3    0.000    0.000    0.244    0.081 Lattice.py:229(reciprocal)
+        3    0.010    0.003    0.244    0.081 Lattice.py:234(reciprocalVectors)
+   178046    0.196    0.000    0.199    0.000 {method 'readline' of '_io.TextIOWrapper' objects}
+       96    0.007    0.000    0.183    0.002 {built-in method io.open}
+       90    0.000    0.000    0.182    0.002 pathlib.py:1177(open)
+       90    0.000    0.000    0.174    0.002 pathlib.py:1037(_opener)
+       90    0.174    0.002    0.174    0.002 {built-in method posix.open}
+       12    0.001    0.000    0.146    0.012 scftAgent.py:84(writeLog)
+        3    0.137    0.046    0.137    0.046 linalg.py:486(inv)
+   533560    0.121    0.000    0.121    0.000 {method 'split' of 'str' objects}
+  1068284    0.113    0.000    0.113    0.000 {method 'strip' of 'str' objects}
+        6    0.000    0.000    0.078    0.013 version.py:9(__init__)
+ 6378/198    0.009    0.000    0.067    0.000 copy.py:132(deepcopy)
+  472/120    0.012    0.000    0.065    0.001 copy.py:268(_reconstruct)
+       36    0.000    0.000    0.063    0.002 Lattice.py:219(volume)
+       36    0.062    0.002    0.063    0.002 linalg.py:2040(det)
+        3    0.000    0.000    0.055    0.018 paramfile.py:33(__init__)
+  388/228    0.002    0.000    0.049    0.000 copy.py:236(_deepcopy_dict)
+       81    0.044    0.001    0.045    0.001 stringTools.py:33(wordsGenerator)
+
+
