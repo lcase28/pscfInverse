@@ -44,6 +44,7 @@ class FieldFile(ABC):
 
         The file named filename is opened and closed within this function.
         '''
+        self.filename = filename
         self.file = open(filename, 'r')
         self._io   = IO()
         file = self.file
@@ -560,42 +561,124 @@ class WaveVectFieldFile(FieldFile):
         temp = self.fields[:,i]
         self.fields[:,i] = self.fields[:,j]
         self.fields[:,j] = temp
-
+    
+    def fieldSimilarity(self, target):
+        """
+        Return a scalar metric of field similarity for each monomer
+        in the field files.
+        
+        Implemented as the inner product of normalized fourier
+        space fields.
+        
+        PARAMETERS
+        ----------
+        target : WaveVectFieldFile
+            The field file to be compared to this one
+        
+        RETURNS
+        -------
+        sim : 1xN_monomer numpy array
+            Each element contains the similarity for the corresponding
+            monomer. 1 indicates high similarity. 0 indicate orthogonality.
+        
+        THROWS
+        ------
+        TypeError
+            If target is not a WaveVectFieldFile
+        ValueError
+            If target is not comparable to current
+        """
+        msgbase = "Field similarity check requires "
+        if type(self) is not type(target):
+            msg = msgbase + "type match.\n\tGiven: %s. Needs: %s"
+            raise(TypeError(msg.format(str(type(target)),str(type(self)))))
+        
+        if not self.canCompare(target):
+            msg = msgbase + "comparable fields. Mismatch in N_monomer, or n_grid."
+            raise(ValueError(msg))
+        
+        field1 = np.conj(self.fields)
+        field2 = target.fields
+        
+        norm1 = np.linalg.norm(field1,axis=0)
+        norm2 = np.linalg.norm(field2,axis=0)
+        normtot = np.multiply(norm1,norm2)
+        
+        inprod = np.diag(np.tensordot(field1,field2,axes=(0,0)))
+        
+        simComplex = np.divide(inprod,normtot) # This will return the complex similarity
+        sim = np.sqrt(np.multiply(simComplex,np.conj(simComplex))) # take magnitude of each similarity
+        
+        return np.real(sim)
+    
+    def canCompare(self,target):
+        if type(self) is not type(target):
+            return False
+        
+        if not self.N_monomer == target.N_monomer:
+            return False
+        
+        if not np.array_equiv(self.ngrid,target.ngrid):
+            return False
+            
+        return True
+    
     # "Private" methods
     
     # overriding inherited private abstract methods
     def _readField(self):
         self.ngrid = self._input_vec('int', n=self.dim, comment='ngrid')
-        gp = int(self.ngrid[0] / 2)
+        gp = int(self.ngrid[0] / 2) + 1
         for i in range(self.dim-1):
             gp = gp * self.ngrid[1+i]
         self.gridPoints = gp
-        self.fields = np.zeros((self.gridPoints,self.N_monomer))
+        self.fields = 1j*np.zeros((self.gridPoints,self.N_monomer))
         for i in range(self.gridPoints):
-            self.fields[i,:] = self._nextFieldLine()
+            try:
+                self.fields[i,:] = self._nextFieldLine()
+            except ValueError as err:
+                msg = str(err) + "Line {} of {}".format(i,gp)
+                raise(ValueError(msg))
     
     def _nextFieldLine(self):
         s = self.file.readline() # get next line
-        sMon = s.split()
-        vals = []
+        sMon = s.split(')')
+        vals = np.zeros((2,self.N_monomer))
         for i in range(self.N_monomer):
-            vals.append(self._getRealComponent(sMon[i]))
-        return np.array(vals)
+            try:
+                re, im = self._getComponents(sMon[i])
+            except ValueError as err:
+                msg = str(err) + "Monomer {}\n".format(i)
+                raise(ValueError(msg))
+            #vals[0,i], vals[1,i] = self._getComponents(sMon[i])
+            #vals.append(self._getRealComponent(sMon[i]))
+            vals[0,i] = re
+            vals[1,i] = im
+        retVal = vals[0,:] + 1j * vals[1,:]
+        return retVal
         
-    def _getRealComponent(self, s):
-        s = s.strip()
+    def _getComponents(self, sbase):
+        s = sbase.strip()
         s = s.strip('()')
         slist = s.split(',')
-        return float(slist[1].strip())
+        try:
+            re = float(slist[0].strip())
+            im = float(slist[1].strip())
+        except(ValueError):
+            raise(ValueError("Error Converting string {} to float.\n".format(sbase)))
+        return re, im
+        #return float(slist[0].strip()), float(slist[1].strip())
         
     
     def _outputField(self):
         self._output_vec('int', 'ngrid', n=self.dim, s='R', f='A')
-        formstr = "({:.4E},{:.4E}) "
+        formstr = "    ({:.4E},{:.4E}) "
         for i in range(self.gridPoints):
             s = ""
             for j in range(self.N_monomer):
-                s += formstr.format(self.fields[i,j],0.0)
+                re = np.real(self.fields[i,j])
+                im = np.imag(self.fields[i,j])
+                s += formstr.format(re,im)
             s += "\n"
             self.file.write(s)
             
