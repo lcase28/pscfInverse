@@ -1,0 +1,380 @@
+ format  1  0
+
+MONOMERS            
+N_monomer           
+                   2
+kuhn                
+    2.0000000000E+00    1.0000000000E+00
+
+CHAINS              
+N_chain             
+                   1
+N_block             
+                   2
+block_monomer       
+                   1                   2
+block_length        
+    2.5000000000E-01    7.5000000000E-01
+
+COMPOSITION         
+ensemble            
+                   0
+phi_chain           
+    1.0000000000E+00
+
+INTERACTION         
+interaction_type    
+               'chi'
+chi                 
+    2.5000000000E+01
+
+UNIT_CELL           
+dim                 
+                   3
+crystal_system      
+             'cubic'
+N_cell_param        
+                   1
+cell_param          
+    2.0000000000E+00
+
+DISCRETIZATION      
+ngrid               
+                  36                  36                  36
+chain_step          
+    1.0000000000E-02
+
+BASIS               
+group_name          
+          'I m -3 m'
+N_star              
+                 670
+
+RGRID_TO_FIELD      
+input_filename      
+         'rho_rgrid'
+output_filename     
+               'rho'
+
+RHO_TO_OMEGA        
+input_filename      
+               'rho'
+output_filename     
+             'omega'
+N_star in field file
+                 670
+
+ITERATE             
+input_filename      
+             'omega'
+N_star in field file
+                 670
+output_prefix       
+                  ''
+max_itr             
+                 400
+error_max           
+    1.0000000000E-05
+domain              
+                   T
+itr_algo            
+                'NR'
+N_cut               
+                  80
+
+************************************
+
+
+Iteration   0
+error       =           7.5874884427E+01
+stress      =          -7.5874884427E-01
+cell_param  =           2.0000000000E+00
+f_Helmholtz =           3.2704125056E+00
+Initializing Jacobian ...
+Jacobian ...
+Inverting Jacobian ...
+
+Iteration   1
+error       =           6.9001380836E+01
+stress      =          -6.9001380836E-01
+cell_param  =           2.0460944466E+00
+f_Helmholtz =           3.1766564297E+00
+
+Iteration   2
+error       =           6.3443755936E+01
+stress      =          -6.3443755936E-01
+cell_param  =           2.0921357254E+00
+f_Helmholtz =           3.1205299685E+00
+
+Iteration   3
+error       =           5.8440291235E+01
+stress      =          -5.8440291235E-01
+cell_param  =           2.1400582709E+00
+f_Helmholtz =           3.0926208436E+00
+
+Iteration   4
+error       =           5.2881450246E+01
+stress      =          -5.2881450246E-01
+cell_param  =           2.1999186789E+00
+f_Helmholtz =           3.0820785000E+00
+
+Iteration   5
+error       =           4.5094665181E+01
+stress      =          -4.5094665181E-01
+cell_param  =           2.2993568031E+00
+f_Helmholtz =           3.1051248730E+00
+
+Iteration   6
+error       =           3.5951844628E+01
+stress      =          -3.5951844628E-01
+cell_param  =           2.4451985913E+00
+f_Helmholtz =           3.1991764820E+00
+
+Iteration   7
+error       =           1.9283733651E+01
+stress      =          -1.9283733651E-01
+cell_param  =           2.7365496221E+00
+f_Helmholtz =           3.3730747627E+00
+
+Iteration   8
+error       =           9.1769384868E+00
+stress      =          -9.1769384868E-02
+cell_param  =           2.8049026543E+00
+f_Helmholtz =           3.1968806900E+00
+Minimum lambda in line search reached.
+
+Iteration   9
+error       =           9.1769372908E+00
+stress      =          -9.1769372908E-02
+cell_param  =           2.8049026798E+00
+f_Helmholtz =           3.1968806830E+00
+
+Iteration  10
+error       =           8.9224913183E+00
+stress      =          -8.9224913183E-02
+cell_param  =           2.8235378116E+00
+f_Helmholtz =           3.2105402292E+00
+
+Iteration  11
+error       =           8.7017116754E+00
+stress      =          -8.7017116754E-02
+cell_param  =           2.8331791508E+00
+f_Helmholtz =           3.2151070144E+00
+
+Iteration  12
+error       =           7.9063664155E+00
+stress      =          -7.9063664155E-02
+cell_param  =           2.8530262461E+00
+f_Helmholtz =           3.2150417102E+00
+
+Iteration  13
+error       =           5.7403103820E+00
+stress      =          -5.7403103820E-02
+cell_param  =           2.9050586021E+00
+f_Helmholtz =           3.2153934156E+00
+
+Iteration  14
+error       =           5.1566538381E+00
+stress      =          -5.1566538381E-02
+cell_param  =           2.9215518661E+00
+f_Helmholtz =           3.2193708958E+00
+
+Iteration  15
+error       =           4.8019880637E+00
+stress      =          -4.8019880637E-02
+cell_param  =           2.9309638227E+00
+f_Helmholtz =           3.2205381118E+00
+
+Iteration  16
+error       =           2.7826003010E+00
+stress      =          -2.7826003010E-02
+cell_param  =           2.9757831900E+00
+f_Helmholtz =           3.2171242567E+00
+
+Iteration  17
+error       =           1.7940536191E+00
+stress      =          -1.7940536191E-02
+cell_param  =           2.9982739273E+00
+f_Helmholtz =           3.2180619478E+00
+
+Iteration  18
+error       =           1.5582429630E+00
+stress      =          -1.5582429630E-02
+cell_param  =           3.0049996751E+00
+f_Helmholtz =           3.2196913095E+00
+
+Iteration  19
+error       =           1.1784686994E+00
+stress      =          -1.1784686994E-02
+cell_param  =           3.0145408714E+00
+f_Helmholtz =           3.2202991313E+00
+
+Iteration  20
+error       =           9.3494284976E-02
+stress      =          -9.3494284976E-04
+cell_param  =           3.0384506211E+00
+f_Helmholtz =           3.2193916952E+00
+
+Iteration  21
+error       =           8.1580126603E-02
+stress      =          -8.1580126603E-04
+cell_param  =           3.0387495741E+00
+f_Helmholtz =           3.2196159814E+00
+
+Iteration  22
+error       =           6.6737593508E-02
+stress      =          -6.6737593508E-04
+cell_param  =           3.0390791985E+00
+f_Helmholtz =           3.2196270568E+00
+
+Iteration  23
+error       =           2.1696217662E-02
+stress      =          -2.1696217662E-04
+cell_param  =           3.0400330461E+00
+f_Helmholtz =           3.2194335608E+00
+
+Iteration  24
+error       =           3.0161338954E-02
+stress      =          -3.0161338954E-04
+cell_param  =           3.0399022393E+00
+f_Helmholtz =           3.2194824914E+00
+
+Iteration  25
+error       =           8.6154078854E-03
+stress      =          -8.6154078854E-05
+cell_param  =           3.0403602584E+00
+f_Helmholtz =           3.2194383663E+00
+
+Iteration  26
+error       =           6.6952611874E-03
+stress      =          -6.6952611874E-05
+cell_param  =           3.0404064442E+00
+f_Helmholtz =           3.2194415719E+00
+
+Iteration  27
+error       =           9.4246907443E-04
+stress      =           9.4246907443E-06
+cell_param  =           3.0405772271E+00
+f_Helmholtz =           3.2194281812E+00
+
+Iteration  28
+error       =           1.7740291021E-03
+stress      =           1.7740291021E-05
+cell_param  =           3.0406066322E+00
+f_Helmholtz =           3.2194329808E+00
+
+Iteration  29
+error       =           6.2622921395E-03
+stress      =           6.2622921395E-05
+cell_param  =           3.0407241419E+00
+f_Helmholtz =           3.2194230401E+00
+
+Iteration  30
+error       =           5.5684047785E-03
+stress      =           5.5684047785E-05
+cell_param  =           3.0407103000E+00
+f_Helmholtz =           3.2194290767E+00
+
+Iteration  31
+error       =           6.4303610134E-03
+stress      =           6.4303610134E-05
+cell_param  =           3.0407284550E+00
+f_Helmholtz =           3.2194299172E+00
+
+Iteration  32
+error       =           2.8527094481E-03
+stress      =           2.8527094481E-05
+cell_param  =           3.0406564409E+00
+f_Helmholtz =           3.2194336337E+00
+
+Iteration  33
+error       =           2.4569990930E-03
+stress      =           2.4569990930E-05
+cell_param  =           3.0406514174E+00
+f_Helmholtz =           3.2194356414E+00
+
+Iteration  34
+error       =           1.8618776331E-03
+stress      =           1.8618776331E-05
+cell_param  =           3.0406397930E+00
+f_Helmholtz =           3.2194377559E+00
+
+Iteration  35
+error       =           1.2557385874E-03
+stress      =           1.2557385874E-05
+cell_param  =           3.0406268811E+00
+f_Helmholtz =           3.2194382422E+00
+
+Iteration  36
+error       =           9.5245885118E-04
+stress      =           9.5245885118E-06
+cell_param  =           3.0406210375E+00
+f_Helmholtz =           3.2194394326E+00
+
+Iteration  37
+error       =           6.1889170309E-04
+stress      =           6.1889170309E-06
+cell_param  =           3.0406149931E+00
+f_Helmholtz =           3.2194404232E+00
+
+Iteration  38
+error       =           4.0401703686E-04
+stress      =           4.0401703686E-06
+cell_param  =           3.0406106271E+00
+f_Helmholtz =           3.2194407194E+00
+
+Iteration  39
+error       =           2.6979618024E-04
+stress      =           2.6979618024E-06
+cell_param  =           3.0406077875E+00
+f_Helmholtz =           3.2194410925E+00
+
+Iteration  40
+error       =           1.8946356458E-04
+stress      =           1.8946356458E-06
+cell_param  =           3.0406062669E+00
+f_Helmholtz =           3.2194412468E+00
+
+Iteration  41
+error       =           1.0546181940E-04
+stress      =           1.0546181940E-06
+cell_param  =           3.0406046843E+00
+f_Helmholtz =           3.2194415453E+00
+
+Iteration  42
+error       =           7.0120586401E-05
+stress      =           7.0120586401E-07
+cell_param  =           3.0406039371E+00
+f_Helmholtz =           3.2194415466E+00
+
+Iteration  43
+error       =           4.3909495035E-05
+stress      =           4.3909495035E-07
+cell_param  =           3.0406034065E+00
+f_Helmholtz =           3.2194416118E+00
+
+Iteration  44
+error       =           3.1792827350E-05
+stress      =           3.1792827350E-07
+cell_param  =           3.0406031815E+00
+f_Helmholtz =           3.2194416734E+00
+
+Iteration  45
+error       =           1.0262417912E-05
+stress      =           1.0262417912E-07
+cell_param  =           3.0406027510E+00
+f_Helmholtz =           3.2194417020E+00
+
+Iteration  46
+error       =           1.0299755036E-05
+stress      =           1.0299755036E-07
+cell_param  =           3.0406027530E+00
+f_Helmholtz =           3.2194417054E+00
+
+Iteration  47
+error       =           4.6461947956E-06
+stress      =           4.6461947956E-08
+cell_param  =           3.0406026422E+00
+f_Helmholtz =           3.2194417283E+00
+
+FINISH              

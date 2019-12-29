@@ -1,0 +1,80 @@
+ format  1  0
+ 
+MONOMERS            
+N_monomer           
+                   3
+kuhn                
+    1.0000000000E+00    1.0000000000E+00    1.0000000000E+00
+ 
+CHAINS              
+N_chain             
+                   1
+N_block             
+                   4
+block_monomer       
+                   1                    2                   3                   2     
+block_length        
+    1.5000000000E-01    2.1250000000E-01    4.25000000000E-01    2.1250000000E-01
+ 
+COMPOSITION         
+ensemble            
+                   0
+phi_chain           
+    1.0000000000E+00
+ 
+INTERACTION         
+interaction_type    
+               'chi'
+chi                 
+    1.23342E+01
+    6.81476E+01    3.45944E+01
+ 
+UNIT_CELL           
+dim                 
+                   3
+crystal_system      
+             'cubic'
+N_cell_param        
+                   1
+cell_param        
+                  2.0
+ 
+DISCRETIZATION      
+ngrid               
+                  36                  36                  36
+chain_step          
+    1.0000000000E-02
+ 
+BASIS               
+group_name          
+          'I m -3 m'
+
+RGRID_TO_FIELD
+input_filename
+          'rho_rgrid'
+output_filename
+          'rho'
+
+RHO_TO_OMEGA
+input_filename
+          'rho'
+output_filename
+          'omega'
+ 
+ITERATE             
+input_filename        
+          'omega'
+output_prefix       
+           ''
+max_itr             
+                 500
+error_max           
+    1.0000000000E-05
+domain              
+                  T
+itr_algo            
+                'NR'
+N_cut               
+                 100
+ 
+FINISH              

@@ -1,0 +1,68 @@
+System{
+  Mixture{
+     nMonomer  2
+     #monomers.0.A 1.0
+     #monomers.0.B 1.0
+     monomers.0{
+         name A
+         kuhn 1.0
+     }
+     monomers.1{
+         name B
+         kuhn 1.0
+     }
+     nPolymer  2
+     Polymer(0){
+        totalNeff 1
+        nBlock  3
+        nVertex 4
+        #blocks.0.0.0.1 0.125
+        #blocks.1.1.1.2 0.875
+        blocks.0{
+           monomerType 0
+           vertex 0  1
+           fraction 0.125
+        }
+        blocks.1{ 
+           monomerType 1  
+           vertex 1  2  
+           fraction 0.750
+        }
+        blocks.2{
+          monomerType 0
+          vertex 2 3
+          fraction 0.125
+        }
+        phi     0.053718
+     }
+     Polymer(1){
+        totalNeff 1
+        nBlock  1
+        nVertex 2
+        #blocks.0.1.0.1 1.000
+        blocks.0{
+           monomerType 1
+           vertex 0  1
+           fraction 1.000
+        }
+        phi     0.946282
+     }
+     vMonomer    0.045787
+     ds             0.005
+  }
+  ChiInteraction{
+     chi.0.1     88.5
+     chi.0.0     0.0
+     chi.1.1     0.0
+  }
+  Domain{
+     mode     Cylindrical
+     isShell            0
+     xMax            4.00
+     nx               401
+  }
+  NrIterator{
+     epsilon   0.0000001
+  }
+}
+

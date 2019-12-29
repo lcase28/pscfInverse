@@ -1,0 +1,61 @@
+ format  1  0
+
+MONOMERS            
+N_monomer           
+                   2
+kuhn                
+    2.0000000000E+00    1.0000000000E+00
+
+CHAINS              
+N_chain             
+                   1
+N_block             
+                   2
+block_monomer       
+                   1                   2
+block_length        
+    2.5000000000E-01    7.5000000000E-01
+
+COMPOSITION         
+ensemble            
+                   0
+phi_chain           
+    1.0000000000E+00
+
+INTERACTION         
+interaction_type    
+               'chi'
+chi                 
+    2.5000000000E+01
+
+UNIT_CELL           
+dim                 
+                   3
+crystal_system      
+        'tetragonal'
+N_cell_param        
+                   2
+cell_param          
+    9.5000000000E+00    5.0300000000E+00
+
+DISCRETIZATION      
+ngrid               
+                 128                 128                  64
+chain_step          
+    1.0000000000E-02
+
+BASIS               
+group_name          
+        'P 42/m n m'
+N_star              
+               68657
+
+FIELD_TO_RGRID      
+input_filename      
+               'rho'
+output_filename     
+         'rho_rgrid'
+N_star in field file
+                8985
+
+FINISH              

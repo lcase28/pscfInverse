@@ -1,0 +1,9 @@
+Tests related to generation and reading of PSCF parameter files.
+
+Subdirectory contents:
+
+    simpleParamTest/    Very first test of PSCF parameter file formatting. Also tests the formatting of the PSO input file.
+                        Trace of input file reading relies on tracing commands within parameter factory code - later revisions 
+                        may eliminate this functionality, but should not impact operation of this test.
+    
+** additional descriptions will be added as more tests are generated.

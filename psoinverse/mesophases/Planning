@@ -1,0 +1,12 @@
+
+## General plan
+    Initially targeting particle phases
+        Generation of "lattice" classes, similar to "crystals" package?
+            Simply representation of lattice parameters, basis vectors, etc.
+            No Particle positions
+        Generation of "ParticlePhase" class
+            Contains "lattice" for system general information
+            Contains list of fractional positions
+            Contains particle radius
+                **Particle class??
+        

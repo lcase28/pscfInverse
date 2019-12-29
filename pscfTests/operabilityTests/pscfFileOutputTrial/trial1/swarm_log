@@ -1,0 +1,55 @@
+Swarm Characteristics:
+	Number Agents : 4
+	Graph Type : <class 'networkx.classes.graph.Graph'>
+	Integrator : <psoinverse.PSO.Integrators.StandardIntegrator object at 0xa1a69c668>
+	Seek Max : True
+	Root Path : /Users/logancase/Documents/Research/PSO/Development/Primary/psoinverse/pscfTests/operabilityTests/pscfFileOutputTrial/trial1
+	Log File : /Users/logancase/Documents/Research/PSO/Development/Primary/psoinverse/pscfTests/operabilityTests/pscfFileOutputTrial/trial1/swarm_log
+Swarm Status:
+	Step Number : 0
+	In Error State : False
+	Best Agent ID : 2
+	Agent Data (Current):
+	ID_Num	Fitness			Position
+	0	1.146148E+00	2.717025E-01, 1.113478E+00, 
+	1	4.862822E-01	2.359428E-03, 4.862765E-01, 
+	2	2.301389E+00	6.835329E-02, 2.300373E+00, 
+	3	4.433006E-01	9.266411E-02, 4.335076E-01, 
+	Agent Data (P_Best):
+	ID_Num	Fitness			Position
+	0	1.146148E+00	2.717025E-01, 1.113478E+00, 
+	1	4.862822E-01	2.359428E-03, 4.862765E-01, 
+	2	2.301389E+00	6.835329E-02, 2.300373E+00, 
+	3	4.433006E-01	9.266411E-02, 4.335076E-01, 
+Swarm Status:
+	Step Number : 1
+	In Error State : False
+	Best Agent ID : 2
+	Agent Data (Current):
+	ID_Num	Fitness			Position
+	0	1.091997E+00	2.717025E-01, 1.057656E+00, 
+	1	1.590406E+00	9.544733E-02, 1.587539E+00, 
+	2	1.864402E+00	9.711100E-02, 1.861871E+00, 
+	3	2.002984E+00	7.620976E-02, 2.001533E+00, 
+	Agent Data (P_Best):
+	ID_Num	Fitness			Position
+	0	1.146148E+00	2.717025E-01, 1.113478E+00, 
+	1	1.590406E+00	9.544733E-02, 1.587539E+00, 
+	2	2.301389E+00	6.835329E-02, 2.300373E+00, 
+	3	2.002984E+00	7.620976E-02, 2.001533E+00, 
+Swarm Status:
+	Step Number : 2
+	In Error State : False
+	Best Agent ID : 2
+	Agent Data (Current):
+	ID_Num	Fitness			Position
+	0	2.320779E+00	2.717025E-01, 2.304819E+00, 
+	1	3.034957E+00	3.978822E-01, 3.008763E+00, 
+	2	2.020351E+00	3.476967E-01, 1.990207E+00, 
+	3	3.271035E+00	2.889147E-01, 3.258251E+00, 
+	Agent Data (P_Best):
+	ID_Num	Fitness			Position
+	0	2.320779E+00	2.717025E-01, 2.304819E+00, 
+	1	3.034957E+00	3.978822E-01, 3.008763E+00, 
+	2	2.301389E+00	6.835329E-02, 2.300373E+00, 
+	3	3.271035E+00	2.889147E-01, 3.258251E+00, 

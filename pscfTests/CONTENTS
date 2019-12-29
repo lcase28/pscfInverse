@@ -1,0 +1,15 @@
+Directory tree rooted in this directory contains test scripts used during the development of the PSCF-interfaced PSO tool.
+
+Sub-directory guide:
+    
+        compatibilityTests/     Tests of direct PSCF-PSO interaction features
+                                (Parameter file writing, field file writing, etc.)
+        
+        unitTests/              Unit tests os specific classes. Intended for use with pytest package
+                                in verification tests of full PSO Suite.
+                                Each file should contain unit tests for a specific class or module
+                                in the PSO suite. Pytest should be able to be used to run the full suite
+                                of tests as an installation verification method or as a development 
+                                debugging procedure.
+        
+        ** New Directories will be added as they're created.
