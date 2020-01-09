@@ -113,7 +113,7 @@ class MesophaseBase(ABC):
     
     def _seterror(self):
         self._validState = False
-        self._energy = np.nan
+        self._energy = np.inf
     
     def _checkPath(self, root):
         return checkPath(root)
@@ -143,8 +143,11 @@ class MesophaseBase(ABC):
             
             Returns
             -------
-            energy : real
-                The energy returned by the simulation.
+            energy : real or numpy.inf
+                The energy returned by the simulation, relative to
+                a hypothetical homogeneous disordered state.
+                If an error occurred, and no energy available, 
+                numpy.inf returned (arbitrarily high energy)
             flag : bool
                 True if simulation converged without issue. 
                 False if an error occurred and no energy could
@@ -191,7 +194,7 @@ class MesophaseBase(ABC):
         if self.validState:
             return self._energy
         else:
-            return np.nan
+            return np.inf
     
     @property
     def phaseName(self):
@@ -285,10 +288,14 @@ class MesophaseManager(object):
         if newPoint is not None:
             self.psoPoint = newPoint
         
-        ft, flag = self._evaluate(root)
+        flag = self._evaluate(root)
         if not flag:
-            print("PhaseManage eval Fail")
+            print("PhaseManager eval Fail")
+            print(self.statusString)
             self._errstate()
+        else:
+            print("PhaseManager update success")
+            self._errstate(False)
         
         return flag
         
@@ -296,12 +303,12 @@ class MesophaseManager(object):
     def _evaluate(self, root):
         root, success = checkPath(root) # resolve root path
         if not success:
-            return np.nan, False
+            raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
         phaseRoot = root/self.target.phaseName
         success = self.target.update( VarSet = self.variables, \
                                  root = phaseRoot )
         if not success:
-            return np.nan, False  # if target fails, error state
+            return False  # if target fails, error state
         ovrSuccess = False
         for (k, c) in self.candidates.items():
             phaseRoot = root/c.phaseName
@@ -309,11 +316,10 @@ class MesophaseManager(object):
                                 root = phaseRoot )
             ovrSuccess = ovrSuccess or success
         if not ovrSuccess:
-            print("phaseManager ovrSuccess Fail")
-            return np.nan, False # error state if all candidates fail
-        fit = self.fitness
-        self._errstate(False)
-        return fit, True
+            print("phaseManager Candidates Fail")
+            #return np.nan, False # error state if all candidates fail
+        #self._errstate(False) # simplify by leaving this process to update()
+        return True
     
     def _errstate(self, flag=True):
         if flag:
@@ -326,7 +332,7 @@ class MesophaseManager(object):
         """ 
             Calculate and return the fitness of the mesophase set 
             
-            If object is in an inconsistent state, returns numpy.nan
+            If object is in an inconsistent state, returns numpy.inf
         """
         WarnText = "Mesophase error state encountered " + \
                     "at an unexpected time. %s entered " + \
@@ -335,25 +341,25 @@ class MesophaseManager(object):
         unexpTarg = "Target Phase"
         unexpCand = "Candidate Phase"
         if not self.consistent:
-            return np.nan
+            return np.NINF
         if not self.target.validState:
             self._errstate()
             raise(RuntimeWarning(WarnText % unexpTarg))
-            return np.nan
+            return np.NINF
         tgtE = self.target.energy
-        fit = None
+        # Mesophase energies are defined relative to homogeneous
+        # disorder. Initializing 'fit' to -tgtE effectively acts
+        # to consider the disordered phase as a candidate.
+        fit = -tgtE  
         for (k,c) in self.candidates.items():
             if c.validState:
                 test = c.energy - tgtE
-                if fit is not None:
-                    if fit < test:
-                        fit = test
-                else:
+                if fit < test:
                     fit = test
         if fit is None:
             self._errstate()
             raise(RuntimeWarning(WarnText % unexpCand))
-            return np.nan
+            return np.NINF
         return fit
     
     @property

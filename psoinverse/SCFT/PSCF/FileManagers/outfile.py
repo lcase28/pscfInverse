@@ -56,8 +56,8 @@ class OutFile(ParamFile):
         self.file = None
 
         # Make sorted list of attribute names
-        self.att_names = self.__dict__.keys()
-        self.att_names.sort()
+        #self.att_names = self.__dict__.keys()
+        #self.att_names.sort()
 
     def write(self, file, major=1, minor=0):
         """

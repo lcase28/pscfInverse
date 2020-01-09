@@ -58,18 +58,15 @@ class ScftAgent(Agent):
         if not success:
             print("scftAgent phasemanager Fail")
             self._startErrorState()
-            return False
-        self._endErrorState()
         if not self.phaseManager.consistent:
             print("scftAgent phaseManager inconsistent.")
             self._startErrorState()
-            return False
-        self.Location.Fitness = np.linalg.norm(self.Location.Coords)
+        self.Location.Fitness = self.phaseManager.fitness
+        #self.Location.Fitness = np.linalg.norm(self.Location.Coords)
         # TODO: Change Fitness operation to use actual simulation.
         superReturn = super().evaluate()
         
-        if self.autoLog:
-            self.writeLog(self._startup)
+        self._tryLog()
         return superReturn
     
     @property
@@ -90,3 +87,7 @@ class ScftAgent(Agent):
             with self.logFile.open(mode='a') as f:
                 f.write(s)
     
+    def _tryLog(self):
+        if self.autoLog:
+            self.writeLog(self._startup)
+        

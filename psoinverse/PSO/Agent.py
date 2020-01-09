@@ -64,9 +64,14 @@ class Agent(ABC):
 
         # Store PBest - best Point() location discovered in all history
         self.PBest = None
-        self.evaluate()
         self._inerror = False
+        self._validPbest = False # Pbest not yet set.
+        self.evaluate()
         
+    @property
+    def validPbest(self):
+        return self._validPbest
+    
     @property
     def inErrorState(self):
         return self._inerror
@@ -138,11 +143,22 @@ class Agent(ABC):
 
             # Fitness is incremented during Evaluate()
             self.Location.Fitness = 0
+            self._endErrorState() # set flag to normal condition.
+                                    # self.evaluate will switch back
+                                    # if required, but base class
+                                    # assumes normal state will be
+                                    # reached unless otherwise
+                                    # specified.
             # Use self.Evaluate as a validator
             if not self.evaluate():
                 debug("Agent {} Failed!".format(self.id))
-                self.Velocity = vtemp
-                self.Location.Coords = ltemp
+                # TODO: Decide if, on evaluation failure, to
+                #       revert to previous state.
+                # Presently removed because reverting is 
+                # inconsistent with assumptions in Pbest
+                # handling.
+                #self.Velocity = vtemp
+                #self.Location.Coords = ltemp
                 return False
 
         return True
@@ -150,15 +166,67 @@ class Agent(ABC):
     # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
     @abstractmethod
     def evaluate(self):
-        if self.PBest is None:
-            # Initialization condition
-            self.PBest = deepcopy(self.Location)
-        # Now that fitness has been updated, compare to PBest
-        if self.Location > self.PBest and self.seekMax:
-            self.PBest.fill_from(self.Location)
-        elif self.Location < self.PBest and not self.seekMax:
-            self.PBest.fill_from(self.Location)
-        return True
+        """
+            Derived classes must override. Overriding method must update
+            the Agent's fitness, then call this method to update Pbest.
+            
+            If the overriding method is unable to calculate a valid fitness value,
+            an arbitrarily high (numpy.inf, if Agent.seekMax=False) 
+            or low (numpy.ninf, if Agent.seekMax=True) value should be set
+            for location fitness, which will leave the location ignored.
+            
+            In addition to arbitrarily extreme fitness, overriding method should 
+            call private method self._startErrorState() to set an Agent-level
+            flag indicating that the current location is invalid.
+            
+            Pbest Behavior:
+            When the Agent's current location is valid (no errors, has fitness):
+                During initialization: 
+                    Pbest is set to current location.
+                Otherwise: 
+                    Pbest is updated to current location if current
+                    location has better fitness value.
+            When Agent's current location is invalid (error, no valid fitness):
+                During initialization: 
+                    Pbest is set to current location,
+                    flag is set to return False from Agent.validPbest property.
+                Other times, while Agent.validPbest==False: 
+                    Pbest is set to current location. 
+                    Agent.validPbest==False flag is retained.
+                Other times, when Agent.validPbest==True:
+                    A valid location has previously been found.
+                    This valid Pbest is retained, and current location ignored.
+            
+            Returns
+            -------
+            success : bool
+                True if evaluation was successful.
+                False if an error occurred.
+        """
+        if not self._validPbest:
+            # Edge condition: No valid Pbest yet found.
+            if self.PBest is None:
+                # Initialization condition
+                self.PBest = deepcopy(self.Location)
+            else:
+                # Searching for initial Pbest
+                self.PBest.fill_from(self.Location)
+                
+            if self.inErrorState:
+                self._validPbest = False
+            else:
+                self._validPbest = True
+                
+        if not self.inErrorState:
+            # Now that fitness has been updated, compare to PBest
+            if self.Location > self.PBest and self.seekMax:
+                self.PBest.fill_from(self.Location)
+            elif self.Location < self.PBest and not self.seekMax:
+                self.PBest.fill_from(self.Location)
+            successFlag = True
+        else:
+            successFlag = False
+        return successFlag
     
     def __str__(self):
         s = "Agent {}:\n\tScaled: {}\n\tCoords: {}\n\tVelcty: {}\n\tFitnes: {}"

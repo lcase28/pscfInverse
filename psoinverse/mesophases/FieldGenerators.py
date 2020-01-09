@@ -89,13 +89,14 @@ class FieldCalculator(object):
                                     raise(NotImplementedError("1-dimensional case not implemented"))
                                 elif dim == 2:
                                     nconst = 3
-                                    raise(NotImplementedError("2-dimensional case not implemented"))
+                                    constNames = ["a", "b", "gamma"]
+                                    #raise(NotImplementedError("2-dimensional case not implemented"))
                                 elif dim == 3:
                                     nconst = 6
+                                    constNames = ["a","b","c","alpha","beta","gamma"]
                                 else:
                                     raise(ValueError("dim may not exceed 3"))
                                 constants = [str_to_num(next(words)) for i in range(nconst)]
-                                constNames = ["a","b","c","alpha","beta","gamma"]
                                 const = dict(zip(constNames,constants))
                                 #print("Constants: ",constants)
                                 data = Lattice.latticeFromParameters(dim, **const)
