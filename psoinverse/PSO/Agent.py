@@ -131,6 +131,7 @@ class Agent(ABC):
                     print("TRIAL POSITION = {}".format(scaled_attempt))
                     new_velocity[i] *= -1.0
                     attempt.Coords[i] = self.Location.Coords[i]
+                    print("NEW POSITION = {}".format(attempt.get_scaled_coords()))
 
         # Replace internal Location and Velocity with new values
         move = True

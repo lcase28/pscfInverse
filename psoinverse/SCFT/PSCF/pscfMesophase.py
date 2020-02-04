@@ -78,7 +78,7 @@ class PSCFMesophase(MesophaseBase):
             fieldGen : pathlib.path
                 An already-resolved path object to a fieldGen source file.
         """
-        kgrid = WaveVectFieldFile(kgridFile.resolve())
+        kgrid = WaveVectFieldFile(kgridFile.resolve(),True)
         param = ParamFile(paramFile.resolve())
         fieldGen = FieldCalculator.from_file(fieldGenFile)
         return cls(ID, kgrid, param, fieldGen)
@@ -192,6 +192,7 @@ class PSCFMesophase(MesophaseBase):
         success = self._launchSim(root)
         if success:
             ener, success = self._readOutput(root)
+            #ener = 0
         else:
             ener = np.nan
         return ener, success

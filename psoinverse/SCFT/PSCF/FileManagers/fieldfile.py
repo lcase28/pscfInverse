@@ -496,20 +496,28 @@ class WaveVectFieldFile(FieldFile):
 
     # "Public" methods
 
-    def __init__(self,filename):
+    def __init__(self,filename,skipField=False):
         '''
         Read a PSCF symmetry-adapted field file, and create a new object.
 
         Argument:
         filename -- name of file
+        skipField -- when input file is being used for templating,
+                    this will trigger initialization to not attempt to
+                    read the field values. (this way, template for new phase
+                    does not need to exactly meet grid counts)
 
         The file named filename is opened and closed within this function.
         '''
         self.ngrid = [1] # Actual Value read during _readField call
         self.fields = []
         
+        self.skipFieldFlag = skipField
+        
         # _readField call made by super
         super().__init__(filename)
+        
+        self.skipFieldFlag = False
 
     def write(self, file, major=1, minor=0):
         '''
@@ -633,12 +641,13 @@ class WaveVectFieldFile(FieldFile):
             gp = gp * self.ngrid[1+i]
         self.gridPoints = gp
         self.fields = 1j*np.zeros((self.gridPoints,self.N_monomer))
-        for i in range(self.gridPoints):
-            try:
-                self.fields[i,:] = self._nextFieldLine()
-            except ValueError as err:
-                msg = str(err) + "Line {} of {}".format(i,gp)
-                raise(ValueError(msg))
+        if not self.skipFieldFlag:
+            for i in range(self.gridPoints):
+                try:
+                    self.fields[i,:] = self._nextFieldLine()
+                except ValueError as err:
+                    msg = str(err) + "Line {} of {}".format(i,gp)
+                    raise(ValueError(msg))
     
     def _nextFieldLine(self):
         s = self.file.readline() # get next line

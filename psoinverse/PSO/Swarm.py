@@ -15,6 +15,7 @@ from .SearchSpace import Point #SimulationPoint as Point
 #from .SearchSpace import SearchBounds
 from .Integrators import Integrator
 from .Agent import Agent
+from psoinverse.util.stringTools import str_to_num, wordsGenerator
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
 def debug(line):
@@ -91,6 +92,8 @@ class Swarm(object):
             raise(ValueError("Number of nodes in graph doesn't match number of agents"))
         self.Agents = agents
         self.Graph = graph
+        tempAgent = self.Agents[0]
+        self.dim = len(tempAgent.Location.Coords)
         self.integrator = integrator
         self.stepsTaken = 0
         # record-keeping
@@ -205,37 +208,365 @@ class Swarm(object):
     def statusString(self, includeDefinitions = False):
         s = ""
         if includeDefinitions:
-            s += "Swarm Characteristics:\n"
-            s += "\tNumber Agents : {}\n".format(len(self.Agents))
-            s += "\tGraph Type : {!s}\n".format(type(self.Graph))
-            s += "\tIntegrator : {}\n".format(self.integrator)
-            s += "\tSeek Max : {}\n".format(self.SeekMax)
-            s += "\tRoot Path : {}\n".format(self.root)
-            s += "\tLog File : {}\n".format(self.logFile)
+            s += "Swarm_Characteristics\n"
+            s += "\tNumber_Agents\t\t{}\n".format(len(self.Agents))
+            s += "\tGraph_Type\t\t{!s}\n".format(type(self.Graph))
+            s += "\tIntegrator\t\t{}\n".format(self.integrator)
+            s += "\tDimensions\t\t{}\n".format(self.dim)
+            s += "\tSeek_Max\t\t{}\n".format(self.SeekMax)
+            s += "\tRoot_Path\t\t{}\n".format(self.root)
+            s += "\tLog_File\t\t{}\n".format(self.logFile)
+            s += "END_Swarm_Characteristics\n"
+        # Start New Step update
+        s += "\nStart_Step_Number\t{}\n".format(self.stepsTaken)
         # Output status
-        agentTableHeader = "\tID_Num\tFitness\t\t\tPosition\n"
-        agentTableLine = "\t{}\t{:E}\t{}\n"
-        s += "Swarm Status:\n"
-        s += "\tStep Number : {}\n".format(self.stepsTaken)
-        s += "\tIn Error State : {}\n".format(self.inErrorState)
+        s += "\tSwarm_Status\n"
+        s += "\t\tIn_Error_State\t\t{}\n".format(self.inErrorState)
         if self.inErrorState:
-            s += "\tBest Agent ID : {}\n".format(self.bestAgent)
+            s += "\t\tBest_Agent_ID\t\t{}\n".format(self.bestAgent)
         else:
-            s += "\tBest Agent ID : {}\n".format(self.bestAgent.id)
-        s += "\tAgent Data (Current):\n"
+            s += "\t\tBest_Agent_ID\t\t{}\n".format(self.bestAgent.id)
+        s += "\tEND_Swarm_Status\n"
+        # Current Positions
+        positTableHeader = "\t\tID_Num\tFitness\t\tPosition\n"
+        positTableLine = "\t\t{}\t{: E}\t{}\n"
+        listForm = "{: E}\t"
+        s += "\tCurrent_Positions\n"
+        s += positTableHeader
+        for a in self.Agents:
+            posStr = "".join([listForm.format(i) for i in a.Location.Coords])
+            s += positTableLine.format(a.id, a.Location.Fitness, posStr)
+        s += "\tEND_Current_Positions\n"
+        # Best Positions
+        s += "\tBest_Positions\n"
+        s += positTableHeader
+        for a in self.Agents:
+            posStr = "".join([listForm.format(i) for i in a.PBest.Coords])
+            s += positTableLine.format(a.id, a.PBest.Fitness, posStr)
+        s += "\tEND_Best_Positions\n"
+        # Velocities
+        agentTableHeader = "\t\tID_Num\tVelocity\n"
+        agentTableLine = "\t\t{}\t{}\n"
+        s += "\tVelocities\n"
         s += agentTableHeader
         for a in self.Agents:
-            posStr = "".join(["{:E}, ".format(i) for i in a.Location.Coords])
-            s += agentTableLine.format(a.id, a.Location.Fitness, posStr)
-        s += "\tAgent Data (P_Best):\n"
-        s += agentTableHeader
-        for a in self.Agents:
-            posStr = "".join(["{:E}, ".format(i) for i in a.PBest.Coords])
-            s += agentTableLine.format(a.id, a.PBest.Fitness, posStr)
+            posStr = "".join([listForm.format(i) for i in a.Velocity])
+            s += agentTableLine.format(a.id, posStr)
+        s += "\tEND_Velocities\n"
+        s += "END_Step\n"
+        
         return s
     
     def logStatus(self, includeDefinitions = False):
         with self.logFile.open(mode='a') as f:
             f.write(self.statusString(includeDefinitions))
         
+class LogReadingException(ValueError):
+    """ Special Class for errors while parsing a SwarmLog file """
+    
+    def __init__(self, expected_key, got_key):
+        self.expectedKey = expected_key
+        self.gotKey = got_key
+        ErrorMsg = "Error reading Log File: Expected key {}; Got {}"
+        super().__init__(ErrorMsg.format(self.expectedKey,self.gotKey))
 
+class SwarmLog(object):
+    """
+    Class to read a swarm's log file for analysis.
+    """
+    
+    def __init__(self, fname):
+        self.fileSource = fname
+        initFlag = False
+        self.steps = []
+        self.nsteps = 0
+        with fname.open(mode='r') as f:
+            words = wordsGenerator(f)
+            for word in words:
+                key = word
+                if not initFlag:
+                    if key == 'Swarm_Characteristics':
+                        self._readCharacteristics(words)
+                        initFlag = True
+                    else:
+                        raise(LogReadingException("Swarm_Characteristics",key))
+                else:
+                    if key == 'Start_Step_Number':
+                        self._readStep(words)
+                    else:
+                        print(self.nsteps)
+                        raise(LogReadingException("Start_Step_Number",key))
+    
+    def _readCharacteristics(self, words):
+        key = next(words)
+        while not key == 'END_Swarm_Characteristics':
+            if key == 'Number_Agents':
+                self.nagent = str_to_num(next(words))
+            elif key == 'Graph_Type':
+                data = next(words)
+                data = data.join(next(words))
+                self.graphtype = data.join(next(words))
+            elif key == 'Integrator':
+                data = next(words)
+                self.integrator = data.join([next(words) for i in range(3)])
+            elif key == 'Dimensions':
+                self.dim = str_to_num(next(words))
+            elif key == 'Seek_Max':
+                self.seekmax = bool(next(words))
+            elif key == 'Root_Path':
+                self.rootpath = pathlib.Path(next(words))
+            elif key == 'Log_File':
+                self.logfile = pathlib.Path(next(words))
+            else:
+                raise(ValueError("Unexpected keyword in Characteristics section: {}".format(key)))
+            key = next(words)
+    
+    def _readStep(self, words):
+        # read step number
+        num = str_to_num(next(words))
+        if not num == self.nsteps:
+            raise(LogReadingException(self.nsteps, num))
+        
+        step = self.StepData(num, self.dim, self.nagent, words)
+        self.steps.append(step)
+        
+        self.nsteps = self.nsteps + 1
+    
+    def tocsv(self, swarmFile, agentFile, root=None):
+        if root is None:
+            root = pathlib.Path.cwd()
+        
+        self.writeSwarmCSV(root/swarmFile)
+        
+        self.writeAgentCSV(root/agentFile)
+        
+    def writeAgentCSV(self,fname):
+        header = "step,agent,cfit,bfit"
+        lineForm = "\n{},{},{:.6E},{:.6E}"
+        dat = [0, 0, 0.0, 0.0]
+        for i in range(self.dim):
+            lineForm += ",{:.6E},{:.6E},{:.6E}"
+            header += ",cpos_{},bpos_{},vel_{}".format(i,i,i)
+            dat.append(0.0)
+            dat.append(0.0)
+            dat.append(0.0)
+        with fname.open(mode='w') as f:
+            f.write(header)
+            for i in range(self.nsteps):
+                step = self.steps[i]
+                dat[0] = i
+                for j in range(self.nagent):
+                    dat[1] = j
+                    cfit, cpos = step.getAgentCurrent(j)
+                    bfit, bpos = step.getAgentBest(j)
+                    vel = step.getAgentVelocity(j)
+                    dat[2] = cfit
+                    dat[3] = bfit
+                    dat[4:3:] = cpos
+                    dat[5:3:] = bpos
+                    dat[6:3:] = vel
+                    f.write(lineForm.format(*dat))
+    
+    def writeSwarmCSV(self,fname):
+        header = "step,inError,bagent,bfit"
+        lineform = "\n{},{},{},{:.6E}"
+        dat = [0, 0, 0, 0.0]
+        for i in range(self.dim):
+            lineform += ",{:.6E}"
+            header += ",bpos_{}".format(i)
+            dat.append(0.0)
+        with fname.open(mode='w') as f:
+            f.write(header)
+            for i in range(self.nsteps):
+                step = self.steps[i]
+                dat[0] = i
+                if step.inError:
+                    dat[1] = 1
+                else:
+                    dat[1] = 0
+                dat[2] = step.bestAgent
+                bfit, bpos = step.getAgentBest(step.bestAgent)
+                dat[3] = bfit
+                dat[4:] = bpos
+                f.write(lineform.format(*dat))
+                
+                    
+    
+    class StepData(object):
+        """ Helper class which reads and stores the data for a single step """
+        
+        def __init__(self, idNum, dim, nagent, words): #curPos, bestPos, curVel, errState, bestAgent):
+            self.id = idNum
+            self.dim = dim
+            self.nagent = nagent
+            
+            # First section is General Swarm info
+            key = next(words)
+            if key == "Swarm_Status":
+                self._readSwarmStatus(words)
+            else:
+                raise(LogReadingException("Swarm_Status",key))
+            
+            # Then read all agent data
+            key = next(words)
+            if key == "Current_Positions":
+                self._readCurrentPositions(words)
+            else:
+                raise(LogReadingException("Current_Positions",key))
+            
+            key = next(words)
+            if key == "Best_Positions":
+                self._readBestPositions(words)
+            else:
+                raise(LogReadingException("Best_Positions",key))
+            
+            key = next(words)
+            if key == "Velocities":
+                self._readVelocities(words)
+            else:
+                raise(LogReadingException("Velocities",key))
+            
+            # check for end of step data
+            key = next(words)
+            if not key == "END_Step":
+                raise(LogReadingException("END_Step",key))
+        
+        def getAgentCurrent(self, agentID):
+            if agentID < self.nagent:
+                dat = self.agentData[agentID]
+            else:
+                raise(ValueError("Invalid agentID, {}. Expected below {}.".format(agentID, self.nagent)))
+            
+            return dat.get("cfit"), dat.get("cpos")
+        
+        def getAgentBest(self, agentID):
+            if agentID < self.nagent:
+                dat = self.agentData[agentID]
+            else:
+                raise(ValueError("Invalid agentID, {}. Expected below {}.".format(agentID, self.nagent)))
+            
+            return dat.get("bfit"), dat.get("bpos")
+        
+        def getAgentVelocity(self, agentID):
+            if agentID < self.nagent:
+                dat = self.agentData[agentID]
+            else:
+                raise(ValueError("Invalid agentID, {}. Expected below {}.".format(agentID, self.nagent)))
+            
+            return dat.get("vel")
+            
+            
+        
+        # Private Functions for file parsing
+        
+        def _readSwarmStatus(self, words):
+            # First read error state value
+            key = next(words)
+            if key == "In_Error_State":
+                self.inError = bool(next(words))
+            else:
+                raise(LogReadingException("In_Error_State",key))
+            
+            # Next read best agent
+            key = next(words)
+            if key == "Best_Agent_ID":
+                self.bestAgent = str_to_num(next(words))
+            else:
+                raise(LogReadingException("Best_Agent_ID",key))
+            
+            # check for end flag
+            key = next(words)
+            if not key == "END_Swarm_Status":
+                raise(LogReadingException("END_SwarmStatus",key))
+        
+        def _readPositionTableHeaders(self, words):
+            ExpHeads = ["ID_Num","Fitness","Position"]
+            for expKey in ExpHeads:
+                key = next(words)
+                if not key == expKey:
+                    raise(LogReadingException(expKey,key))
+        
+        def _readPositionLine(self, words):
+            # read ID number
+            num = str_to_num(next(words))
+            
+            # read Fitness
+            fitness = str_to_num(next(words))
+            
+            # read Position
+            pos = np.zeros(self.dim)
+            for i in range(self.dim):
+                pos[i] = str_to_num(next(words))
+            
+            return num, fitness, pos
+            
+        def _readVelocityTableHeaders(self,words):
+            ExpHeads = ["ID_Num","Velocity"]
+            for expKey in ExpHeads:
+                key = next(words)
+                if not key == expKey:
+                    raise(LogReadingException(expKey,key))
+            
+        def _readVelocityLine(self, words):
+            # read ID number
+            num = str_to_num(next(words))
+            
+            # read Velocity
+            pos = np.zeros(self.dim)
+            for i in range(self.dim):
+                pos[i] = str_to_num(next(words))
+            
+            return num, pos
+            
+                
+        def _readCurrentPositions(self,words):
+            # Check for table headings
+            self._readPositionTableHeaders(words)
+            
+            self.agentData = []
+            # Read Agents' Data
+            for i in range(self.nagent):
+                num, ft, pos = self._readPositionLine(words)
+                if num == i:
+                    dat = {"ID": num, "cfit":ft, "cpos": pos}
+                    self.agentData.append(dat)
+                else:
+                    raise(LogReadingException(i,num))
+            
+            #Check for section end flag
+            key = next(words)
+            if not key == "END_Current_Positions":
+                raise(LogReadingException("END_Current_Position",key))
+        
+        def _readBestPositions(self, words):
+            # assumed that self.agentData has been initialized
+            self._readPositionTableHeaders(words)
+            
+            for i in range(self.nagent):
+                num, ft, pos = self._readPositionLine(words)
+                if num == i:
+                    dat = {"ID": num, "bfit": ft, "bpos": pos}
+                    self.agentData[i].update(dat)
+                else:
+                    raise(LogReadingException(i,num))
+            
+            key = next(words)
+            if not key == "END_Best_Positions":
+                raise(LogReadingException("End_Best_Position",key))
+        
+        def _readVelocities(self, words):
+            self._readVelocityTableHeaders(words)
+            
+            for i in range(self.nagent):
+                num, vel = self._readVelocityLine(words)
+                if i == num:
+                    dat = {"ID": num, "vel": vel}
+                    self.agentData[i].update(dat)
+                else:
+                    raise(LogReadingException(i, num))
+            
+            key = next(words)
+            if not key == "END_Velocities":
+                raise(LogReadingException("END_Velocities",key))
+        
+        

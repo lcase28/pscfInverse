@@ -150,7 +150,7 @@ class FieldCalculator(object):
         frac = np.array(frac)
         nspecies = frac.size
         nwaves = str_to_num(np.prod(kgrid + np.ones_like(kgrid)))
-        rho = np.zeros((nwaves, nspecies))
+        rho = 1j*np.zeros((nwaves, nspecies))
         vol = self.lattice.volume
         particleVol = frac[coreindex] * vol / self.nparticles
         
@@ -167,9 +167,11 @@ class FieldCalculator(object):
             else:
                 # sum of wave-vector dot particle positions
                 R, I = self.sum_ff(brillouin)
+                compSum = R + 1j*I
                 q_norm = 2 * np.pi * self.reciprocal_lattice.vectorNorm(brillouin)
                 ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
-                rho[t, coreindex] = (1/vol) * R * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
+                rho[t, coreindex] = compSum * (1/vol) * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
+                #rho[t, coreindex] = (1/vol) * R * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
                 rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
                 for i in range(nspecies-1):
                     rho[t, i+1] = rhoTemp * frac[i+1]
