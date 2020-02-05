@@ -182,7 +182,8 @@ class PSCFMesophase(MesophaseBase):
         """
         monFrac = self._getMonomerFractions()
         ngrid = self.param.ngrid
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid)
+        w = self._getinterface()
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
         self.kgrid.fields = newField
         kgridFile = root / 'rho_kgrid_in'
         self.kgrid.write(kgridFile.open(mode='x'))
@@ -191,11 +192,23 @@ class PSCFMesophase(MesophaseBase):
         
         success = self._launchSim(root)
         if success:
-            ener, success = self._readOutput(root)
-            #ener = 0
+            #ener, success = self._readOutput(root)
+            ener = 0
         else:
             ener = np.nan
         return ener, success
+    
+    def _getinterface(self):
+        # Presently only works for straight-chi, 2-monomer system
+        nMon = self.param.N_monomer
+        segLen = np.array(self.param.kuhn)
+        b = (1.0 * np.prod(segLen)) ** (1.0/len(segLen))
+        if nMon == 2:
+            chi = self.param.chi[1][0]
+        else:
+            chi = self.param.chi[1][0]
+        w = 2*b / np.sqrt(6.0 * chi)
+        return w
     
     def _launchSim(self, root):
         """

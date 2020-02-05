@@ -124,7 +124,7 @@ class FieldCalculator(object):
             return cls(**kwargs)
     
     # TODO: Figure out how to generate 2D, 1D initial guesses
-    def to_kgrid(self, frac, ngrid):
+    def to_kgrid(self, frac, ngrid,interfaceWidth=None):
         """
             Return the reciprocal space grid of densities.
             
@@ -170,6 +170,8 @@ class FieldCalculator(object):
                 compSum = R + 1j*I
                 q_norm = 2 * np.pi * self.reciprocal_lattice.vectorNorm(brillouin)
                 ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
+                if interfaceWidth is not None:
+                    fsmear = np.exp(-( (interfaceWidth**2) * q_norm**2) / 2.0)
                 rho[t, coreindex] = compSum * (1/vol) * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
                 #rho[t, coreindex] = (1/vol) * R * ff * fsmear # * np.exp( -(sigma_smear**2 * qR**2 / 2) )
                 rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
