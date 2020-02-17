@@ -27,8 +27,13 @@ class PsoVariable(ABC):
     """
     __next_ID = 0
     
-    def __init__(self, value, lower, upper, psoValues=True, \
-                 boundsType=BoundTypes.reflective, label=None)
+    def __init__(self, value, lower, upper, \
+                psoValues=True, \
+                boundsType=BoundTypes.reflective, \
+                label=None, \
+                initLower = None, \
+                initUpper = None, \
+                initIsPsoValue = True)
         """
         Initialize a basic PsoVariable object.
         
@@ -83,6 +88,23 @@ class PsoVariable(ABC):
         else:
             self.__label = "Variable{}".format(self.__id)
         
+    # Practical methods
+    def checkBounds(self, val, psoValue = True):
+        if psoValue:
+            lb = self.psoLowerBound
+            ub = self.psoUpperBound
+        else:
+            lb = self.trueLowerBound
+            ub = self.trueUpperBound
+        return val >= lb and val <= ub
+        
+    def checkAcceptance(self, val, psoValue = True):
+        cb = self.checkBounds(val, psoValue)
+        if self.boundStyle == BoundTypes.reflective:
+            return cb
+        else:
+            return True
+    
     # abstract Methods
     @abstractmethod
     def __pso_to_true(self, val):
@@ -91,7 +113,7 @@ class PsoVariable(ABC):
         true value. This must perform the inverse
         operation as __true_to_pso(...) such that 
         val == self.__true_to_pso(self.__pso_to_true(val))
-        is tautological.
+        is tautological (**within numerical precision**)
         
         Default behavior is to apply no scaling. Inheriting
         classes can select this behavior with a super() call.
@@ -114,7 +136,7 @@ class PsoVariable(ABC):
     
     @psoValue.setter
     def psoValue(self, newValue):
-        if self.boundStyle = BoundTypes.reflective:
+        if self.boundStyle == BoundTypes.reflective:
             if self.checkBounds(newValue):
                 self.__psoValue = newValue
             else:
@@ -237,7 +259,6 @@ class LinearScaledVariable(PsoVariable):
     def __true_to_pso(self, val):
         return val * self.__scalefactor
     
-    
 class LinearOffsetVariable(LinearScaledVariable):
     """
     Conversion factors in scaling are given as
@@ -257,4 +278,24 @@ class LinearOffsetVariable(LinearScaledVariable):
     def __true_to_pso(self, val):
         return super().__true_to_pso(val - self.__scaleoffset)
     
+class LogScaledVariable(PsoVariable):
+    """
+    A the true value is scaled logarithmically for the pso search.
+    
+    psoValue = ln(trueValue)
+    trueValue = exp(psoValue)
+    """
+    
+    def __init__(self, scale, *args, **kwargs):
+        self.__scalefactor = scale
+        super().__init__(*args, **kwargs)
+        
+    def __pso_to_true(self, val):
+        return np.exp(val)
+        
+    def __true_to_pso(self, val):
+        return np.log(val)
+    
+
+
 
