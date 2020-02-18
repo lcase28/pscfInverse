@@ -12,9 +12,10 @@ from enum import Enum
 
 class ContainerStatusTypes(Enum):
     stable = 1
-    unstable = 2
-    error = 3
-    unknown = 4
+    uninitialized = 2
+    unstable = 3
+    error = 4
+    unknown = 5
 
 class ContainerStatusError(Exception):
     """
@@ -39,7 +40,6 @@ class ContainerStatusError(Exception):
         self.trigger_action = action
         self.explanation = message
     
-
 class PsoVariableSet(object):
     """
     Class defining basic variable set management
@@ -352,5 +352,131 @@ class PsoVariableSet(object):
             v = self.__variables[i]
             v.trueBounds = [lowbnds[i], upbnds[i]]
             
+class PsoPositionData(object):
+    """
+    Wrapper object for the PsoVariableSet which also stores
+    current and best positions and fitnesses.
+    """
     
+    ## TODO: Implement queue-based position history storage with max capacity.
+    
+    def __init__(self, varSet):
+        """
+        Partial initialization of object
+        """
+        if not isinstance(varSet, PsoVariableSet):
+            raise(TypeError("{} is not a valid type for a variable set".format(varSet.__class__.__name__)))
+        self.__variableSet = varSet
+        self.__status = ContainerStatusTypes.uninitialized
+        self.__fitness = None
+        self.__best_point = None
+        self.__old_fitness = None
         
+    @classmethod
+    def initializedInstance(cls, varSet, fitness):
+        instance = cls(varSet)
+        pt = instance.__variableSet.psoValues
+        instance.forceUpdate(pt, fitness)
+        instance.setCurrentAsBest()
+        return instance
+        
+    # Updating methods
+    
+    def tryUpdate(self, src, psoValues=True):
+        """
+        Reversibly update the current position.
+        
+        Parameters
+        """
+        if self.status == ContainerStatusTypes.unstable:
+            raise(ContainerStatusError(self.__class__, self.status, self.tryUpdate, \
+                        "Cannot try new update until prior try is confirmed or cancelled."))
+        success = self.__variableSet.tryUpdate(src, psoValues)
+        self.__old_fitness = self.__fitness
+        self.__fitness = None
+        self.__status = ContainerStatusTypes.unstable
+        return success
+        
+    def confirmUpdate(self, fitness):
+        """
+        Accept currently attempted update and set fitness to given value
+        """
+        if not self.status == ContainerStatusTypes.unstable:
+            raise(ContainerStatusError(self.__class__, self.status, self.confirmUpdate, \
+                    "Must initiate a soft update before confirming the soft update."))
+        success = self.__variableSet.confirmUpdate()
+        self.__fitness = fitness
+        self.__old_fitness = None
+        self.__status = ContainerStatusTypes.stable
+        return success
+        
+    def cancelUpdate(self):
+        """ Reject active update attempt """
+        if not self.status == ContainerStatusTypes.unstable:
+            raise(ContainerStatusError(self.__class__, self.status, self.cancelUpdate, \
+                    "Must initiate a soft update before cancelling the soft update."))
+        self.__variableSet.cancelUpdate()
+        self.__fitness = self.__old_fitness
+        self.__status = ContainerStatusTypes.stable
+        
+    def forceUpdate(self, src, fitness, psoVals=True):
+        self.tryUpdate(src, psoVals)
+        success = self.confirmUpdate(fitness, psoVals)
+        return success
+    
+    def setCurrentAsBest(self):
+        """ Set the current position as the best position seen """
+        if not self.status == ContainerStatusTypes.stable:
+            raise(ContainerStatusError(self.__class__, self.status, self.setCurrentAsBest, \
+                    "The container must be stable before setting the best position."))
+        self.__best_fitness = self.currentFitness
+        self.__best_pso_coords = self.currentPsoValues
+        self.__best_true_coords = self.currentTrueValues
+        
+    # Properties
+    
+    @property
+    def currentPsoValues(self):
+        return self.__variableSet.psoValues
+        
+    @property
+    def currentTrueValues(self):
+        return self.__variableSet.trueValues
+    
+    @property
+    def currentFitness(self):
+        return self.__fitness
+    
+    @property
+    def bestPsoValues(self):
+        return np.array(self.__best_pso_coords)
+        
+    @property
+    def bestTrueValues(self):
+        return np.array(self.__best_true_coords)
+    
+    @property
+    def bestFitness(self):
+        return self.__best_fitness
+            
+    @property
+    def currentPoint(self):
+        """ A Point object with current fitness and current pso values. """
+        return Point(self.currentPsoValues, self.currentFitness)
+    
+    @property
+    def bestPoint(self):
+        """ A Point object with current fitness and current pso values. """
+        return Point(self.bestPsoValues, self.bestFitness)
+    
+    @property
+    def variableSet(self):
+        """ 
+            The underlying variable set used for position management.
+            The returned value should be treated as read-only; modification
+            may lead to undefined behavior.
+        """
+        return self.__variableSet
+        
+
+

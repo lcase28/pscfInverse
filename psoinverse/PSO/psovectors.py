@@ -24,6 +24,13 @@ class Velocity(PsoVector):
             raise(ValueError("template and maximum must have same size"))
         self.components = template
         
+    def reverseComponent(self, index):
+        if index >= self.dimensions:
+            raise(IndexError("Index {} outside bounds for velocity with dimension {}".format(index,self.dimensions)))
+        cd = self.components
+        cd[index] *= -1.
+        self.components = cd
+    
     @property
     def dimensions(self):
         return self.__dim
