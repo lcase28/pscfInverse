@@ -62,7 +62,8 @@ class PsoVariableSet(object):
         
         # Attributes for use during reversible value updates
         self.__soft_update_flag = False   # flag indicating soft update not yet confirmed.
-        self.__old_data = None            # old variable values (psoValue)
+        self.__old_pso_data = None        # old variable values (psoValue)
+        self.__old_true_data = None       # old variable values (trueValue)
         self.__update_acceptance = None   # position acceptance flags for update
         self.__update_bounds_check = None # position in-bounds flags for update
         
@@ -128,7 +129,8 @@ class PsoVariableSet(object):
             raise(ContainerStatusError(self.__class__, self.status, self.tryUpdate, \
                         "Must confirm or cancel update before attempting new update"))
         
-        self.__old_data = self.psoValues
+        self.__old_pso_data = self.psoValues
+        self.__old_true_data = self.trueValues
         self.__update_bounds_check = self.checkBounds(src)
         success = self.checkAcceptance(src)
         self.__update_acceptance = self.checkAcceptance(src)
@@ -215,16 +217,38 @@ class PsoVariableSet(object):
     def __clear_soft_backup(self):
         self.__update_acceptance = None
         self.__update_bounds_check = None
-        self.__old_data = None
+        self.__old_pso_data = None
+        self.__old_true_data = None
         self.__soft_update_flag = False
         
     # Properties, and unmonitored modifiers
+    
+    @property
+    def dimensions(self):
+        tmp = self.stablePsoValues
+        return tmp.size
     
     @property
     def status(self):
         if self.__soft_update_flag:
             return ContainerStatusTypes.unstable
         return ContainerStatusTypes.stable
+    
+    @property
+    def inBounds(self):
+        """ True if all stable pso values are in bounds for the variables. """
+        tmp = True
+        for b in self.checkBounds(self.stablePsoValues):
+            tmp = tmp and b
+        return tmp
+    
+    @property
+    def stablePsoValues(self):
+        """ The most recent stable psoValue data. Constant return value between confirmUpdate() calls. """
+        if self.__soft_update_flag:
+            return np.array(self.__old_pso_data)
+        else:
+            return self.psoValues
     
     @property
     def psoValues(self):
@@ -436,6 +460,32 @@ class PsoPositionData(object):
     # Properties
     
     @property
+    def dimensions(self):
+        return self.__variableSet.dimensions
+    
+    @property
+    def stablePsoValues(self):
+        if self.__status == ContainerStatusTypes.uninitialized:
+            msg = "No stable state has yet been set. No stable data Available."
+            raise(ContainerStatusError(self.__class__, self.__status, "stablePsoValues", msg))
+        return self.__variableSet.stablePsoValues
+    
+    @property
+    def stableTrueValues(self):
+        if self.__status == ContainerStatusTypes.uninitialized:
+            msg = "No stable state has yet been set. No stable data Available."
+            raise(ContainerStatusError(self.__class__, self.__status, "stableTrueValues", msg))
+        return self.__variableSet.stableTrueValues
+    
+    @property
+    def stableFitness(self):
+        if self.__status == ContainerStatusTypes.uninitialized:
+            msg = "No stable state has yet been set. No stable data Available."
+            raise(ContainerStatusError(self.__class__, self.__status, "stableFitness", msg))
+        if self.__status == ContainerStatusTypes.unstable:
+            return self.__old_fitness
+    
+    @property
     def currentPsoValues(self):
         return self.__variableSet.psoValues
         
@@ -458,7 +508,15 @@ class PsoPositionData(object):
     @property
     def bestFitness(self):
         return self.__best_fitness
-            
+    
+    @property
+    def stablePoint(self):
+        """ A point containing the most recent stable position and fitness. Constant return between confirmUpdate calls. """
+        if self.__status == ContainerStatusTypes.uninitialized:
+            msg = "No stable state has yet been set. No stablePoint Available."
+            raise(ContainerStatusError(self.__class__, self.__status, "stablePoint", msg))
+        return Point(self.stablePsoValues, self.stableFitness)
+    
     @property
     def currentPoint(self):
         """ A Point object with current fitness and current pso values. """
@@ -478,5 +536,5 @@ class PsoPositionData(object):
         """
         return self.__variableSet
         
-
+# TODO: Implement container class to wrap velocities and manage updates.
 

@@ -4,15 +4,15 @@ Module containing basic wrapper classes of point and velocity.
 Each class is a simple extension of numpy.ndarray, modified to ensure
 uniform treatment throughout this program.
 """
+from enum import Enum, unique
 from functools import total_ordering
 import numbers
 import numpy as np
 
-class Velocity(PsoVector):
+class Velocity(object):
     """
     Velocity object to enforce velocity maxima.
     """
-    
     def __init__(self, template, maximum=None):
         self.__dim = np.asarray(template).size
         self.__coord = None
@@ -48,10 +48,9 @@ class Velocity(PsoVector):
         newAbs = np.absolute(newVal)
         newCap = np.minimum(newAbs, self.__cap)
         self.__coord = negFlags * newCap
-    
         
 @total_ordering
-class Point(PsoVector):
+class Point(object):
     """
     Point object containing both a position and a fitness.
     """
@@ -107,4 +106,89 @@ class Point(PsoVector):
         
     def same_point(self,other):
         return self == other and np.allclose(self.components, other.components)
+
+@unique
+class OptimizationType(Enum):
+    minimize = 1
+    maximize = 2
+
+class FitnessComparator(object):
+    """ Class to enable uniform comparison between points according to selected optimization target """
+    
+    def __init__(self, optimType=OptimizationType.maximize):
+        """
+        Parameters
+        ----------
+        optimType : psovectors.OptimizationType
+            The optimization type desired.
+        """
+        self.__optimType = optimType
+    
+    @property
+    def badFitness(self):
+        """ For the given optimization type, return the worst possible fitness value. 
+        Any point with this fitness will never be favored as the best point (except in a tie) """
+        if self.optimizationType == OptimizationType.maximize:
+            return -np.inf
+        return np.inf
+    
+    @property
+    def optimizationType(self):
+        """ The OptimizationType enforced by the FitnessComparator instance. """
+        return self.__opimType
+    
+    def betterPoint(self, point1, point2):
+        """
+        Return the point deemed "better" according to the set opimization type.
+        Thus, return the point with lower fitness if optimizationType is OptimizationType.minimize.
+        
+        If the two points are "equal" point1 is returned. No explicit accommodation is made for
+        floating point precision. For points with very close fitnesses, the returned point may 
+        depend on roundoff errors.
+        
+        Parameters
+        ----------
+        point1, point2 : Point
+            The points to compare
+            
+        Returns
+        -------
+        The better point according to optimization type.
+        """
+        if self.__optimType is OptimizationType.minimize:
+            if point1.fitness <= point2.fitness:
+                return point1
+            else:
+                return point2
+        elif self.__optimType is OptimizationType.maximize:
+            if point1.fitness >= point2.fitness:
+                return point1
+            else:
+                return point2
+        else:
+            raise(RuntimeError("Unrecognized optimization type set"))
+    
+    def bestPoint(self, pointSet):
+        """ 
+        Return the point from pointSet with the best fitness.
+        
+        If two or more points tie for "best" point, the first one encountered is returned.
+        
+        Parameters
+        ----------
+        pointSet : iterable of Point objects
+            The set of points being mutually compared.
+        
+        Returns
+        -------
+        The point from pointSet with the best fitness.
+        """
+        tmp = None
+        for (i,p) in enumerate(pointSet):
+            if i == 0:
+                tmp = p
+            else:
+                tmp = self.betterPoint(tmp, p)
+        return tmp
+            
     
