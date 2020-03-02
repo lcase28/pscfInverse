@@ -1,5 +1,12 @@
 """
-Module defining pso variable sets and points
+Module defining pso variable sets and data managers.
+
+Data managers provide a simple interface for agents to update 
+their own data while allowing the possibility to easily add historical
+data tracking and enabling multt-stage updates to complement the 
+updating procedure of the agents themselves.
+
+
 """
 
 # Library imports
