@@ -12,7 +12,7 @@ import multiprocessing as mp
 from queue import SimpleQueue
 import os
 
-class LocalBatchRunner(Object):
+class LocalBatchRunner():
     
     def __init__(self, num_proc):
         self._num_proc = num_proc
@@ -21,6 +21,7 @@ class LocalBatchRunner(Object):
         
     def addTask(self, func, args):
         out = self._next_task_id
+        print("Adding",out, func, args)
         self._batch_queue.put( (out, func, args) )
         self._next_task_id += 1
         return out
@@ -29,6 +30,7 @@ class LocalBatchRunner(Object):
         with mp.Pool(processes=self._num_proc) as p:
             while not self._batch_queue.empty():
                 nextItem = self._batch_queue.get()
+                print("Running", nextItem)
                 nextRes = p.apply_async(nextItem[1],nextItem[2])
             # Prevent adding new tasks and wait to complete.
             p.close()
@@ -37,15 +39,18 @@ class LocalBatchRunner(Object):
 
 if __name__ == '__main__':
     
-    class testclass(Object):
+    import time
+    class testclass():
         def __init__(self, stableData):
             self.stableData = stableData
             self.inSet = []
             self.outSet = []
         def evaluateInput(self, inData):
+            print("Running evaluateInput on",self," with ",inData)
             self.inSet.append(inData)
             out = inData * self.stableData
             self.outSet.append(out)
+            time.sleep(1)
             return out
         def addJob(self, inData, runner):
             runner.addTask(self.evaluateInput,inData)
@@ -53,6 +58,7 @@ if __name__ == '__main__':
     objSet = []
     for i in range(5):
         objSet.append(testclass(i))
+        print(objSet[i])
     runner = LocalBatchRunner(4)
     for i in range(5):
         for j in range(5):
