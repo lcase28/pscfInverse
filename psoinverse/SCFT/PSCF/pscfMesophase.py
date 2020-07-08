@@ -83,7 +83,7 @@ class PSCFMesophase(MesophaseBase):
         fieldGen = FieldCalculator.from_file(fieldGenFile)
         return cls(ID, kgrid, param, fieldGen)
     
-    def update(self, VarSet, root, **kwargs):
+    def startUpdate(self, VarSet, root, runner, **kwargs):
         """ 
             Update phase variables, launch a simulation,
             and update phase energy from result.
@@ -108,8 +108,51 @@ class PSCFMesophase(MesophaseBase):
                 True if updated without error.
                 False otherwise.
         """
-        return super().update(VarSet,root)
+        return super().startUpdate(VarSet,root,runner)
     
+    def _setup_calculations(self, root, runner):
+        """
+            Launch a pscf simulation of the phase using current parameters.
+            Parse the results and return the energy.
+            
+            ** Presently will not handle multiple blocks of same monomer
+            type. i.e. will not handle ABA-type structures.
+            
+            Parameters
+            ----------
+            root : pathlib.Path
+                The root directory of the run. All simulation files are
+                placed in this location. It is assumed that path has 
+                already been resolved.
+            
+            Returns
+            -------
+            energy : real
+                The energy returned by the simulation.
+                numpy.nan if flag = False
+            flag : bool
+                True if simulation converged without issue.
+                False if an error occurred and no energy found.
+        """
+        monFrac = self._getMonomerFractions()
+        ngrid = self.param.ngrid
+        w = self._getinterface()
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
+        self.kgrid.fields = newField
+        kgridFile = root / 'rho_kgrid_in'
+        self.kgrid.write(kgridFile.open(mode='x'))
+        paramFile = root / 'param'
+        self.param.write(paramFile.open(mode='x'))
+        # pass simulation launch to runner
+        runner.addTask(self._launchSim, root)
+        return True
+    
+    def finishUpdate(self, root, runner):
+        return super().finishUpdate(root, runner)
+    
+    def _evaluate_energy(root, runner):
+        return self._readOutput(root)
+        
     def setParams(self, VarSet):
         """
             Update the specified set of variables.
@@ -155,48 +198,6 @@ class PSCFMesophase(MesophaseBase):
                 # TODO: Adjust this to return False rather than raising error for unknowns
                 raise(NotImplementedError("Variable of Type " + str(f) + " not implemented"))
         return True
-        
-    def _evaluate(self, root):
-        """
-            Launch a pscf simulation of the phase using current parameters.
-            Parse the results and return the energy.
-            
-            ** Presently will not handle multiple blocks of same monomer
-            type. i.e. will not handle ABA-type structures.
-            
-            Parameters
-            ----------
-            root : pathlib.Path
-                The root directory of the run. All simulation files are
-                placed in this location. It is assumed that path has 
-                already been resolved.
-            
-            Returns
-            -------
-            energy : real
-                The energy returned by the simulation.
-                numpy.nan if flag = False
-            flag : bool
-                True if simulation converged without issue.
-                False if an error occurred and no energy found.
-        """
-        monFrac = self._getMonomerFractions()
-        ngrid = self.param.ngrid
-        w = self._getinterface()
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
-        self.kgrid.fields = newField
-        kgridFile = root / 'rho_kgrid_in'
-        self.kgrid.write(kgridFile.open(mode='x'))
-        paramFile = root / 'param'
-        self.param.write(paramFile.open(mode='x'))
-        
-        success = self._launchSim(root)
-        if success:
-            #ener, success = self._readOutput(root)
-            ener = 0
-        else:
-            ener = np.nan
-        return ener, success
     
     def _getinterface(self):
         # Presently only works for straight-chi, 2-monomer system
@@ -240,8 +241,8 @@ class PSCFMesophase(MesophaseBase):
                     self.lastLaunch = sub.run("pscf",stdin=fin,stdout=fout, cwd=root)
             self.lastLaunch.check_returncode()
         except sub.CalledProcessError as err:
-            print("Simuation error in: {}".format(root))
-            print(err)
+            with open(root/"errorLog") as ferr:
+            ferr.write("Simuation error in: {}\n{}".format(root,err))
             return False
         return True
         
@@ -285,7 +286,6 @@ class PSCFMesophase(MesophaseBase):
             flag = False
         return ener, flag
         
-    
     def _getMonomerFractions(self):
         """ Return the volume fraction of all monomers """
         nmonomer = self.param.N_monomer
@@ -302,32 +302,5 @@ class PSCFMesophase(MesophaseBase):
         for i in range(nmonomer):
             frac[i] = frac[i] / Ntot
         return frac
-    
-    ###################################################
-    #
-    #  Below method was temporary overloading of super.energy
-    #  It has been removed following implementation of 
-    #  the proper methods
-    #
-    ###################################################
-    #@property
-    #def energy(self):
-    #    """
-    #        The energy of the mesophase as of the most recent simulation.
-    #        
-    #        THIS IS PRESENTLY UNDER CONSTRUCTION. TEMPORARILY USING QUADRATIC
-    #        FITNESS FUNCTION.
-    #        
-    #        Returns
-    #        -------
-    #        E : real or np.NaN
-    #            If the simulation failed to converge, returns np.NaN.
-    #            Else returns the simulated energy.
-    #    """
-    #    # TODO: Implement actual energy value.
-    #    tot = 0.0
-    #    for v in self._psoVars.items():
-    #        tot = tot + v.scftValue**2
-    #    return np.sqrt(max(tot, 0.0))
     
     
