@@ -68,7 +68,9 @@ class Agent(ABC):
         self.PBest = None
         self._inerror = False
         self._validPbest = False # Pbest not yet set.
-        self.evaluate()
+        # Prepare for calculations to be run for initial fitness.
+        # Swarm will trigger the actual calculation and evaluation.
+        self._setup_calculations()
         
     @property
     def validPbest(self):
