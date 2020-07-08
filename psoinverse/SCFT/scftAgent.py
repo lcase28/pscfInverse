@@ -55,7 +55,7 @@ class ScftAgent(Agent):
         
     def _setup_calculations(self):
         stepRoot = self.root / "step{}".format(self.steps)
-        success = self.phaseManager.startUpdate(stepRoot, self.Location)
+        success = self.phaseManager.startUpdate(stepRoot, self._runner, self.Location)
         if not success:
             print("scftAgent phasemanager setup Fail")
             self._startErrorState()
@@ -65,6 +65,8 @@ class ScftAgent(Agent):
         self._tryLog()
     
     def _evaluate_fitness(self):
+        stepRoot = self.root / "step{}".format(self.steps)
+        self.phaseManager.finishUpdate(stepRoot, self._runner)
         if not self.phaseManager.consistent:
             print("scftAgent phaseManager inconsistent.")
             self._startErrorState()

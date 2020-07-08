@@ -260,10 +260,10 @@ class MesophaseManager(object):
     def psoBounds(self):
         return self.variables.psoBounds
     
-    def update(self, root, newPoint = None, **kwargs):
+    def startUpdate(self, root, runner, newPoint = None, **kwargs):
         """
-            Update the Mesophase variable values, run simulations,
-            and recalculate fitness.
+            Update the Mesophase variable values, setup calculations,
+            and pass calculation commands to runner
             
             Parameters
             ----------
@@ -287,33 +287,32 @@ class MesophaseManager(object):
         """
         if newPoint is not None:
             self.psoPoint = newPoint
+        root, success = checkPath(root) # resolve root path
+        if not success:
+            raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
         
-        flag = self._evaluate(root)
+        flag = self._setup_calculations(root,runner)
         if not flag:
-            print("PhaseManager eval Fail")
+            print("PhaseManager setup Fail")
             print(self.statusString)
             self._errstate()
         else:
-            print("PhaseManager update success")
+            print("PhaseManager setup success")
             self._errstate(False)
         
         return flag
         
-    # TODO: Revise to allow parallelization of phases??
-    def _evaluate(self, root):
-        root, success = checkPath(root) # resolve root path
-        if not success:
-            raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
+    def _setup_calculations(self, root, runner):
         phaseRoot = root/self.target.phaseName
-        success = self.target.update( VarSet = self.variables, \
-                                 root = phaseRoot )
+        success = self.target.startUpdate( VarSet = self.variables, \
+                                 root = phaseRoot, runner )
         if not success:
             return False  # if target fails, error state
         ovrSuccess = False
         for (k, c) in self.candidates.items():
             phaseRoot = root/c.phaseName
-            success = c.update( VarSet = self.variables, \
-                                root = phaseRoot )
+            success = c.startUpdate( VarSet = self.variables, \
+                                root = phaseRoot, runner )
             ovrSuccess = ovrSuccess or success
         if not ovrSuccess:
             print("phaseManager Candidates Fail")
@@ -321,6 +320,28 @@ class MesophaseManager(object):
         #self._errstate(False) # simplify by leaving this process to update()
         return True
     
+    def finishUpdate(self, root, runner):
+        root, success = checkPath(root) # resolve root path
+        if not success:
+            raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
+        return self._evaluate_fitness(root, runner)
+    
+    def _evaluate_fitness(self, root, runner):
+        phaseRoot = root/self.target.phaseName
+        success = self.target.finishUpdate(root = phaseRoot, runner )
+        if not success:
+            return False  # if target fails, error state
+        ovrSuccess = False
+        for (k, c) in self.candidates.items():
+            phaseRoot = root/c.phaseName
+            success = c.finishUpdate(root = phaseRoot, runner )
+            ovrSuccess = ovrSuccess or success
+        if not ovrSuccess:
+            print("phaseManager Candidates Fail")
+            #return np.nan, False # error state if all candidates fail
+        #self._errstate(False) # simplify by leaving this process to update()
+        return True
+        
     def _errstate(self, flag=True):
         if flag:
             self._consistent = False
