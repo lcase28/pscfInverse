@@ -16,6 +16,7 @@ from .SearchSpace import Point #SimulationPoint as Point
 from .Integrators import Integrator
 from .Agent import Agent
 from psoinverse.util.stringTools import str_to_num, wordsGenerator
+from psoinverse.util.parallelBatches import LocalBatchRunner
 
 # Helper function for debugging - just wraps the process of spitting out a string to a file
 def debug(line):
@@ -51,7 +52,8 @@ def checkPath(root):
 # =========================================================
 class Swarm(object):
     def __init__(self, graph, agents, integrator, \
-                root = None, logName = "swarm_log", autoLog = True):
+                root = None, batchRunner = None, \
+                logName = "swarm_log", autoLog = True):
         """ 
             Constructor for swarm class.
             
@@ -109,9 +111,11 @@ class Swarm(object):
             raise(ValueError("Unable to resolve root in Swarm"))
         self.SeekMax = integrator.seekMax
         self._inerror = False
-        self.bestAgent = self.get_gbest()
-        if self.autoLog:
-            self.logStatus(True)
+        if batchRunner is None:
+            self._runner = LocalBatchRunner(1)
+        else:
+            self._runner = batchRunner
+        self._finish_step(is_startup=True)
         
     
     @property
@@ -126,11 +130,21 @@ class Swarm(object):
     
     def step(self):
         self.stepsTaken += 1
+        self._start_step()
+        self._finish_step()
+    
+    def _start_step(self):
         for i in range(len(self.Agents)):
             neighbors = [self.Agents[a] for a in self.Graph.neighbors(i)]
-            self.Agents[i].update(neighbors, self.integrator)
+            self.Agents[i].startUpdate(neighbors, self.integrator)
+        
+    def _finish_step(self, is_startup=False):
+        self._runner.runBatch()
+        for i in range(len(self.Agents)):
+            self.Agents[i].finishUpdate()
+        self.bestAgent = self.get_gbest()
         if self.autoLog:
-            self.logStatus(False)
+            self.logStatus(is_startup)
     
     def printState(self):
         """ Depreciated. logStatus and statusString should be used. """
