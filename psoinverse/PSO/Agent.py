@@ -14,7 +14,8 @@ class Agent(ABC):
     
     __NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, ptSrc, velSrc, randGen = None, **kwargs):
+    def __init__(self, boundaries, ptSrc, velSrc, \
+                    randGen = None, batchRunner=None, **kwargs):
         """
         Constructor for Agent base class.
         
@@ -41,6 +42,7 @@ class Agent(ABC):
         self.seekMax = kwargs.get("seekMax",True)
         self.Location = deepcopy(ptSrc)
         self.Velocity = np.array(velSrc)
+        self._runner = batchRunner
         
         if randGen is None:
             randomizeValues = False
@@ -110,10 +112,12 @@ class Agent(ABC):
     def get_coords(self):
         return self.Location.get_scaled_coords()
     
-    def update(self, neighbors, integrator, acceleration=None):
+    def startUpdate(self, neighbors, integrator, acceleration=None):
+        self._integrate_motion(neighbors, integrator, acceleration)
+        self._setup_calculations()
+    
+    def _integrate_motion(self, neighbors, integrator, acceleration=None):
         """ Update the agent's Position (and Velocity) based on the current Position and neighbor information.
-
-            ::Returns:: the agent's personal best fitness value (not Position)
         """
         ## Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
         self.steps += 1
@@ -134,42 +138,50 @@ class Agent(ABC):
                     print("NEW POSITION = {}".format(attempt.get_scaled_coords()))
 
         # Replace internal Location and Velocity with new values
-        move = True
-        if move:
-            vtemp = deepcopy(self.Velocity)
-            ltemp = deepcopy(self.Location.Coords)
+        vtemp = deepcopy(self.Velocity)
+        ltemp = deepcopy(self.Location.Coords)
 
-            self.Velocity = new_velocity
-            self.Location.Coords = attempt.Coords
+        self.Velocity = new_velocity
+        self.Location.Coords = attempt.Coords
 
-            # Fitness is incremented during Evaluate()
-            self.Location.Fitness = 0
-            self._endErrorState() # set flag to normal condition.
-                                    # self.evaluate will switch back
-                                    # if required, but base class
-                                    # assumes normal state will be
-                                    # reached unless otherwise
-                                    # specified.
-            # Use self.Evaluate as a validator
-            if not self.evaluate():
-                debug("Agent {} Failed!".format(self.id))
-                # TODO: Decide if, on evaluation failure, to
-                #       revert to previous state.
-                # Presently removed because reverting is 
-                # inconsistent with assumptions in Pbest
-                # handling.
-                #self.Velocity = vtemp
-                #self.Location.Coords = ltemp
-                return False
-
+        # Fitness is incremented during Evaluate()
+        self.Location.Fitness = 0
+        self._endErrorState() # set flag to normal condition.
+                                # self.evaluate will switch back
+                                # if required, but base class
+                                # assumes normal state will be
+                                # reached unless otherwise
+                                # specified.
+        ## If choosing to revert on failure, store new and old position and velocity
+        ## presently don't do this, so values not stored.
         return True
-
-    # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
+    
+    # Derived classes must override, perform any steps to prepare for fitness evaluation
+    #   then send functions and argument to self._runner for parallel evaluation if using.
+    # Function sent to self._runner must not require modifications to the Agent's data.
+    #   If Data must be returned, task id returned from self._runner should be stored and
+    #   used in self.finishUpdate to retrieve the return value.
     @abstractmethod
-    def evaluate(self):
+    def _setup_calculations(self):
+        pass
+    
+    # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
+    def finishUpdate(self):
+        """
+        Basic wrapper method for process in finishing an update procedure
+        """
+        self._evaluate_fitness()
+        self._evaluate_Pbest()
+        
+        
+    ## Derived classes must override.
+    ## Overriding method must retrieve any data produced by self._runner execution of
+    ##  methods in order to update the fitness of the Agent.
+    @abstractmethod
+    def _evaluate_fitness(self):
         """
             Derived classes must override. Overriding method must update
-            the Agent's fitness, then call this method to update Pbest.
+            the Agent's fitness.
             
             If the overriding method is unable to calculate a valid fitness value,
             an arbitrarily high (numpy.inf, if Agent.seekMax=False) 
@@ -179,7 +191,11 @@ class Agent(ABC):
             In addition to arbitrarily extreme fitness, overriding method should 
             call private method self._startErrorState() to set an Agent-level
             flag indicating that the current location is invalid.
-            
+        """
+        pass
+        
+    def _evaluate_Pbest(self):
+        """
             Pbest Behavior:
             When the Agent's current location is valid (no errors, has fitness):
                 During initialization: 
@@ -241,10 +257,17 @@ class FunctionAgent(Agent):
         super().__init__(**kwargs)
         
         self.evaluate()
-
-    def evaluate(self):
+    
+    def _setup_calculations(self):
+        """
+        Current implementation does not make use of parallelization.
+        """
+        return True
+        
+    def _evaluate_fitness(self):
+        """
+        Batch parallelization is bypassed. Instead, fitness is evaluated here.
+        """
         self.Location.Fitness = self.Function(self.get_coords())
-
-        return super().evaluate()
 
 
