@@ -67,7 +67,7 @@ class MesophaseBase(ABC):
         self.name = ID
         self._seterror()
         
-    def update(self, VarSet, root, **kwargs):
+    def startUpdate(self, VarSet, root, runner, **kwargs):
         """ 
             Update phase variables, launch a simulation,
             and update phase energy from result.
@@ -101,35 +101,16 @@ class MesophaseBase(ABC):
         if not success:
             raise(ValueError("Invalid root directory provided"))
             
-        ener, success = self._evaluate(root)
+        success = self._setup_calculations(root, runner)
         if not success:
             self._seterror()
             return False
-            
-        # only reaches here if all else valid
-        self._validState = True
-        self._energy = ener
+        # If reaches this point, state not valid
+        self._validState = False
         return True
     
-    def _seterror(self):
-        self._validState = False
-        self._energy = np.inf
-    
-    def _checkPath(self, root):
-        return checkPath(root)
-    
-    @property
-    def validState(self):
-        """
-            True if the Mesophase is in a stable (successfully 
-            resolved and converged) state.
-            False if the Mesophase is not up-to-date, or has 
-            otherwise encountered an error.
-        """
-        return self._validState
-    
     @abstractmethod
-    def _evaluate(self, root, **kwargs):
+    def _setup_calculations(self, root, runner, **kwargs):
         """
             Launch a simulation of the mesophase and parse results.
             
@@ -153,6 +134,42 @@ class MesophaseBase(ABC):
                 False if an error occurred and no energy could
         """
         pass
+    
+    def finishUpdate(self, root, runner):
+        root, success = self._checkPath(root)
+        if not success:
+            raise(ValueError("Invalid root directory provided"))
+            
+        ener, success = self._evaluate_energy(root, runner)
+        if not success:
+            self._seterror()
+            return False
+        # If reaches this point, state valid
+        self._validState = True 
+        self._energy = ener
+        return True
+    
+    @abstractmethod
+    def _evaluate_energy(root, runner):
+        pass
+        
+    
+    def _seterror(self):
+        self._validState = False
+        self._energy = np.inf
+    
+    def _checkPath(self, root):
+        return checkPath(root)
+    
+    @property
+    def validState(self):
+        """
+            True if the Mesophase is in a stable (successfully 
+            resolved and converged) state.
+            False if the Mesophase is not up-to-date, or has 
+            otherwise encountered an error.
+        """
+        return self._validState
     
     @abstractmethod
     def setParams(self, VarSet, **kwargs):
