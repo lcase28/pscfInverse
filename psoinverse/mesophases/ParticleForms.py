@@ -112,7 +112,9 @@ class Circle2DForm(ParticleForm):
         smear = kwargs.get("smear",0)
         
         qR = qNorm * R
-        ff = ( 2 / qR**2 ) * ( 1 - sp.special.jv(1,2*qR) / qR)
-        f_smear = np.exp( -(smear**2 * qR**2 / 2) )
+        #ff = ( 2.0 / (qR**2) ) * ( 1.0 - (sp.special.j1(2.0*qR) / qR))
+        ff = (2.0 / (qR**3)) * (qR - sp.special.j1(2.0*qR))
+        ff = zero_q_magnitude*ff
+        f_smear = np.exp( -(smear**2 * qR**2 / 2.0) )
         return ff, f_smear
 

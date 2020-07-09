@@ -124,8 +124,11 @@ class ParamFile(object):
                 file.write("\n%-20s\n" % 'SWEEP')
                 self._output_var( 'real', 's_max')
                 self.output_increments()
-            if s == 'FIELD_TO_RGRID' or s == 'RGRID_TO_FIELD' \
-                or s == 'KGRID_TO_RGRID' or s == 'RHO_TO_OMEGA':
+            if s == 'FIELD_TO_RGRID' \
+                or s == 'RGRID_TO_FIELD' \
+                or s == 'KGRID_TO_RGRID' \
+                or s == 'RGRID_TO_KGRID' \
+                or s == 'RHO_TO_OMEGA': 
                 nFieldTrans = self.output_field_transform(s, nFieldTrans)
                 
         file.write("\n%-20s\n" % 'FINISH')
@@ -199,6 +202,8 @@ class ParamFile(object):
         elif flag == 'FIELD_TO_RGRID':
             self.input_field_transform(flag)
         elif flag == 'RGRID_TO_FIELD':
+            self.input_field_transform(flag)
+        elif flag == 'RGRID_TO_KGRID':
             self.input_field_transform(flag)
         elif flag == 'KGRID_TO_RGRID':
             self.input_field_transform(flag)

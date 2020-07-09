@@ -14,7 +14,8 @@ class Agent(ABC):
     
     __NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, boundaries, ptSrc, velSrc, randGen = None, **kwargs):
+    def __init__(self, boundaries, ptSrc, velSrc, \
+                    randGen = None, batchRunner=None, **kwargs):
         """
         Constructor for Agent base class.
         
@@ -41,6 +42,7 @@ class Agent(ABC):
         self.seekMax = kwargs.get("seekMax",True)
         self.Location = deepcopy(ptSrc)
         self.Velocity = np.array(velSrc)
+        self._runner = batchRunner
         
         if randGen is None:
             randomizeValues = False
@@ -64,9 +66,16 @@ class Agent(ABC):
 
         # Store PBest - best Point() location discovered in all history
         self.PBest = None
-        self.evaluate()
         self._inerror = False
+        self._validPbest = False # Pbest not yet set.
+        # Prepare for calculations to be run for initial fitness.
+        # Swarm will trigger the actual calculation and evaluation.
+        self._setup_calculations()
         
+    @property
+    def validPbest(self):
+        return self._validPbest
+    
     @property
     def inErrorState(self):
         return self._inerror
@@ -105,10 +114,12 @@ class Agent(ABC):
     def get_coords(self):
         return self.Location.get_scaled_coords()
     
-    def update(self, neighbors, integrator, acceleration=None):
+    def startUpdate(self, neighbors, integrator, acceleration=None):
+        self._integrate_motion(neighbors, integrator, acceleration)
+        self._setup_calculations()
+    
+    def _integrate_motion(self, neighbors, integrator, acceleration=None):
         """ Update the agent's Position (and Velocity) based on the current Position and neighbor information.
-
-            ::Returns:: the agent's personal best fitness value (not Position)
         """
         ## Update the position according to PSO dynamics. Retain in tmp array for boundary checks / constraints
         self.steps += 1
@@ -126,39 +137,115 @@ class Agent(ABC):
                     print("TRIAL POSITION = {}".format(scaled_attempt))
                     new_velocity[i] *= -1.0
                     attempt.Coords[i] = self.Location.Coords[i]
+                    print("NEW POSITION = {}".format(attempt.get_scaled_coords()))
 
         # Replace internal Location and Velocity with new values
-        move = True
-        if move:
-            vtemp = deepcopy(self.Velocity)
-            ltemp = deepcopy(self.Location.Coords)
+        vtemp = deepcopy(self.Velocity)
+        ltemp = deepcopy(self.Location.Coords)
 
-            self.Velocity = new_velocity
-            self.Location.Coords = attempt.Coords
+        self.Velocity = new_velocity
+        self.Location.Coords = attempt.Coords
 
-            # Fitness is incremented during Evaluate()
-            self.Location.Fitness = 0
-            # Use self.Evaluate as a validator
-            if not self.evaluate():
-                debug("Agent {} Failed!".format(self.id))
-                self.Velocity = vtemp
-                self.Location.Coords = ltemp
-                return False
-
+        # Fitness is incremented during Evaluate()
+        self.Location.Fitness = 0
+        self._endErrorState() # set flag to normal condition.
+                                # self.evaluate will switch back
+                                # if required, but base class
+                                # assumes normal state will be
+                                # reached unless otherwise
+                                # specified.
+        ## If choosing to revert on failure, store new and old position and velocity
+        ## presently don't do this, so values not stored.
         return True
-
-    # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
+    
+    # Derived classes must override, perform any steps to prepare for fitness evaluation
+    #   then send functions and argument to self._runner for parallel evaluation if using.
+    # Function sent to self._runner must not require modifications to the Agent's data.
+    #   If Data must be returned, task id returned from self._runner should be stored and
+    #   used in self.finishUpdate to retrieve the return value.
     @abstractmethod
-    def evaluate(self):
-        if self.PBest is None:
-            # Initialization condition
-            self.PBest = deepcopy(self.Location)
-        # Now that fitness has been updated, compare to PBest
-        if self.Location > self.PBest and self.seekMax:
-            self.PBest.fill_from(self.Location)
-        elif self.Location < self.PBest and not self.seekMax:
-            self.PBest.fill_from(self.Location)
-        return True
+    def _setup_calculations(self):
+        pass
+    
+    # Derived classes must override, update fitness, and call base using super calls to generate the MRO.
+    def finishUpdate(self):
+        """
+        Basic wrapper method for process in finishing an update procedure
+        """
+        self._evaluate_fitness()
+        self._evaluate_Pbest()
+        
+        
+    ## Derived classes must override.
+    ## Overriding method must retrieve any data produced by self._runner execution of
+    ##  methods in order to update the fitness of the Agent.
+    @abstractmethod
+    def _evaluate_fitness(self):
+        """
+            Derived classes must override. Overriding method must update
+            the Agent's fitness.
+            
+            If the overriding method is unable to calculate a valid fitness value,
+            an arbitrarily high (numpy.inf, if Agent.seekMax=False) 
+            or low (numpy.ninf, if Agent.seekMax=True) value should be set
+            for location fitness, which will leave the location ignored.
+            
+            In addition to arbitrarily extreme fitness, overriding method should 
+            call private method self._startErrorState() to set an Agent-level
+            flag indicating that the current location is invalid.
+        """
+        pass
+        
+    def _evaluate_Pbest(self):
+        """
+            Pbest Behavior:
+            When the Agent's current location is valid (no errors, has fitness):
+                During initialization: 
+                    Pbest is set to current location.
+                Otherwise: 
+                    Pbest is updated to current location if current
+                    location has better fitness value.
+            When Agent's current location is invalid (error, no valid fitness):
+                During initialization: 
+                    Pbest is set to current location,
+                    flag is set to return False from Agent.validPbest property.
+                Other times, while Agent.validPbest==False: 
+                    Pbest is set to current location. 
+                    Agent.validPbest==False flag is retained.
+                Other times, when Agent.validPbest==True:
+                    A valid location has previously been found.
+                    This valid Pbest is retained, and current location ignored.
+            
+            Returns
+            -------
+            success : bool
+                True if evaluation was successful.
+                False if an error occurred.
+        """
+        if not self._validPbest:
+            # Edge condition: No valid Pbest yet found.
+            if self.PBest is None:
+                # Initialization condition
+                self.PBest = deepcopy(self.Location)
+            else:
+                # Searching for initial Pbest
+                self.PBest.fill_from(self.Location)
+                
+            if self.inErrorState:
+                self._validPbest = False
+            else:
+                self._validPbest = True
+                
+        if not self.inErrorState:
+            # Now that fitness has been updated, compare to PBest
+            if self.Location > self.PBest and self.seekMax:
+                self.PBest.fill_from(self.Location)
+            elif self.Location < self.PBest and not self.seekMax:
+                self.PBest.fill_from(self.Location)
+            successFlag = True
+        else:
+            successFlag = False
+        return successFlag
     
     def __str__(self):
         s = "Agent {}:\n\tScaled: {}\n\tCoords: {}\n\tVelcty: {}\n\tFitnes: {}"
@@ -172,10 +259,17 @@ class FunctionAgent(Agent):
         super().__init__(**kwargs)
         
         self.evaluate()
-
-    def evaluate(self):
+    
+    def _setup_calculations(self):
+        """
+        Current implementation does not make use of parallelization.
+        """
+        return True
+        
+    def _evaluate_fitness(self):
+        """
+        Batch parallelization is bypassed. Instead, fitness is evaluated here.
+        """
         self.Location.Fitness = self.Function(self.get_coords())
-
-        return super().evaluate()
 
 

@@ -12,6 +12,7 @@ from copy import deepcopy
 import io
 import numpy as np
 import os
+import subprocess as sub    # Requires Python 3.5 --> System dependence
 
 class PSCFMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
@@ -44,6 +45,11 @@ class PSCFMesophase(MesophaseBase):
         self.kgrid = kgrid
         self.param = param
         self.fieldGen = fieldGen
+        # lastLaunch will be used to hold a subprocess.CompletedProcess instance
+        #   Will store system status data for the most recent run
+        #   Previous runs currently not deemed useful.
+        self.lastLaunch = None
+        self.out = None
         super().__init__(ID)
     
     @classmethod
@@ -72,12 +78,12 @@ class PSCFMesophase(MesophaseBase):
             fieldGen : pathlib.path
                 An already-resolved path object to a fieldGen source file.
         """
-        kgrid = WaveVectFieldFile(kgridFile.resolve())
+        kgrid = WaveVectFieldFile(kgridFile.resolve(),True)
         param = ParamFile(paramFile.resolve())
         fieldGen = FieldCalculator.from_file(fieldGenFile)
         return cls(ID, kgrid, param, fieldGen)
     
-    def update(self, VarSet, root, **kwargs):
+    def startUpdate(self, VarSet, root, runner, **kwargs):
         """ 
             Update phase variables, launch a simulation,
             and update phase energy from result.
@@ -102,8 +108,51 @@ class PSCFMesophase(MesophaseBase):
                 True if updated without error.
                 False otherwise.
         """
-        return super().update(VarSet,root)
+        return super().startUpdate(VarSet,root,runner)
     
+    def _setup_calculations(self, root, runner):
+        """
+            Launch a pscf simulation of the phase using current parameters.
+            Parse the results and return the energy.
+            
+            ** Presently will not handle multiple blocks of same monomer
+            type. i.e. will not handle ABA-type structures.
+            
+            Parameters
+            ----------
+            root : pathlib.Path
+                The root directory of the run. All simulation files are
+                placed in this location. It is assumed that path has 
+                already been resolved.
+            
+            Returns
+            -------
+            energy : real
+                The energy returned by the simulation.
+                numpy.nan if flag = False
+            flag : bool
+                True if simulation converged without issue.
+                False if an error occurred and no energy found.
+        """
+        monFrac = self._getMonomerFractions()
+        ngrid = self.param.ngrid
+        w = self._getinterface()
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
+        self.kgrid.fields = newField
+        kgridFile = root / 'rho_kgrid_in'
+        self.kgrid.write(kgridFile.open(mode='x'))
+        paramFile = root / 'param'
+        self.param.write(paramFile.open(mode='x'))
+        # pass simulation launch to runner
+        runner.addTask(self._launchSim, root)
+        return True
+    
+    def finishUpdate(self, root, runner):
+        return super().finishUpdate(root, runner)
+    
+    def _evaluate_energy(root, runner):
+        return self._readOutput(root)
+        
     def setParams(self, VarSet):
         """
             Update the specified set of variables.
@@ -149,41 +198,94 @@ class PSCFMesophase(MesophaseBase):
                 # TODO: Adjust this to return False rather than raising error for unknowns
                 raise(NotImplementedError("Variable of Type " + str(f) + " not implemented"))
         return True
-        
-    def _evaluate(self, root):
+    
+    def _getinterface(self):
+        # Presently only works for straight-chi, 2-monomer system
+        nMon = self.param.N_monomer
+        segLen = np.array(self.param.kuhn)
+        b = (1.0 * np.prod(segLen)) ** (1.0/len(segLen))
+        if nMon == 2:
+            chi = self.param.chi[1][0]
+        else:
+            chi = self.param.chi[1][0]
+        w = 2*b / np.sqrt(6.0 * chi)
+        return w
+    
+    def _launchSim(self, root):
         """
-            Launch a pscf simulation of the phase using current parameters.
-            Parse the results and return the energy.
-            
-            ** Presently will not handle multiple blocks of same monomer
-            type. i.e. will not handle ABA-type structures.
+            Handle Launching of the simulation in given root 
+            directory
+         
+            Store completed process object in self.lastLaunch
             
             Parameters
             ----------
             root : pathlib.Path
-                The root directory of the run. All simulation files are
-                placed in this location. It is assumed that path has 
+                The root directory of the run. 
+                All simulation files are
+                placed in this location. 
+                It is assumed that path has 
+                already been resolved.
+            
+            Returns
+            -------
+            flag : bool
+                True if simulation converged without issue.
+                False if an error occurred and no energy found.
+        """
+        infile = root / "param"
+        outfile = root / "simLog"
+        try:
+            with open(infile) as fin:
+                with open(outfile,'w') as fout:
+                    self.lastLaunch = sub.run("pscf",stdin=fin,stdout=fout, cwd=root)
+            self.lastLaunch.check_returncode()
+        except sub.CalledProcessError as err:
+            with open(root/"errorLog") as ferr:
+            ferr.write("Simuation error in: {}\n{}".format(root,err))
+            return False
+        return True
+        
+    def _readOutput(self, root):
+        """
+            If simulation successful, read energy from output file.
+            
+            NOTE: this method should not be called except 
+            by _launchSim following successful simulation.
+            
+            Parameters
+            ----------
+            root : pathlib.Path
+                The root directory of the run. 
+                All simulation files are
+                placed in this location. 
+                It is assumed that path has 
                 already been resolved.
             
             Returns
             -------
             energy : real
-                The energy returned by the simulation.
+                The energy of the mesophase.
+                numpy.nan if flag = False
             flag : bool
                 True if simulation converged without issue.
                 False if an error occurred and no energy found.
         """
-        monFrac = self._getMonomerFractions()
-        ngrid = self.param.ngrid
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid)
-        self.kgrid.fields = newField
-        kgridFile = root / 'rho_kgrid_in'
-        self.kgrid.write(kgridFile.open(mode='x'))
-        paramFile = root / 'param'
-        self.param.write(paramFile.open(mode='x'))
-        # TODO: Implement actual pscf launch and output parsing
-        return 1.0, True
-    
+        # Check field similarity
+        kgridFile = root/"rho_kgrid"
+        self.convField = WaveVectFieldFile(kgridFile.resolve())
+        self.fieldSim = self.kgrid.fieldSimilarity(self.convField)
+        if np.min(self.fieldSim) >= 0.8:
+            # converged to similar fields
+            outfile = root/"out"
+            self.outfile = OutFile(outfile.resolve())
+            ener = self.outfile.f_Helmholtz - self.outfile.f_homo
+            flag = True
+        else:
+            ener = np.nan
+            flag = False
+        return ener, flag
+        
     def _getMonomerFractions(self):
         """ Return the volume fraction of all monomers """
         nmonomer = self.param.N_monomer
@@ -200,25 +302,5 @@ class PSCFMesophase(MesophaseBase):
         for i in range(nmonomer):
             frac[i] = frac[i] / Ntot
         return frac
-        
-    @property
-    def energy(self):
-        """
-            The energy of the mesophase as of the most recent simulation.
-            
-            THIS IS PRESENTLY UNDER CONSTRUCTION. TEMPORARILY USING QUADRATIC
-            FITNESS FUNCTION.
-            
-            Returns
-            -------
-            E : real or np.NaN
-                If the simulation failed to converge, returns np.NaN.
-                Else returns the simulated energy.
-        """
-        # TODO: Implement actual energy value.
-        tot = 0.0
-        for v in self._psoVars.items():
-            tot = tot + v.scftValue**2
-        return np.sqrt(max(tot, 0.0))
     
     

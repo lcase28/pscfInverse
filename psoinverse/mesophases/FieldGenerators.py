@@ -124,13 +124,14 @@ class FieldCalculator(object):
                                     raise(NotImplementedError("1-dimensional case not implemented"))
                                 elif dim == 2:
                                     nconst = 3
-                                    raise(NotImplementedError("2-dimensional case not implemented"))
+                                    constNames = ["a", "b", "gamma"]
+                                    #raise(NotImplementedError("2-dimensional case not implemented"))
                                 elif dim == 3:
                                     nconst = 6
+                                    constNames = ["a","b","c","alpha","beta","gamma"]
                                 else:
                                     raise(ValueError("dim may not exceed 3"))
                                 constants = [str_to_num(next(words)) for i in range(nconst)]
-                                constNames = ["a","b","c","alpha","beta","gamma"]
                                 const = dict(zip(constNames,constants))
                                 #print("Constants: ",constants)
                                 data = Lattice.latticeFromParameters(dim, **const)
@@ -158,7 +159,7 @@ class FieldCalculator(object):
             return cls(**kwargs)
     
     # TODO: Figure out how to generate 2D, 1D initial guesses
-    def to_kgrid(self, frac, ngrid):
+    def to_kgrid(self, frac, ngrid,interfaceWidth=None):
         """
             Return the reciprocal space grid of densities.
             
@@ -182,7 +183,7 @@ class FieldCalculator(object):
         frac = np.array(frac)
         nspecies = frac.size
         nwaves = len(record)
-        rho = np.zeros((nwaves, nspecies))
+        rho = 1j*np.zeros((nwaves, nspecies))
         vol = self.lattice.volume
         particleVol = frac[coreindex] * vol / self.nparticles
         
@@ -192,8 +193,11 @@ class FieldCalculator(object):
                 # 0-th wave-vector -- corresponds to volume fractions
                 rho[t,:] = frac[:] 
             else:
+                compSum = R + 1j*I
                 ff, fsmear = self.partForm.formFactorAmplitude(q_norm, particleVol, smear = self.smear)
-                rho[t, coreindex] = (1/vol) * R * ff * fsmear
+                if interfaceWidth is not None:
+                    fsmear = np.exp(-( (interfaceWidth**2) * q_norm**2) / 2.0)
+                rho[t, coreindex] = compSum * (1/vol) * ff * fsmear
                 rhoTemp = -rho[t, coreindex] / np.sum(frac[1:])
                 for i in range(nspecies-1):
                     rho[t, i+1] = rhoTemp * frac[i+1]

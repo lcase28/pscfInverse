@@ -16,7 +16,8 @@ class ScftAgent(Agent):
     """ Derived Agent Class for SCFT phase search. """
     
     def __init__(self, phaseManager, randGen, root = None, \
-                logFileName = 'AgentLog', autoLog = True, *args, **kwargs):
+                logFileName = 'AgentLog', autoLog = True, \
+                batchRunner, *args, **kwargs):
         """
             Constructor for ScftAgent
             
@@ -49,28 +50,27 @@ class ScftAgent(Agent):
         velSrc = np.zeros_like(location.Coords)
         # TODO: Figure out better way to force clean file on startup.
         self._startup = True
-        super().__init__(bounds, location, velSrc, randGen, seekMax = True)
+        super().__init__(bounds, location, velSrc, randGen, batchRunner, seekMax = True)
         self._startup = False
         
-    def evaluate(self):
+    def _setup_calculations(self):
         stepRoot = self.root / "step{}".format(self.steps)
-        success = self.phaseManager.update(stepRoot, self.Location)
+        success = self.phaseManager.startUpdate(stepRoot, self._runner, self.Location)
         if not success:
-            print("scftAgent phasemanager Fail")
+            print("scftAgent phasemanager setup Fail")
             self._startErrorState()
-            return False
-        self._endErrorState()
+    
+    def finishUpdate(self):
+        super().finishUpdate()
+        self._tryLog()
+    
+    def _evaluate_fitness(self):
+        stepRoot = self.root / "step{}".format(self.steps)
+        self.phaseManager.finishUpdate(stepRoot, self._runner)
         if not self.phaseManager.consistent:
             print("scftAgent phaseManager inconsistent.")
             self._startErrorState()
-            return False
-        self.Location.Fitness = np.linalg.norm(self.Location.Coords)
-        # TODO: Change Fitness operation to use actual simulation.
-        superReturn = super().evaluate()
-        
-        if self.autoLog:
-            self.writeLog(self._startup)
-        return superReturn
+        self.Location.Fitness = self.phaseManager.fitness
     
     @property
     def statusString(self):
@@ -90,3 +90,7 @@ class ScftAgent(Agent):
             with self.logFile.open(mode='a') as f:
                 f.write(s)
     
+    def _tryLog(self):
+        if self.autoLog:
+            self.writeLog(self._startup)
+        
