@@ -8,65 +8,115 @@
 ##
 ################
 
+from abc import ABC, abstractmethod
 import multiprocessing as mp
 from queue import SimpleQueue
 import os
 
-class LocalBatchRunner():
+class BaseCalculationResult(ABC):
+    
+    def __init__(self, idnum):
+        self.__id = idnum
+    
+    @property
+    def id(self):
+        return self.__id
+    
+    @abstractmethod
+    def get(self):
+        """ Return the result of the calculation. """
+        pass
+    
+    @abstractmethod
+    def ready(self):
+        """ Return whether the calculation has completed. """
+        pass
+    
+class BaseCalculationManager(ABC):
+    """
+    Base class for objects which act as continuous parallel processing task queues.
+    """
     
     def __init__(self, num_proc):
-        self._num_proc = num_proc
-        self._batch_queue = SimpleQueue()
-        self._next_task_id = 0
-        
+        self.__num_proc = num_proc
+    
+    @property
+    def width(self):
+        """ The number of processes set to run simultaneously. """
+        return self.__num_proc
+    
+    @abstractmethod
     def addTask(self, func, args):
-        out = self._next_task_id
-        print("Adding",out, func, args)
-        self._batch_queue.put( (out, func, args) )
-        self._next_task_id += 1
+        """
+        Add the given calculation task to the job queue.
+        
+        Parameters
+        ----------
+        func : Function
+            The function to be performed.
+        args : list
+            The arguments for the function.
+        
+        Return
+        ------
+        taskID : int
+            An ID number for the task
+        res : CalculationResult
+            An object to track calculation progress and retrieve returns.
+        """
+        pass
+    
+    @abstractmethod
+    def finishAll(self):
+        """ Wait until all pending tasks complete """
+
+class LocalCalculationResult(BaseCalculationResult):
+    """
+    A wrapper for multiprocessing.pool.AsyncResult
+    """
+    
+    def __init__(self, idnum, res):
+        """
+        Parameters
+        ----------
+        idnum : int
+            The ID number of the result
+        res : multiprocessing.pool.AsyncResult
+            The Result generated when submitting the calculation.
+        """
+        self.__res = res
+        super().__init__(idnum)
+    
+    def get(self):
+        return self.__res.get()
+    
+    def ready(self):
+        return self.__res.ready()
+
+class LocalCalculationManager(BaseCalculationManager):
+    """
+    A local machine parallel manager, using the multiprocessing library.
+    """
+    def __init__(self, num_proc):
+        super().__init__(num_proc)
+        self.__next_task_id = 0
+        self.__pool = None #mp.Pool(processes=self.__num_proc)
+    
+    def addTask(self, func, args):
+        jobid = self.__next_task_id
+        if self.__pool is None:
+            self.__startPool()
+        res = self.__pool.apply_async(func, args)
+        self.__next_task_id += 1
         return out
     
-    def runBatch(self):
-        with mp.Pool(processes=self._num_proc) as p:
-            while not self._batch_queue.empty():
-                nextItem = self._batch_queue.get()
-                print("Running", nextItem)
-                nextRes = p.apply_async(nextItem[1],nextItem[2])
-            # Prevent adding new tasks and wait to complete.
-            p.close()
-            p.join()
-        self._next_task_id = 0
+    def __startPool(self):
+        self.__pool = mp.Pool(processes=self.width)
+    
+    def finishAll(self):
+        """ Wait until all pending tasks complete """
+        if self.__pool is not None:
+            self.__pool.close()
+            self.__pool.join()
+            self.__pool = None
 
-if __name__ == '__main__':
-    
-    import time
-    class testclass():
-        def __init__(self, stableData):
-            self.stableData = stableData
-            self.inSet = []
-            self.outSet = []
-        def evaluateInput(self, inData):
-            print("Running evaluateInput on",self," with ",inData)
-            self.inSet.append(inData)
-            out = inData * self.stableData
-            self.outSet.append(out)
-            time.sleep(1)
-            return out
-        def addJob(self, inData, runner):
-            runner.addTask(self.evaluateInput,inData)
-    
-    objSet = []
-    for i in range(5):
-        objSet.append(testclass(i))
-        print(objSet[i])
-    runner = LocalBatchRunner(4)
-    for i in range(5):
-        for j in range(5):
-            objSet[j].addJob(i, runner)
-        runner.runBatch()
-    for i in objSet:
-        print(i.stableData)
-        print(i.inSet)
-        print(i.outSet)
-        print("")
-        

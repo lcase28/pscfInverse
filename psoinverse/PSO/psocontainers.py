@@ -11,7 +11,7 @@ updating procedure of the agents themselves.
 
 # Library imports
 from psoinverse.PSO.psovariables import PsoVariable
-from psoinverse.PSO.psovectors import Point
+from psoinverse.PSO.psovectors import Point, Velocity
 
 # Third-party imports
 import numpy as np
@@ -94,7 +94,7 @@ class PsoVariableSet(object):
             res.append( self.__variables[i].checkAcceptance(val[i], psoVals) )
         return res
         
-    def tryUpdate(self, source, psoVals=True):
+    def startUpdate(self, source, psoVals=True):
         """
             Perform a soft update on variable values.
             This will update the values in the variables, but internally
@@ -151,7 +151,7 @@ class PsoVariableSet(object):
         
         return success
         
-    def confirmUpdate(self):
+    def finishUpdate(self):
         """
         When a soft update has been started, this method fixes the update as the stable
         state of the object.
@@ -187,10 +187,10 @@ class PsoVariableSet(object):
         self.__clear_soft_backup()
         self.psoValues = src
         
-    def forceUpdate(self, source, psoVals=True):
+    def update(self, source, psoVals=True):
         """
             Applies the update and confirms it. Has the same effect as consecutive calls to
-            tryUpdate and confirmUpdate.
+            startUpdate and finishUpdate.
             
             Parameters
             ----------
@@ -217,8 +217,8 @@ class PsoVariableSet(object):
         if self.__soft_update_flag:
             raise(ContainerStatusError(self.__class__, self.status, self.forceUpdate, \
                         "Must confirm or cancel update before attempting new update"))
-        success = self.tryUpdate(source,psoVals)
-        suc = self.confirmUpdate()
+        success = self.startUpdate(source,psoVals)
+        suc = self.finishUpdate()
         return success
     
     def __clear_soft_backup(self):
@@ -389,8 +389,6 @@ class PsoPositionData(object):
     current and best positions and fitnesses.
     """
     
-    ## TODO: Implement queue-based position history storage with max capacity.
-    
     def __init__(self, varSet):
         """
         Partial initialization of object
@@ -400,45 +398,51 @@ class PsoPositionData(object):
         self.__variableSet = varSet
         self.__status = ContainerStatusTypes.uninitialized
         self.__fitness = None
-        self.__best_point = None
-        self.__old_fitness = None
+        self.__best_step = None
+        self.__next_step = 0
+        self.__stable_history = [] # Point objects with psovalue coordinates
+        self.__best_history = [] # Step numbers referencing the __stable_history points.
         
     @classmethod
     def initializedInstance(cls, varSet, fitness):
         instance = cls(varSet)
         pt = instance.__variableSet.psoValues
-        instance.forceUpdate(pt, fitness)
-        instance.setCurrentAsBest()
+        instance.startUpdate(pt)
+        instance.finishUpdate(fitness, newBest=True)
         return instance
         
     # Updating methods
     
-    def tryUpdate(self, src, psoValues=True):
+    def startUpdate(self, src, psoValues=True):
         """
         Reversibly update the current position.
         
         Parameters
         """
         if self.status == ContainerStatusTypes.unstable:
-            raise(ContainerStatusError(self.__class__, self.status, self.tryUpdate, \
-                        "Cannot try new update until prior try is confirmed or cancelled."))
-        success = self.__variableSet.tryUpdate(src, psoValues)
-        self.__old_fitness = self.__fitness
+            raise(ContainerStatusError(self.__class__, self.status, self.startUpdate, \
+                        "Cannot try new update until prior update is confirmed or cancelled."))
+        success = self.__variableSet.startUpdate(src, psoValues)
         self.__fitness = None
         self.__status = ContainerStatusTypes.unstable
         return success
         
-    def confirmUpdate(self, fitness):
+    def finishUpdate(self, fitness, newBest=False):
         """
         Accept currently attempted update and set fitness to given value
         """
         if not self.status == ContainerStatusTypes.unstable:
             raise(ContainerStatusError(self.__class__, self.status, self.confirmUpdate, \
                     "Must initiate a soft update before confirming the soft update."))
-        success = self.__variableSet.confirmUpdate()
-        self.__fitness = fitness
-        self.__old_fitness = None
+        # Set new Stable Position
+        success = self.__variableSet.finishUpdate()
         self.__status = ContainerStatusTypes.stable
+        if newBest:
+            self.__best_step = self.__next_step
+        newpt = Point(self.__variableSet.psoValues,fitness)
+        self.__stable_history.append(newpt)
+        self.__best_history.append(self.__best_step)
+        self.__next_step += 1
         return success
         
     def cancelUpdate(self):
@@ -447,25 +451,51 @@ class PsoPositionData(object):
             raise(ContainerStatusError(self.__class__, self.status, self.cancelUpdate, \
                     "Must initiate a soft update before cancelling the soft update."))
         self.__variableSet.cancelUpdate()
-        self.__fitness = self.__old_fitness
         self.__status = ContainerStatusTypes.stable
         
-    def forceUpdate(self, src, fitness, psoVals=True):
-        self.tryUpdate(src, psoVals)
-        success = self.confirmUpdate(fitness, psoVals)
+    def update(self, src, fitness, psoVals=True):
+        self.startUpdate(src, psoVals)
+        success = self.finishUpdate(fitness)
         return success
     
-    def setCurrentAsBest(self):
-        """ Set the current position as the best position seen """
-        if not self.status == ContainerStatusTypes.stable:
-            raise(ContainerStatusError(self.__class__, self.status, self.setCurrentAsBest, \
-                    "The container must be stable before setting the best position."))
-        self.__best_fitness = self.currentFitness
-        self.__best_pso_coords = self.currentPsoValues
-        self.__best_true_coords = self.currentTrueValues
-        
-    # Properties
+    # Properties and accessing methods
     
+    def hasStep(self, step):
+        """
+        True if the container has data for step.
+        
+        Where records are kept, one entry is maintained for each
+        step, added before self.__next_step is incremented.
+        """
+        flag = self.__next_step > step
+        return flag
+    
+    def stablePointAtStep(self, step):
+        """
+        Return the best point at specified step number.
+        """
+        if self.hasStep(step):
+            pt = self.__stable_history[step]
+            newpt = Point(pt.components, pt.fitness)
+            return newpt
+        else:
+            return None
+    
+    def bestPointAtStep(self, step):
+        """
+        Return the best point at specified step number.
+        """
+        if self.hasStep(step):
+            ref = self.__best_history[step]
+            return self.stablePointAtStep(ref)
+        else:
+            return None
+    
+    @property
+    def bestStep(self):
+        """ The step number at which the stable point was the best point. """
+        return self.__best_step
+        
     @property
     def dimensions(self):
         return self.__variableSet.dimensions
@@ -489,8 +519,17 @@ class PsoPositionData(object):
         if self.__status == ContainerStatusTypes.uninitialized:
             msg = "No stable state has yet been set. No stable data Available."
             raise(ContainerStatusError(self.__class__, self.__status, "stableFitness", msg))
-        if self.__status == ContainerStatusTypes.unstable:
-            return self.__old_fitness
+        pt = self.__stable_history[-1]
+        return pt.fitness
+    
+    @property
+    def stablePoint(self):
+        """ A point containing the most recent stable position and fitness. Constant return between confirmUpdate calls. """
+        if self.__status == ContainerStatusTypes.uninitialized:
+            msg = "No stable state has yet been set. No stablePoint Available."
+            raise(ContainerStatusError(self.__class__, self.__status, "stablePoint", msg))
+        pt = self.__stable_history[-1]
+        return Point(pt.components, pt.fitness)
     
     @property
     def currentPsoValues(self):
@@ -500,48 +539,43 @@ class PsoPositionData(object):
     def currentTrueValues(self):
         return self.__variableSet.trueValues
     
-    @property
-    def currentFitness(self):
-        return self.__fitness
-    
-    @property
-    def bestPsoValues(self):
-        return np.array(self.__best_pso_coords)
+    def currentPoint(self, currentFitness):
+        """
+        Return a point containing current psoValues and given fitness.
         
-    @property
-    def bestTrueValues(self):
-        return np.array(self.__best_true_coords)
-    
-    @property
-    def bestFitness(self):
-        return self.__best_fitness
-    
-    @property
-    def stablePoint(self):
-        """ A point containing the most recent stable position and fitness. Constant return between confirmUpdate calls. """
-        if self.__status == ContainerStatusTypes.uninitialized:
-            msg = "No stable state has yet been set. No stablePoint Available."
-            raise(ContainerStatusError(self.__class__, self.__status, "stablePoint", msg))
-        return Point(self.stablePsoValues, self.stableFitness)
-    
-    @property
-    def currentPoint(self):
-        """ A Point object with current fitness and current pso values. """
-        return Point(self.currentPsoValues, self.currentFitness)
+        During an update, the "current position" does not have an assigned fitness.
+        This method allows caller to generate a point object for comparisons
+        without actually modifying the in-update status of the positionData object.
+        
+        In between updates, the method will return the "stablePoint" positions along
+        with the given fitness. This use-case is generally discouraged.
+        
+        Parameters
+        ----------
+        currentFitness : real
+            A fitness value to assign to the current point.
+        """
+        return Point(self.currentPsoValues, currentFitness)
     
     @property
     def bestPoint(self):
-        """ A Point object with current fitness and current pso values. """
-        return Point(self.bestPsoValues, self.bestFitness)
+        """ A Point object with best fitness and best pso values. """
+        return self.stablePointAtStep(self.__best_step)
+    
+    @property
+    def bestPsoValues(self):
+        return self.bestPoint.components
+        
+    @property
+    def bestFitness(self):
+        return self.bestPoint.fitness
     
     @property
     def variableSet(self):
         """ 
-            The underlying variable set used for position management.
-            The returned value should be treated as read-only; modification
-            may lead to undefined behavior.
+        The underlying variable set used for position management.
+        The returned value should be treated as read-only; modification
+        may lead to undefined behavior.
         """
         return self.__variableSet
-        
-# TODO: Implement container class to wrap velocities and manage updates.
-
+    

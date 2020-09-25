@@ -57,161 +57,227 @@ class MesophaseBase(ABC):
     """
     
     @abstractmethod
-    def __init__(self, ID, **kwargs):
+    def __init__(self, ID):
         """
-            All inheriting classes should define their own __init__
-            First call in __init__ should be  call to the base class
-            constructor to set the ID/name of the phase and set initial
-            error state.
+        All inheriting classes should define their own __init__
+        First call in __init__ should be  call to the base class
+        constructor to set the ID/name of the phase and set initial
+        error state.
         """
         self.name = ID
-        self._seterror()
-        
-    def startUpdate(self, VarSet, root, runner, **kwargs):
-        """ 
-            Update phase variables, launch a simulation,
-            and update phase energy from result.
-            
-            If deriving classes override, they should end
-            with a call to super().update, and allow super
-            to run calls to setParams and _evaluate.
-            
-            Parameters
-            ----------
-            VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
-                The set of all variables to be updated, with their 
-                current values
-            root : pathlib.Path (OS-dependent type)
-                The root directory of the run. All files from the
-                simulation are to be placed in this directory.
-                If the directory does not exist, it will be created.
-            
-            Returns
-            -------
-            flag : bool
-                True if updated without error.
-                False otherwise.
-        """
-        success = self.setParams(VarSet)
-        if not success:
-            self._seterror()
-            return False
-            
-        root, success = self._checkPath(root)
-        if not success:
-            raise(ValueError("Invalid root directory provided"))
-            
-        success = self._setup_calculations(root, runner)
-        if not success:
-            self._seterror()
-            return False
-        # If reaches this point, state not valid
-        self._validState = False
-        return True
-    
-    @abstractmethod
-    def _setup_calculations(self, root, runner, **kwargs):
-        """
-            Launch a simulation of the mesophase and parse results.
-            
-            Parameters
-            ----------
-            root : pathlib.Path
-                The root directory of the run. All files from the
-                simulation are to be placed in this directory.
-                update() method should have already ensured this
-                path exists prior to call to _evaluate().
-            
-            Returns
-            -------
-            energy : real or numpy.inf
-                The energy returned by the simulation, relative to
-                a hypothetical homogeneous disordered state.
-                If an error occurred, and no energy available, 
-                numpy.inf returned (arbitrarily high energy)
-            flag : bool
-                True if simulation converged without issue. 
-                False if an error occurred and no energy could
-        """
-        pass
-    
-    def finishUpdate(self, root, runner):
-        root, success = self._checkPath(root)
-        if not success:
-            raise(ValueError("Invalid root directory provided"))
-            
-        ener, success = self._evaluate_energy(root, runner)
-        if not success:
-            self._seterror()
-            return False
-        # If reaches this point, state valid
-        self._validState = True 
-        self._energy = ener
-        return True
-    
-    @abstractmethod
-    def _evaluate_energy(root, runner):
-        pass
-        
-    
-    def _seterror(self):
-        self._validState = False
         self._energy = np.inf
-    
-    def _checkPath(self, root):
-        return checkPath(root)
+        self._updating = False
+        self._lastLaunch = None
+        self._updateCount = -1
     
     @property
-    def validState(self):
+    def stable(self):
         """
-            True if the Mesophase is in a stable (successfully 
-            resolved and converged) state.
-            False if the Mesophase is not up-to-date, or has 
-            otherwise encountered an error.
+        True if not updating, not waiting on calculations, and has valid fitness.
+        
+        Return value is analogous to self.readyForStartUpdate, but will return
+        False on initialization, before the first calculation has been run.
         """
-        return self._validState
+        out = self._updateCount >= 0 and self.readyForStartUpdate
+        return out
+    
+    @property
+    def updating(self):
+        return self._updating
+    
+    @property
+    def calculationFinished(self):
+        """
+        True if the latest calculation is complete and results available.
+        
+        If not in the process of an update, returns False.
+        """
+        if self._lastLaunch is None:
+            return False
+        else:
+            return self._lastLaunch.ready()
+    
+    @property
+    def readyForStartUpdate(self):
+        if self._lastLaunch is None and not self.updating:
+            return True
+        else:
+            return False
+    
+    @property
+    def readyForFinishUpdate(self):
+        flag = self.updating and self.calculationFinished
+        return flag
+        
+    def startUpdate(self, VarSet, root, runner):
+        """ 
+        Update phase variables, and launch a simulation.
+        
+        If deriving classes override, they should end
+        with a call to super().update, and allow super
+        to run calls to setParams and _evaluate.
+        
+        Parameters
+        ----------
+        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+            The set of all variables to be updated, with their 
+            current values
+        root : pathlib.Path (OS-dependent type)
+            The root directory of the run. All files from the
+            simulation are to be placed in this directory.
+            If the directory does not exist, it will be created.
+        
+        Returns
+        -------
+        flag : bool
+            True if updated without error.
+            False otherwise.
+        """
+        if not self.readyForStartUpdate:
+            return False
+        
+        success = self.setParams(VarSet)
+        if not success:
+            return False
+            
+        root, success = self._checkPath(root)
+        if not success:
+            raise(ValueError("Invalid root directory provided"))
+            
+        args, success = self._setup_calculations(root, runner)
+        if not success:
+            return False
+        self._updating = True
+        self._lastLaunch = runner.addTask(self._launchSim, args)
+        return True
+    
+    @abstractmethod
+    def _setup_calculations(self, root):
+        """
+        Perform any setup required before launching the calculation.
+        
+        Make any required state changes to the object prior to launching
+        the calculation. Put together a list of arguments for to pass
+        to self._launchSim and return this list (will be passed to 
+        self._launchSim using *args).
+        
+        Parameters
+        ----------
+        root : pathlib.Path
+            The root directory of the run. All files from the
+            simulation are to be placed in this directory.
+            update() method should have already ensured this
+            path exists prior to call to _evaluate().
+        
+        Returns
+        -------
+        args : list
+            List of arguments for self._launchSim
+        flag : boolean
+            True if setup occurred without issue.
+        """
+        pass
+    
+    @abstractmethod
+    def _launchSim(self):
+        """
+        Finalize setup and run the simulation.
+        
+        This method will be passed to the parallel calculation manager.
+        During this method, any additional calculation setup can be done, 
+        and the calculation should be run. This call should not make any
+        modifications to the object state.
+        
+        Any arguments should be returned from self._setup_calculations(...).
+        
+        Return values are discouraged, but can be accessed through
+        the multiprocessing.AsyncResult attribute self._lastLaunch.
+        """
+        pass
+    
+    def finishUpdate(self, root):
+        if not self.readyForFinishUpdate:
+            return False
+        flag = True
+        root, success = self._checkPath(root)
+        if not success:
+            raise(ValueError("Invalid root directory provided"))
+        ener, success = self._evaluate_energy(root)
+        if not success:
+            flag = False
+        # If reaches this point, state valid
+        self._updateCount += 1
+        self._updating = False
+        self._lastLaunch = None
+        self._energy = ener
+        return flag
+    
+    @abstractmethod
+    def _evaluate_energy(root):
+        """
+        Determine energy of the phase from calculation results.
+        
+        Derived classes must override. Overriding method must
+        read results from the SCFT calculations to determine
+        the free energy of the phase.
+        
+        Parameters
+        ----------
+        root : pathlib.Path
+            The root directory containing calculation results.
+        
+        Returns
+        -------
+        energy : numeric or numpy.inf
+            The energy of the phase based on SCFT.
+            If an error occurs and an energy is unable to be
+            determined, numpy.inf should be returned as an arbitrarily
+            high free energy.
+        """
+        pass
+        
+    def _checkPath(self, root):
+        return checkPath(root)
     
     @abstractmethod
     def setParams(self, VarSet, **kwargs):
         """
-            Update the specified set of variables.
-            
-            Parameters
-            ----------
-            VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
-                The set of MesophaseVariable objects to be updated.
-            
-            Returns
-            -------
-            flag : bool
-                True if parameters updated without issue.
-                False otherwise
-            
-            NOTE:
-            Built-in Variable Types can be found in the mesophaseVariables
-            module.
-            
-            NOTE: 
-            A given variable type may or may not be implemented
-            by a derived Mesophase. See derived classes for details.
+        Update the specified set of variables.
+        
+        Parameters
+        ----------
+        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+            The set of MesophaseVariable objects to be updated.
+        
+        Returns
+        -------
+        flag : bool
+            True if parameters updated without issue.
+            False otherwise
+        
+        NOTE:
+        Built-in Variable Types can be found in the mesophaseVariables
+        module.
+        
+        NOTE: 
+        A given variable type may or may not be implemented
+        by a derived Mesophase. See derived classes for details.
         """
         pass
     
     @property
     def energy(self):
         """
-            The energy of the mesophase as of the most recent simulation.
-            
-            Returns
-            -------
-            E : real or np.NaN
-                If the simulation failed to converge, returns np.NaN.
-                Else returns the simulated energy.
+        The energy of the mesophase as of the most recent simulation.
+        
+        Returns
+        -------
+        E : real or numpy.inf
+            If the simulation failed to converge, or another
+            error occurred, returns numpy.inf.
+            Else returns the simulated energy.
         """
-        if self.validState:
-            return self._energy
-        else:
-            return np.inf
+        return self._energy
     
     @property
     def phaseName(self):
@@ -219,199 +285,186 @@ class MesophaseBase(ABC):
 
 class MesophaseManager(object):
     """
-        Manages a set of Mesophase objects based on universal set of 
-        variable parameters. Responsible for coordinating launch, parsing,
-        and comparison of multiple mesophase simulations
-        
-        *** should be SCFT-Simulator-Independent ***
+    Manages a set of Mesophase objects.
+    
+    The manager contains a target phase and a set of candidates.
+    At each update, the manager distributes the new values to the
+    competitor phases to initiate updates. It ensures that all phases
+    have updated before new updates can start. It then uses the energy
+    of the target and candidate phases to determine the "fitness" based
+    on the relative energetic stability of the target relative to
+    the competitors.
     """
     
-    def __init__(self, candidates, target, variables, **kwargs):
+    def __init__(self, candidates, target):
         """
-            Initialize the MesophaseManager.
-            
-            Parameters
-            ----------
-            candidates : dict
-                Keys are name of phase.
-                Values are MesophaseBase-like objects.
-                The set of initialized candidate phases.
-                All should be capable of launching simulations
-                as-is.
-            target : MesophaseBase-like
-                The phase object to be treated as the "target" phase.
-                As with candidates, should be initialized and ready to run.
-            variables : psoinverse.mesophases.mesophaseVariables.VariableSet
-                The set of variables being handled in this PSO run.
+        Initialize the MesophaseManager.
+        
+        Parameters
+        ----------
+        candidates : dict
+            Keys are name of phase.
+            Values are MesophaseBase-like objects.
+            The set of initialized candidate phases.
+            All should be capable of launching simulations
+            as-is.
+        target : MesophaseBase-like
+            The phase object to be treated as the "target" phase.
+            As with candidates, should be initialized and ready to run.
         """
         self.candidates = candidates
         self.target = target
         self.target_name = self.target.phaseName
-        self.variables = variables
         ## Ensure target is not in candidate phases
         self.candidates.pop( self.target_name, None )
-        ## Flag to indicate whether successful simulations have 
-        ##  been run on the current variable state.
-        self._consistent = False
+        self._fitness = np.NINF
     
     @property
-    def consistent(self):
-        """ 
-        Indicates whether or not the manager is in a consistent state.
-        
-        Returns True if successful simulations have been run on the 
-        current set of variable values. Returns False otherwise.
+    def stable(self):
         """
-        return self._consistent
-        
-    @property
-    def psoPoint(self):
-        return self.variables.psoPoint
-        
-    @psoPoint.setter
-    def psoPoint(self, val):
-        self.variables.psoPoint = val
-        self._consistent = False
+        Specifies if all competing phases are stable.
+        """
+        flag = self.target.stable
+        for (k,c) in self.candidates.items():
+            flag = flag and c.stable
+        return flag
     
     @property
-    def psoBounds(self):
-        return self.variables.psoBounds
+    def updating(self):
+        """
+        True if any candidate is still updating.
+        """
+        flag = self.target.updating
+        for (k,c) in self.candidates.items():
+            flag = flag or c.updating
+        return flag
     
-    def startUpdate(self, root, runner, newPoint = None, **kwargs):
+    @property
+    def calculationFinished(self):
         """
-            Update the Mesophase variable values, setup calculations,
-            and pass calculation commands to runner
-            
-            Parameters
-            ----------
-            root : pathlib.Path
-                Path to the root directory of the run. All files
-                from this update will be written to this path, or
-                or a child path.
-                NOTE: Not implemented to handle concurrency.
-            newPoint : psoinverse.PSO.SearchSpace.DictPoint
-                A PSO point object (such as that returned from 
-                MesophaseManager.psoPoint) containing the updated
-                values for this update.
-                If newPoint is None, simulations will be run at 
-                current variable values
-            
-            Returns
-            -------
-            flag : bool
-                Returns True if the update was successful. 
-                Returns False otherwise.
+        True if all candidates are finished calculating
         """
-        if newPoint is not None:
-            self.psoPoint = newPoint
+        flag = self.target.calculationFinished
+        for (k,c) in self.candidates.items():
+            flag = flag and c.calculationFinished
+        return flag
+    
+    @property
+    def readyForStartUpdate(self):
+        """
+        True if all candidates are ready for an update.
+        """
+        flag = self.target.readyForStartUpdate
+        for (k,c) in self.candidates.items():
+            flag = flag and c.readyForStartUpdate
+        return flag
+    
+    @property
+    def readyForFinishUpdate(self):
+        """
+        True if all candidates are ready for finishUpdate call.
+        """
+        flag = self.target.readyForFinishUpdate
+        for (k,c) in self.candidates.items():
+            flag = flag and c.readyForFinishUpdate
+        return flag
+    
+    def startUpdate(self, varSet, root, runner):
+        """
+        Update the Mesophase variable values, setup calculations,
+        and pass calculation commands to runner.
+        
+        If the object is not in a state to begin an update, the 
+        request is rejected, and the method returns False.
+        
+        Parameters
+        ----------
+        varSet : PolymerVariableSet
+            The set of variables (with updated values) to modify
+            for this set of calculations.
+        root : pathlib.Path
+            Path to the root directory of the run. All files
+            from this update will be written to this path, or
+            or a child path.
+        runner : util.parallelBatches.LocalBatchRunner
+            The job manager to which all calculations should be
+            submitted for parallel processing.
+        
+        Returns
+        -------
+        flag : bool
+            Returns True if the update was successful. 
+            Returns False otherwise.
+        """
+        if not self.readyForStartUpdate:
+            return False
+        
         root, success = checkPath(root) # resolve root path
         if not success:
             raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
         
-        flag = self._setup_calculations(root,runner)
-        if not flag:
-            print("PhaseManager setup Fail")
-            print(self.statusString)
-            self._errstate()
-        else:
-            print("PhaseManager setup success")
-            self._errstate(False)
+        flag = True
+        phaseRoot = root/self.target.phaseName
+        success = self.target.startUpdate(varSet, phaseRoot, runner)
+        if not success:
+            flag = False  # if target fails, error state
+        for (k, c) in self.candidates.items():
+            phaseRoot = root/c.phaseName
+            success = c.startUpdate(varSet, phaseRoot, runner)
+            flag = flag or success
         
         return flag
         
-    def _setup_calculations(self, root, runner):
-        phaseRoot = root/self.target.phaseName
-        success = self.target.startUpdate( VarSet = self.variables, \
-                                 root = phaseRoot, runner )
-        if not success:
-            return False  # if target fails, error state
-        ovrSuccess = False
-        for (k, c) in self.candidates.items():
-            phaseRoot = root/c.phaseName
-            success = c.startUpdate( VarSet = self.variables, \
-                                root = phaseRoot, runner )
-            ovrSuccess = ovrSuccess or success
-        if not ovrSuccess:
-            print("phaseManager Candidates Fail")
-            #return np.nan, False # error state if all candidates fail
-        #self._errstate(False) # simplify by leaving this process to update()
-        return True
-    
-    def finishUpdate(self, root, runner):
+    def finishUpdate(self, root):
         root, success = checkPath(root) # resolve root path
         if not success:
             raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
-        return self._evaluate_fitness(root, runner)
-    
-    def _evaluate_fitness(self, root, runner):
+        
+        flag = True
         phaseRoot = root/self.target.phaseName
-        success = self.target.finishUpdate(root = phaseRoot, runner )
-        if not success:
-            return False  # if target fails, error state
-        ovrSuccess = False
+        success = self.target.finishUpdate(phaseRoot)
+        flag = flag or success
         for (k, c) in self.candidates.items():
             phaseRoot = root/c.phaseName
-            success = c.finishUpdate(root = phaseRoot, runner )
-            ovrSuccess = ovrSuccess or success
-        if not ovrSuccess:
-            print("phaseManager Candidates Fail")
-            #return np.nan, False # error state if all candidates fail
-        #self._errstate(False) # simplify by leaving this process to update()
-        return True
+            success = c.finishUpdate(phaseRoot)
+            flag = flag or success
         
-    def _errstate(self, flag=True):
-        if flag:
-            self._consistent = False
-        else:
-            self._consistent = True
+        self._fitness = self._evaluate_fitness
+        
+        return flag
     
-    @property
-    def fitness(self):
-        """ 
-            Calculate and return the fitness of the mesophase set 
-            
-            If object is in an inconsistent state, returns numpy.inf
-        """
-        WarnText = "Mesophase error state encountered " + \
-                    "at an unexpected time. %s entered " + \
-                    "invalid state outside of update. " + \
-                    "Inconsistent behavior may result."
-        unexpTarg = "Target Phase"
-        unexpCand = "Candidate Phase"
-        if not self.consistent:
-            return np.NINF
-        if not self.target.validState:
-            self._errstate()
-            raise(RuntimeWarning(WarnText % unexpTarg))
-            return np.NINF
+    def _evaluate_fitness()
         tgtE = self.target.energy
         # Mesophase energies are defined relative to homogeneous
         # disorder. Initializing 'fit' to -tgtE effectively acts
         # to consider the disordered phase as a candidate.
         fit = -tgtE  
         for (k,c) in self.candidates.items():
-            if c.validState:
-                test = c.energy - tgtE
-                if fit < test:
-                    fit = test
-        if fit is None:
-            self._errstate()
-            raise(RuntimeWarning(WarnText % unexpCand))
-            return np.NINF
+            test = c.energy - tgtE
+            if fit > test:
+                fit = test
         return fit
+        
+    @property
+    def fitness(self):
+        """ 
+        The relative energetic stability of the target phase.
+        
+        This result should be considered the optimization fitness
+        to be maximized.
+        """
+        return self._fitness
     
     @property
     def statusString(self):
-        s = self.__class__.__name__ + "\n"
-        s += "Consistent = {!s}\n".format(self.consistent)
-        s += "Fitness = {}\n".format(self.fitness)
-        s += "Competing Phases Summary:\n"
-        s += "Phase\tTgt\tValid\tEnergy\n"
-        formstring = "{}\t{}\t{!s}\t{:E}\n"
+        s = self.__class__.__name__ + ", "
+        s += "Fitness = {}, ".format(self.fitness)
+        formstring = "{}({}) = {:E}"
         c = self.target
-        s += formstring.format(c.phaseName, "Y", c.validState, c.energy)
+        s += formstring.format("Tgt", c.phaseName, c.energy)
         for (k, c) in self.candidates.items():
-            s += formstring.format(c.phaseName, "N", c.validState, c.energy)
+            s += formstring.format("Comp", c.phaseName, c.energy)
+        s += "\n"
         return s
             
     

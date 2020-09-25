@@ -9,6 +9,8 @@ from functools import total_ordering
 import numbers
 import numpy as np
 
+__all__ = [Velocity, Point, OptimizationType,FitnessComparator,FITNESS_SELECTOR,set_optimization_type]
+
 class Velocity(object):
     """
     Velocity object to enforce velocity maxima.
@@ -137,38 +139,6 @@ class FitnessComparator(object):
         """ The OptimizationType enforced by the FitnessComparator instance. """
         return self.__opimType
     
-    def betterFitness(self, fit1, fit2):
-        """
-        Return the better of the two fitness values.
-        
-        Allowing for comparison without point objects.
-        
-        Parameters
-        ----------
-        fit1 : real numeric
-            The first fitness value
-        fit2 : real numeric
-            The second fitness value
-        
-        Returns
-        -------
-        bestFit : real, numeric
-            The "better" of fit1 and fit2, depending on comparison scheme.
-            If equally "good" fitness, returns fit1.
-        """
-        if self.__optimType is OptimizationType.minimize:
-            if fit1 <= fit2:
-                return fit1
-            else:
-                return fit2
-        elif self.__optimType is OptimizationType.maximize:
-            if fit1 >= fit2:
-                return fit1
-            else:
-                return fit2
-        else:
-            raise(RuntimeError("Unrecognized optimization type set"))
-    
     def betterPoint(self, point1, point2):
         """
         Return the point deemed "better" according to the set opimization type.
@@ -213,47 +183,36 @@ class FitnessComparator(object):
         
         Returns
         -------
-        bestPoint : Point
-            The point from pointSet with the best fitness.
+        The point from pointSet with the best fitness.
         """
-        outp = None
+        tmp = None
         for (i,p) in enumerate(pointSet):
             if i == 0:
-                outp = p
+                tmp = p
             else:
-                outp = self.betterPoint(outp, p)
-                
-        return outp
-    
-    def bestPointIndex(self, pointSet):
-        """ 
-        Return the point from pointSet with the best fitness.
-        
-        If two or more points tie for "best" point, the first one encountered is returned.
-        
-        Parameters
-        ----------
-        pointSet : iterable of Point objects
-            The set of points being mutually compared.
-        
-        Returns
-        -------
-        bestPoint : Point
-            The point from pointSet with the best fitness.
-        bestIndex : int
-            The position of the best position in the iterable.
-            (If a list is passed, the list index of the best point).
-        """
-        outp = None
-        outid = 0
-        for (i,p) in enumerate(pointSet):
-            if i == 0:
-                outp = p
-            else:
-                outp = self.betterPoint(outp, p)
-                if outp is p:
-                    outid = i
-                
-        return outp, outid
+                tmp = self.betterPoint(tmp, p)
+        return tmp
             
+## Shared Variables for Library
+
+FITNESS_SELECTOR = FitnessComparator()
+
+## Methods to Modify Shared States
+
+def set_optimization_type(optim_type):
+    """
+    Changes core module variables to reflect new optimization type.
     
+    Parameters
+    ----------
+    optim_type : OptimizationType
+        The new optimization targeting type.
+    
+    Raises
+    ------
+    ValueError
+        If optim_type is not a member of OptimizationType
+    """
+    if not isinstance(optim_type, OptimizationType):
+        raise(ValueError("{} is not a member of {}".format(optim_type,OptimizationType)))
+    FITNESS_SELECTION = FitnessComparator(optim_type)

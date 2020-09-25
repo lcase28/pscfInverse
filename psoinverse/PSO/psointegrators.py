@@ -1,21 +1,12 @@
-"""
-A set of classes to perform position and velocity updates on PSO Agents.
-
-The Integrators do not assign new positions and velocities, but are meant to be called by
-the agents to simply perform the update calculations and return the new positions.
-
-Experimental component to ease the implementation and testing of various update schemes.
-"""
 
 # Third Party imports
 from abc import ABC, abstractmethod
 import numpy as np
 
 # Local Library imports
-from .SearchSpace import Point
-from .Agent import Agent
+from psoinverse.pso.core import Point, FITNESS_SELECTOR
+from psoinverse.pso.agent import Agent
 
-# Inheriting classes must override method Update
 class Integrator(ABC):
     """
     Abstract base class for Integrator objects.
@@ -24,35 +15,26 @@ class Integrator(ABC):
     
     Abstract Methods
     ----------------
-    update
+    integrate
         Calculates the new position and velocity of a target Agent
     """
     
-    def __init__(self, **kwargs):
+    def __init__(self, randGen):
         """
         Constructor for abstract Integrator Class
-        
-        Keyword Arguments
-        -----------------
-        seekMax : Boolean, optional, Default False
-            If True, the Integrator considers higher Fitness better
-            If False, lower fitness is considered better
-            If given value can not be cast as bool, seekMax set to
-            default and warning is printed.
         """
-        super().__init__()
-        
-        seekMax = kwargs.get("seekMax",True)
-        try:
-            self.seekMax = bool(seekMax)
-        except(TypeError, ValueError):
-            self.seekMax = False
-            print("DEBUG: seekMax set to default value of False")
+        self.__randGen = randGen
+        self.__fit_compare = FITNESS_SELECTOR
     
     @abstractmethod
-    def update(self, Target, Neighbors, **kwargs):
+    def integrate(self, target, neighbors):
         """
-        [Abstract] Calculate and return the updated position and velocity for Target
+        [Abstract] Calculate and return the updated position and velocity for Target.
+        
+        Derived classes should override this definition and implement an update scheme.
+        
+        Derived classes should use self.chooseBest when selecting best positions among
+        neighbors to ensure consistent comparison schemes.
         
         Parameters
         ----------
@@ -68,93 +50,116 @@ class Integrator(ABC):
         new_velocity : 1D numpy array
             The new velocity of Target after update
         """
-        return Position, Velocity
+        pass
+    
+    @property
+    def randomGenerator(self):
+        return self.__randGen
+    
+    @property
+    def fitCompare(self):
+        return self.__fit_compare
     
 ## "Standard" PSO Update Scheme
 class StandardIntegrator(Integrator):
-    ## Constructor
-    #
-    # @param chi Constriction factor value. (Default: 0.729)
-    # @param c1 Personal Best weighting factor. (Default: 2.05)
-    # @param c2 Neighbor Best weighting factor. (Default: 2.05)
-    # @param seekMax (Optional, key-word) Boolean. Default: False
-    #                If True, Neighbor best is the MAXIMUM neighbor value.
-    def __init__(self, randGen, chi=None, c1=None, c2=None, **kwargs):
-        super().__init__(**kwargs)
-        try:
-            self.chi = float(chi)
-        except(TypeError, ValueError):
-            self.chi = 0.729
-        try:
-            self.c1 = float(c1)
-        except(TypeError, ValueError):
-            self.c1 = 2.05
-        try:
-            self.c2 = float(c2)
-        except(TypeError, ValueError):
-            self.c2 = 2.05
-        
-        self.__randGen = randGen
+    """
+    Integrator implementing "standard" pso updates.
+    """
     
-    ## Return updated position and velocity for agent with Neighbors
-    #
-    # Operates on and returns the scaled (O(1)) coordinates and velocities.
-    #
-    # Assumes that Agent.Location.Coords and Agent.Velocity are equivallently scaled.
-    #
-    # @param target The Agent being updated in the call (will not be modified in call)
-    # @param Neighbors An iterable set of neighboring agents
-    # @param acceleration Additional velocity increment (Optional, key-word)
-    # @return new_position The new position of the agent (if accepted) (np.array)
-    # @return new_velocity The updated velocity of the agent (np.array)
-    #
-    def update(self, target, Neighbors, **kwargs):
-        nbest = self.get_nbest(Neighbors) # best among neighbors
-        # Get data from target
-        Position = target.Location
-        Velocity = target.Velocity
-        pbest = target.PBest
+    def __init__(self, randGen, chi=0.729, c1=2.05, c2=2.05):
+        """
+        Constructor for StandardIntegrator.
+        
+        Parameters
+        ----------
+        randGen : numpy.random.RandomState
+            The random number generator.
+        chi : float, 0 < chi < 1
+            Constriction factor value. (Default: 0.729)
+        c1 : float 0 < c1
+            Personal Best weighting factor. (Default: 2.05)
+        c2 : float, 0 < c2
+            Neighbor Best weighting factor. (Default: 2.05)
+        """
+        super().__init__(randGen)
+        self.chi = float(chi)
+        self.c1 = float(c1)
+        self.c2 = float(c2)
+    
+    @property
+    def chi(self):
+        return self.__chi
+    
+    @chi.setter
+    def chi(self, val):
+        val = float(val)
+        if val <= 0. or val > 1.:
+            raise(ValueError("Chi must be in the range (0,1]: gave {}".format(val)))
+        self.__chi = val
+    
+    @property
+    def c1(self):
+        return self.__c1
+    
+    @c1.setter
+    def c1(self,val):
+        val = float(val)
+        if val < 0:
+            raise(ValueError("C1 must be non-negative: gave {}".format(val)))
+        self.__c1 = val
+        
+    @property
+    def c2(self):
+        return self.__c2
+    
+    @c2.setter
+    def c2(self,val):
+        val = float(val)
+        if val < 0:
+            raise(ValueError("C2 must be non-negative: gave {}".format(val)))
+        self.__c2 = val
+    
+    def integrate(self, target, neighbors):
+        """
+        Return updated position and velocity for agent with neighbors.
+        
+        Assumes that position and velocity components are equivallently scaled.
+        
+        Parameters
+        ----------
+        target : Agent
+            The Agent being updated in the call (will not be modified in call).
+        Neighbors : iterable of Agent
+            An iterable set of neighboring agents.
+        
+        Returns
+        -------
+        new_position : numpy.array
+            The new position of the agent (if accepted).
+        new_velocity : numpy.array
+            The updated velocity of the agent.
+        """
+        # get data from target
+        step = target.lastStep
+        position = target.stablePoint
+        velocity = target.stableVelocity
+        pbest = target.bestPoint
+        # get data from neighbors
+        nlist = [ n.bestPointAtStep(step) for n in neighbors ]
+        nbest = self.fitCompare.bestPoint(nlist)
         
         # Random forcing terms
-        e1 = self.__randGen.rand(len(Position.Coords))
-        e2 = self.__randGen.rand(len(Position.Coords))
-        
-        # Inertia??
-        res = kwargs.get("acceleration",None) # Temporary result storage
-        if res is not None:
-            res = np.array(res)
-            acc = acc.astype(float)
-        else:
-            acc = np.zeros_like(e1)
+        e1 = self.randomGenerator.rand(len(position.components))
+        e2 = self.randomGenerator.rand(len(Position.components))
         
         # new Velocity
-        val1 = self.c1 * e1 * (pbest.Coords - Position.Coords)
-        val2 = self.c2 * e2 * (nbest.Coords - Position.Coords)
-        new_velocity = self.chi * (Velocity + val1 + val2) + acc
+        val1 = self.c1 * e1 * (pbest.components - position.components)
+        val2 = self.c2 * e2 * (nbest.components - position.components)
+        new_velocity = self.chi * (velocity.components + val1 + val2)
         
         # new Position
-        new_position = Position.Coords + new_velocity
+        new_position = position.components + new_velocity
         
         # return results
         return new_position, new_velocity
-    
-    ## Return best position seen by any neighbor.
-    #
-    # @param Neighbors An iterable set of Agent objects representing neighbors
-    def get_nbest(self, Neighbors):
-        nbest = None
-        for n in Neighbors:
-            #if not isinstance(n,Agent):
-            #    raise(TypeException("Neighbors List must contain only subclasses of Agent"))
-            if nbest is None:
-                nbest = n.Location
-            else:
-                if self.seekMax:
-                    if n.Location > nbest:
-                        nbest = n.Location
-                else:
-                    if n.Location < nbest:
-                        nbest = n.Location
-        
-        return nbest
-    
+

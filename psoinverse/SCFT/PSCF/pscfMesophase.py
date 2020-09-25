@@ -1,11 +1,16 @@
 # LIBRARY IMPORTS
-from psoinverse.SCFT.PSCF.FileManagers.fieldfile import CoordFieldFile, WaveVectFieldFile
-from psoinverse.SCFT.PSCF.FileManagers.paramfile import ParamFile
-from psoinverse.SCFT.PSCF.FileManagers.outfile import OutFile
-from psoinverse.mesophases.FieldGenerators import FieldCalculator
+#from psoinverse.SCFT.PSCF.FileManagers.fieldfile import CoordFieldFile, WaveVectFieldFile
+#from psoinverse.SCFT.PSCF.FileManagers.paramfile import ParamFile
+#from psoinverse.SCFT.PSCF.FileManagers.outfile import OutFile
+#from psoinverse.mesophases.FieldGenerators import FieldCalculator
 from psoinverse.mesophases.phaseManagement import MesophaseBase
 from psoinverse.mesophases.mesophaseVariables import MesophaseVariable
 from psoinverse.mesophases.mesophaseVariables import VariableTypes as varType
+
+# Related Libraries
+from pscfFieldGen.fieldGenerators import FieldCalculator
+from pscfFieldGen.filemanagers import PscfParam
+from pscfFieldGen.filemanagers.pscf import WaveVectFieldFile, ParamFile, OutFile
 
 # EXTERNAL IMPORTS
 from copy import deepcopy
@@ -17,7 +22,7 @@ import subprocess as sub    # Requires Python 3.5 --> System dependence
 class PSCFMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
-    def __init__(self, ID, kgrid, param, fieldGen, **kwargs):
+    def __init__(self, ID, paramWrap, fieldGen, **kwargs):
         """
             Initialize the PSCF Mesophase using pre-formatted files.
             
@@ -32,8 +37,6 @@ class PSCFMesophase(MesophaseBase):
             ID : string
                 The name of the phase (should be unique within the run, 
                 but this is not enforced)
-            kgrid : filemanager.fieldfile.WaveVectFieldFile
-                A pre-populated Wave-vector format field file.
             param : filemanager.paramfile.ParamFile
                 A pre-populated param file. Should minimally contain definitional
                 fields (format, MONOMERS, CHAINS, SOLVENTS, ..., BASIS) as well as
@@ -42,18 +45,14 @@ class PSCFMesophase(MesophaseBase):
                 A pre-initialized FieldGenerator object, set to generate fields
                 for this phase.
         """
-        self.kgrid = kgrid
-        self.param = param
+        #self.kgrid = kgrid
+        self.paramWrap = paramWrap
+        self.param = paramWrap.file
         self.fieldGen = fieldGen
-        # lastLaunch will be used to hold a subprocess.CompletedProcess instance
-        #   Will store system status data for the most recent run
-        #   Previous runs currently not deemed useful.
-        self.lastLaunch = None
-        self.out = None
         super().__init__(ID)
     
     @classmethod
-    def instanceFromFiles(cls, ID, kgridFile, paramFile, fieldGenFile, **kwargs):
+    def instanceFromFiles(cls, ID, paramFile, fieldGenFile, **kwargs):
         """
             Return an instance of PSCFMesophase initialized from given files.
             
@@ -78,12 +77,11 @@ class PSCFMesophase(MesophaseBase):
             fieldGen : pathlib.path
                 An already-resolved path object to a fieldGen source file.
         """
-        kgrid = WaveVectFieldFile(kgridFile.resolve(),True)
-        param = ParamFile(paramFile.resolve())
+        param = PscfParam.fromFileName(paramFile.resolve())
         fieldGen = FieldCalculator.from_file(fieldGenFile)
-        return cls(ID, kgrid, param, fieldGen)
+        return cls(ID, param, fieldGen)
     
-    def startUpdate(self, VarSet, root, runner, **kwargs):
+    def startUpdate(self, VarSet, root, runner):
         """ 
             Update phase variables, launch a simulation,
             and update phase energy from result.
@@ -110,7 +108,7 @@ class PSCFMesophase(MesophaseBase):
         """
         return super().startUpdate(VarSet,root,runner)
     
-    def _setup_calculations(self, root, runner):
+    def _setup_calculations(self, root):
         """
             Launch a pscf simulation of the phase using current parameters.
             Parse the results and return the energy.
@@ -134,24 +132,65 @@ class PSCFMesophase(MesophaseBase):
                 True if simulation converged without issue.
                 False if an error occurred and no energy found.
         """
-        monFrac = self._getMonomerFractions()
-        ngrid = self.param.ngrid
-        w = self._getinterface()
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
-        self.kgrid.fields = newField
-        kgridFile = root / 'rho_kgrid_in'
-        self.kgrid.write(kgridFile.open(mode='x'))
-        paramFile = root / 'param'
-        self.param.write(paramFile.open(mode='x'))
+        #monFrac = self._getMonomerFractions()
+        #ngrid = self.param.ngrid
+        #w = self._getinterface()
+        #newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
+        #self.kgrid.fields = newField
+        #kgridFile = root / 'rho_kgrid_in'
+        #self.kgrid.write(kgridFile.open(mode='x'))
+        #paramFile = root / 'param'
+        #self.param.write(paramFile.open(mode='x'))
         # pass simulation launch to runner
-        runner.addTask(self._launchSim, root)
-        return True
+        #self._lastLaunch = runner.addTask(self._launchSim, root)
+        return root, True
     
-    def finishUpdate(self, root, runner):
-        return super().finishUpdate(root, runner)
+    def finishUpdate(self, root):
+        return super().finishUpdate(root)
     
-    def _evaluate_energy(root, runner):
-        return self._readOutput(root)
+    def _evaluate_energy(self, root):
+        """
+        Return energy of the phase.
+        
+        Parameters
+        ----------
+        root : pathlib.Path
+            The root directory of the run. 
+            All simulation files are
+            placed in this location. 
+            It is assumed that path has 
+            already been resolved.
+        
+        Returns
+        -------
+        energy : real
+            The energy of the mesophase.
+            numpy.nan if flag = False
+        flag : bool
+            True if simulation converged without issue.
+            False if an error occurred and no energy found.
+        """
+        # Check output file
+        outfilename = root/"out"
+        outfile = OutFile(outfilename.resolve())
+        metError = outfile.final_error <= outfile.error_max
+        metIter = outfile.iterations <= outfile.max_itr
+        converged = metError and metIter
+        if not converged:
+            return np.inf, False
+        ener = outfile.f_Helmholtz - outfile.f_homo
+        flag = True
+        ## TODO: Check Field Similarity with symmetrized files for quicker I/O
+        # Check field similarity
+        startFile = root/"rho_kgrid_in"
+        startField = WaveVectFieldFile(startFile.resolve())
+        endFile = root/"rho_kgrid"
+        endField = WaveVectFieldFile(endFile.resolve())
+        self.fieldSim = startField.fieldSimilarity(endField)
+        if np.min(self.fieldSim) <= 0.8:
+            ener = np.inf
+            flag = False
+        return ener, flag
         
     def setParams(self, VarSet):
         """
@@ -199,18 +238,6 @@ class PSCFMesophase(MesophaseBase):
                 raise(NotImplementedError("Variable of Type " + str(f) + " not implemented"))
         return True
     
-    def _getinterface(self):
-        # Presently only works for straight-chi, 2-monomer system
-        nMon = self.param.N_monomer
-        segLen = np.array(self.param.kuhn)
-        b = (1.0 * np.prod(segLen)) ** (1.0/len(segLen))
-        if nMon == 2:
-            chi = self.param.chi[1][0]
-        else:
-            chi = self.param.chi[1][0]
-        w = 2*b / np.sqrt(6.0 * chi)
-        return w
-    
     def _launchSim(self, root):
         """
             Handle Launching of the simulation in given root 
@@ -233,7 +260,21 @@ class PSCFMesophase(MesophaseBase):
                 True if simulation converged without issue.
                 False if an error occurred and no energy found.
         """
-        infile = root / "param"
+        # Create Input Files
+        monFrac = self.paramWrap.getMonomerFractions()
+        ngrid = self.param.ngrid
+        ## TODO: Figure out how to choose core monomer
+        w = self.paramWrap.getInterfaceWidth()
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
+        kgrid = self.paramWrap.cleanFieldFile()
+        kgrid.fields = newField
+        ## TODO: Select Kgrid file name based on param file value.
+        kgridFile = root / 'rho_kgrid_in'
+        self.kgrid.write(kgridFile.open(mode='x'))
+        paramFile = root / 'param'
+        self.param.write(paramFile.open(mode='x'))
+        # Launch Calculations
+        infile = paramFile #root / "param"
         outfile = root / "simLog"
         try:
             with open(infile) as fin:
@@ -246,61 +287,3 @@ class PSCFMesophase(MesophaseBase):
             return False
         return True
         
-    def _readOutput(self, root):
-        """
-            If simulation successful, read energy from output file.
-            
-            NOTE: this method should not be called except 
-            by _launchSim following successful simulation.
-            
-            Parameters
-            ----------
-            root : pathlib.Path
-                The root directory of the run. 
-                All simulation files are
-                placed in this location. 
-                It is assumed that path has 
-                already been resolved.
-            
-            Returns
-            -------
-            energy : real
-                The energy of the mesophase.
-                numpy.nan if flag = False
-            flag : bool
-                True if simulation converged without issue.
-                False if an error occurred and no energy found.
-        """
-        # Check field similarity
-        kgridFile = root/"rho_kgrid"
-        self.convField = WaveVectFieldFile(kgridFile.resolve())
-        self.fieldSim = self.kgrid.fieldSimilarity(self.convField)
-        if np.min(self.fieldSim) >= 0.8:
-            # converged to similar fields
-            outfile = root/"out"
-            self.outfile = OutFile(outfile.resolve())
-            ener = self.outfile.f_Helmholtz - self.outfile.f_homo
-            flag = True
-        else:
-            ener = np.nan
-            flag = False
-        return ener, flag
-        
-    def _getMonomerFractions(self):
-        """ Return the volume fraction of all monomers """
-        nmonomer = self.param.N_monomer
-        nchain = self.param.N_chain
-        frac = np.zeros(nmonomer)
-        Ntot = 0.0
-        for i in range(nchain):
-            nblock = self.param.N_block[i]
-            for j in range(nblock):
-                mon = self.param.block_monomer[i][j] - 1
-                Nb = self.param.block_length[i][j]
-                Ntot += Nb
-                frac[mon] += Nb
-        for i in range(nmonomer):
-            frac[i] = frac[i] / Ntot
-        return frac
-    
-    

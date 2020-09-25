@@ -17,7 +17,7 @@ class BoundTypes(Enum):
     periodic = 2
     fly = 3
 
-class PsoVariable(ABC):
+class VariableBase(ABC):
     """
     Base class for all PSO variables. Defines the basic
     operations expected of all variables going to be used
@@ -35,7 +35,7 @@ class PsoVariable(ABC):
                 initUpper = None, \
                 initIsPsoValue = True)
         """
-        Initialize a basic PsoVariable object.
+        Initialize a basic VariableBase object.
         
         Inheriting classes should perform actions required to 
         enable translations between pso and true values, then
@@ -90,6 +90,22 @@ class PsoVariable(ABC):
         
     # Practical methods
     def checkBounds(self, val, psoValue = True):
+        """
+        Check if the given value is within the proscribed bounds for the variable.
+        
+        Parameters
+        ----------
+        val : numeric
+            The value being tested.
+        psoValue : boolean (optional)
+            True if the given value is meant to be pso scaling (default).
+            False if the value is in true scaling (unscaled)
+        
+        Returns
+        -------
+        inBounds : bool
+            True if lowerbound <= val <= upperbound. False otherwise.
+        """
         if psoValue:
             lb = self.psoLowerBound
             ub = self.psoUpperBound
@@ -99,6 +115,33 @@ class PsoVariable(ABC):
         return val >= lb and val <= ub
         
     def checkAcceptance(self, val, psoValue = True):
+        """
+        Determine if the given value would be accepted in an update.
+        
+        Point acceptance is determined by the bounding style set
+        for the variable. A point "out of bounds" may be accepted by
+        some bounding styles. For example, periodic bounds will accept
+        an out-of-bound value, but will store it as the translated value
+        within the bounds. If false is returned, the variable's value will
+        remain unchanged and the new position will be rejected outright
+        during an update attempt.
+        
+        Parameters
+        ----------
+        val : numeric
+            The value being tested.
+        psoValue : boolean (optional)
+            True if the given value is meant to be pso scaling (default).
+            False if the value is in true scaling (unscaled).
+        
+        Returns
+        -------
+        isAcceptable : boolean
+            Always true if self.checkBounds(val,psoValue) returns True.
+            If self.checkBounds returns False, and a "hard" bounding style
+            is selected.
+            Otherwise, returns True.
+        """
         cb = self.checkBounds(val, psoValue)
         if self.boundStyle == BoundTypes.reflective:
             return cb
@@ -224,7 +267,7 @@ class PsoVariable(ABC):
         psoUpBnd = self.__true_to_pso(newvals[1])
         self.psoBounds = [psoLowBnd, psoUpBnd]
             
-class UnscaledVariable(PsoVariable):
+class UnscaledVariable(VariableBase):
     """
     Derived variable class accepting PsoVariable's default,
     unscaled behavior. psoValue and trueValue are treated as interchangeable
@@ -239,7 +282,7 @@ class UnscaledVariable(PsoVariable):
     def __true_to_pso(self,val):
         return val
     
-class LinearScaledVariable(PsoVariable):
+class LinearScaledVariable(VariableBase):
     """
     A constant scaling factor is used between true and pso value.
     
@@ -278,7 +321,7 @@ class LinearOffsetVariable(LinearScaledVariable):
     def __true_to_pso(self, val):
         return super().__true_to_pso(val - self.__scaleoffset)
     
-class LogScaledVariable(PsoVariable):
+class LogScaledVariable(VariableBase):
     """
     A the true value is scaled logarithmically for the pso search.
     

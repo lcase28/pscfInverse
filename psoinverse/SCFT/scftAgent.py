@@ -1,6 +1,5 @@
 # Library imports
 from psoinverse.PSO.Agent import Agent
-from psoinverse.PSO.SearchSpace import Point
 from psoinverse.mesophases.phaseManagement import MesophaseManager
 
 # temporary imports (will be changing form later)
@@ -15,82 +14,70 @@ import pathlib
 class ScftAgent(Agent):
     """ Derived Agent Class for SCFT phase search. """
     
-    def __init__(self, phaseManager, randGen, root = None, \
-                logFileName = 'AgentLog', autoLog = True, \
-                batchRunner, *args, **kwargs):
+    def __init__(
+        self, 
+        varSet, 
+        phaseManage, 
+        velocitySource, 
+        calcManager, 
+        parentRoot = None):
         """
-            Constructor for ScftAgent
-            
-            Parameters
-            ----------
-            phaseManager : MesophaseManager object
-                Fully initialized phase manager class
-            randGen : np.random.RandomState
-                Seeded random number generator used to initialize position
-            root : pathlib.Path
-                Path to directory where agent can place any files generated.
-                Defaults to pathlib.Path.cwd()
-            logFileName : string, valid filename
-                The file to which the Agent will write its log.
-            autoLog : bool
-                Whether or not the agent should automatically write out to its
-                log, or wait for caller to do so. Default: True
-        """
-        self.phaseManager = deepcopy(phaseManager)
-        if root is None:
-            self.root = pathlib.Path.cwd()
-        else:
-            self.root, success = checkPath(root)
-            if not success:
-                raise(ValueError("Given root path failed to resolve."))
-        self.logFile = self.root / logFileName
-        self.autoLog = autoLog
-        location = self.phaseManager.psoPoint
-        bounds = self.phaseManager.psoBounds
-        velSrc = np.zeros_like(location.Coords)
-        # TODO: Figure out better way to force clean file on startup.
-        self._startup = True
-        super().__init__(bounds, location, velSrc, randGen, batchRunner, seekMax = True)
-        self._startup = False
+        Constructor for ScftAgent
         
-    def _setup_calculations(self):
-        stepRoot = self.root / "step{}".format(self.steps)
-        success = self.phaseManager.startUpdate(stepRoot, self._runner, self.Location)
-        if not success:
-            print("scftAgent phasemanager setup Fail")
-            self._startErrorState()
-    
-    def finishUpdate(self):
-        super().finishUpdate()
-        self._tryLog()
-    
-    def _evaluate_fitness(self):
-        stepRoot = self.root / "step{}".format(self.steps)
-        self.phaseManager.finishUpdate(stepRoot, self._runner)
-        if not self.phaseManager.consistent:
-            print("scftAgent phaseManager inconsistent.")
-            self._startErrorState()
-        self.Location.Fitness = self.phaseManager.fitness
+        Parameters
+        ----------
+        varSet : PolymerVariableSet
+            The variables being searched in this optimization.
+        phaseManage : MesophaseManager
+            Fully initialized phase manager class.
+        velocitySource : Velocity
+            A template Velocity object.
+            Values will be randomized on initial update.
+        runner : CalculationManager
+            A parallel calculation manager for running calculations.
+        parentRoot : pathlib.Path
+            The parent directory of the Agent's output root.
+            Generally, this is the Swarm's root directory. Each Agent
+            will place their output in a subdirectory of this root
+            named 'parentRoot/agent{id}/'.
+        """
+        if not isinstance(varSet, PolymerVariableSet):
+            raise(TypeError("ScftAgent requires a PolymerVariableSet, not {}".format(type(varSet))))
+        if not isinstance(phaseManage, MesophaseManager):
+            raise(TypeError("ScftAgent requires MesophaseManager, not {}".format(type(phaseManage))))
+        self.__phaseManager = deepcopy(phaseManage)
+        super().__init__(varSet, velocitySource, calcManager, parentRoot)
     
     @property
-    def statusString(self):
-        s = "Agent {}:\n".format(self.id)
-        s += "Step {}:\n".format(self.steps)
-        s += "Location:\n{}\n".format(self.Location)
-        s += "Personal Best:\n{}\n".format(self.PBest)
-        s += "Phase Manager Status:\n{}\n".format(self.phaseManager.statusString)
-        return s
+    def calculationFinished(self):
+        """
+        Determine if all phase calculations are complete.
+        """
+        return self.__phaseManager.calculationFinished()
+        
+    @property
+    def readyForStartUpdate(self):
+        out1 = self.__phaseManager.readyForStartUpdate
+        out2 = super().readyForStartUpdate
+        return out1 and out2
     
-    def writeLog(self, refresh=False):
-        s = self.statusString
-        if refresh:
-            with self.logFile.open(mode='w') as f:
-                f.write(s)
-        else:
-            with self.logFile.open(mode='a') as f:
-                f.write(s)
+    @property
+    def readyForFinishUpdate(self):
+        out1 = self.__phaseManager.readyForFinishUpdate()
+        out2 = super().readyForFinishUpdate()
+        return out1 and out2
+        
+    def _setup_calculations(self, calcManager):
+        stepRoot = self.root / "step{}".format(self.nextStep)
+        success = self.phaseManager.startUpdate(stepRoot, calcManager)
     
-    def _tryLog(self):
-        if self.autoLog:
-            self.writeLog(self._startup)
+    def _cleanup_calculations(self, calcManager):
+        stepRoot = self.root / "step{}".format(self.nextStep)
+        self.phaseManager.finishUpdate(stepRoot)
+        fitness = self.phaseManager.fitness
+        return fitness
+    
+    def _unset_calculations(self):
+        self.phaseManager.cancelUpdate()
+    
         
