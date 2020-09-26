@@ -5,51 +5,20 @@ Declarations here allow PSO algorithm objects to uniformly access mesophase
 data and simulations from any given SCFT simulator by abstracting specifics
 of the simulator formatting from the interface through class hierarchies.
 """
-from psoinverse.mesophases.mesophaseVariables import VariableSet
-
+# Standard Library Imports
 from abc import ABC, abstractmethod
 from copy import deepcopy
-import numpy as np
 import os
 from pathlib import Path
 import io
 
-def checkPath(root):
-    """
-        Checks if path exists, creates it if not.
-        Checks if path is a directory, if not takes the
-        parent directory.
-        Fully resolves path.
-        
-        Parameters
-        ----------
-        root : pathlib.Path
-            The directory path to be resolved.
-        
-        Returns
-        -------
-        resolvedRoot : pathlib.Path
-            The resolved path to the specified directory.
-        flag : bool
-            True if the path resolved without error.
-            False if path resolution threw one of:
-            FileNotFoundError, FileExistsError, RuntimeError,
-            which capture the expected throws from the Path
-            object during resolution.
-    """
-    root = root.resolve()
-    if root.exists() and root.is_dir():
-        return root.resolve(), True
-    # path either does not exist or is not directory
-    try:
-        if not root.exists():
-            root.mkdir(parents=True)
-        if not root.is_dir():
-            root = root.parent
-        return root.resolve(), True
-    except (FileNotFoundError, FileExistsError, RuntimeError):
-        return None, False
-    
+# Third Party Library Imports
+import numpy as np
+
+# Project Imports
+from psoinverse.polymer.mesophaseVariables import VariableSet
+from psoinverse.util.iotools import checkPath
+
 class MesophaseBase(ABC):
     """ 
     Abstract base class for mesophase wrapper classes.

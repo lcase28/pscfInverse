@@ -9,6 +9,7 @@ from functools import total_ordering
 import numbers
 import numpy as np
 
+
 class Velocity(object):
     """
     Velocity object to enforce velocity maxima.
@@ -42,7 +43,7 @@ class Velocity(object):
     @components.setter
     def components(self, newVal):
         newVal = np.asarray(newVal).flatten()
-        if not self.dimensions == newVal.size
+        if not self.dimensions == newVal.size:
             raise(ValueError("Velocity must maintain dimensionality"))
         negFlags = np.sign(newVal)
         newAbs = np.absolute(newVal)
@@ -135,7 +136,20 @@ class FitnessComparator(object):
     @property
     def optimizationType(self):
         """ The OptimizationType enforced by the FitnessComparator instance. """
-        return self.__opimType
+        return self.__optimType
+    
+    @optimizationType.setter
+    def optimizationType(self,optimType):
+        """
+        Parameters
+        ----------
+        optimType : pso.core.OptimizationType
+            The optimization type desired.
+        """
+        if not isinstance(optimType, OptimizationType):
+            raise(ValueError("{} is not a member of {}".format(optim_type,OptimizationType)))
+        self.__optimType = optimType
+        
     
     def betterFitness(self, fit1, fit2):
         """
@@ -255,5 +269,19 @@ class FitnessComparator(object):
                     outid = i
                 
         return outp, outid
-            
     
+    def __str__(self):
+        return "<FitnessComparator with target {}>".format(self.optimizationType)
+
+## Shared Variables for Library
+
+FITNESS_SELECTOR = FitnessComparator()
+
+## Methods to Access Shared Properties
+
+def get_bad_fitness():
+    """ Return the default bad fitness for the current optimization type """
+    return FITNESS_SELECTOR.badFitness
+
+__all__ = [Velocity, Point, OptimizationType,FitnessComparator,FITNESS_SELECTOR]
+

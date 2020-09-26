@@ -14,7 +14,6 @@ from queue import SimpleQueue
 import os
 
 class BaseCalculationResult(ABC):
-    
     def __init__(self, idnum):
         self.__id = idnum
     
@@ -108,7 +107,7 @@ class LocalCalculationManager(BaseCalculationManager):
             self.__startPool()
         res = self.__pool.apply_async(func, args)
         self.__next_task_id += 1
-        return out
+        return LocalCalculationResult(jobid,res)
     
     def __startPool(self):
         self.__pool = mp.Pool(processes=self.width)

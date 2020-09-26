@@ -1,33 +1,24 @@
 """Module contains core classes for Agent implementation."""
+# Standard Library Imports
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from enum import Enum, Flag, unique
+import pathlib
 
 # Third-party imports
-from abc import ABC, abstractmethod
-from enum import Enum, Flag, unique
-from copy import deepcopy
 import numpy as np
 
 # Project imports
-from .psocontainers import PsoPositionData, PsoVariableSet
-from .core import Point, Velocity, OptimizationType, FitnessComparator, FITNESS_SELECTOR
+from psoinverse.pso.containers import PsoPositionData, PsoVariableSet
+from psoinverse.pso.core import Point, Velocity, FitnessComparator, FITNESS_SELECTOR
+from psoinverse.util.iotools import writeCsvLine, checkPath
 
-@unique
-class AGENT_STATUS_TYPES(Flag):
-    STABLE = 0
-    STARTUP = auto()
-    UPDATE = auto()
-    TRY = auto()
-    EVALUATE = auto()
-    CONFIRM = auto()
-    ERROR = auto()
-    INITIALIZED = ~STARTUP
-    UPDATE_ALL = UPDATE | TRY | EVALUATE | CONFIRM
-    
 class Agent(ABC):
     """Abstract base class for PSO Agents."""
     
     __NextID = 0  # Static counter for generating unique agent IDs
 
-    def __init__(self, varSet, velocitySource, calcManager, parentRoot=None)
+    def __init__(self, varSet, velocitySource, calcManager, parentRoot=None):
         """
         Constructor for Agent base class.
         
@@ -66,7 +57,6 @@ class Agent(ABC):
         self.__old_velocity = deepcopy(self.__velocity)
         
         self.__calc_manager = calcManager
-        self.__fit_compare = FITNESS_SELECTOR
         
         # Set Agent Root
         if parentRoot is None:
@@ -77,25 +67,92 @@ class Agent(ABC):
         root, success = checkPath(root)
         if not success:
             raise(ValueError("Given root path failed to resolve."))
-        self._root = root
+        self.root = root
+        
+        self._start_logs()
     
     @classmethod
-    def createSeveral(
-        cls,
-        nAgent,
-        varSet,
-        velocitySource,
-        calcManager,
-        root = None)
-        """ """
+    def createSeveral(cls, nAgent, *args, **kwargs):
+        """
+        Generate a full set of uninitialized Agents.
+        
+        A shortcut for generating a swarm of agents from the same input set.
+        
+        Parameters
+        ----------
+        nAgent : int > 0
+            The number of agents to generate.
+        *args : ordered parameters
+            Any ordered parameters required for the class's __init__ method.
+            See __init__ of the Agent-derived class for details.
+        **kwargs : keyworded parameters
+            Any keyword parameters required for the class's __init__ method.
+            see __init__ of the Agent-derived class for details.
+        
+        Returns
+        -------
+        agentSet : list
+            A list containing nAgent uninitialized Agents.
+        
+        Raises
+        ------
+        ValueError :
+            If nAgent <= 0.
+        """
+        if nAgent <= 0:
+            raise(ValueError("Must generate a positive number of agents."))
         out = []
         for i in range(nAgent):
             out.append(cls(*args, **kwargs))
-        #TODO: enable parallel evaluation
-        for a in out:
-            a.evaluateUpdate()
-        for a in out:
-            a.confirmUpdate()
+        return out
+    
+    @staticmethod
+    def randomizeSeveral(agents, randGen, lowerBound=None, upperBound=None, velocityBound=None):
+        """
+        Start an update with randomized values for each in a set of agents.
+        
+        Caller can optionally specify bounds (psoValue) in which to spawn the position.
+        If bounds are excluded, the full search bounds are used.
+        
+        If velocityBound is not specified, 1/10 of the spawn range is used.
+        
+        Sequential calls to <CLASS>.createSeveral() and <CLASS>.randomizeSeveral will
+        produce a randomly initialized set of Agents with initial calculations started.
+        This set will be ready to pass directly to a swarm.
+        
+        Parameters
+        ----------
+        agents : iterable set of Agent-derived instances
+            The set of agents to randomize.
+        randGen : numpy.random.RandomState
+            Seeded random number generator from which to draw values
+        lowerBound : array-like of real, Optional
+            The lower bound of the positional spawn range (psoValue).
+            Must be within the bounds permitted by the variable set.
+        upperBound : array-like of real, Optional
+            The upper bound of the positional spawn range (psoValue).
+            Must be within the bounds permitted by the variable set.
+        velocityBound : array-like of real, Optional
+            The upper bound of the velocity magnitude. 
+            Velocity is initialized such that -velocityBound < velocity < velocityBound.
+        
+        Returns
+        -------
+        agents : list of Agent-derived instances
+            A list containing the same set of Agent objects passed to the method.
+        
+        Raises
+        ------
+        ValueError : 
+            If spawn bounds conflict with each other (lower > upper),
+            If search space bounds are violated (lower or upper is outside of search space).
+            If given bounds do not match dimensionality of the search space.
+        """
+        out = []
+        for a in agents:
+            a.randomize(randGen, lowerBound, upperBound, velocityBound)
+            out.append(a)
+        return out
     
     @property
     def id(self):
@@ -261,22 +318,22 @@ class Agent(ABC):
             if not len(lowerBound) == self.__positions.dimensions:
                 msg = "Dimension mismatch on lower bound: given {}, needs {}"
                 raise(ValueError(msg.format(len(lowerBound),self.__positions.dimensions)))
-            for b in self.__positions.variables.checkBounds(lowerBound):
+            for b in self.__positions.variableSet.checkBounds(lowerBound):
                 if not b:
                     raise(ValueError("Search bound violation on lower bound"))
         else:
-            lowerBound = self.__positions.variables.psoLowerBounds
+            lowerBound = self.__positions.variableSet.psoLowerBounds
         
         if upperBound is not None:
             upperBound = np.array(upperBound)
             if not len(upperBound) == self.__positions.dimensions:
                 msg = "Dimension mismatch on upper bound: given {}, needs {}"
                 raise(ValueError(msg.format(len(upperBound),self.__positions.dimensions)))
-            for b in self.__positions.variables.checkBounds(upperBound):
+            for b in self.__positions.variableSet.checkBounds(upperBound):
                 if not b:
                     raise(ValueError("Search bound violation on upper bound"))
         else:
-            upperBound = self.__positions.variables.psoUpperBounds
+            upperBound = self.__positions.variableSet.psoUpperBounds
         
         boundRange = upperBound - lowerBound
         
@@ -287,7 +344,7 @@ class Agent(ABC):
         
         if velocityBound is not None:
             velocityBound = np.array(velocityBound)
-            if not len(velocityBound == self.__positions.dimensions:
+            if not len(velocityBound) == self.__positions.dimensions:
                 msg = "Dimension mismatch on velocity bound: given {}, needs {}"
                 raise(ValueError(msg.format(len(velocityBound),self.__positions.dimensions)))
         else:
@@ -327,12 +384,13 @@ class Agent(ABC):
         self.__old_velocity.components = self.__velocity.components
         self.__velocity.components = newVel
         # Attempt to update position
-        accepted = self.__positions.tryUpdate(newPos)
+        accepted = self.__positions.startUpdate(newPos)
         for (i,b) in enumerate(accepted):
             if not b:
                 self.__velocity.reverseComponent(i)
-        if not self.inBounds:
+        if not self.__positions.inBounds:
             raise(NotImplementedError("Case of open search bounds not implemented."))
+        self._log_update_attempt(newPos,newVel,accepted)
         self._setup_calculations(self.__calc_manager)
         self.__updating = True
         return True
@@ -365,23 +423,28 @@ class Agent(ABC):
         """ 
         Finalize and accept the update, and set new fitness.
         """
-        if not self.readyForFinishUpdate():
+        if not self.readyForFinishUpdate:
             if not self.updating:
                 raise(RuntimeError("No active update to finish for agent {}.".format(self.id)))
             else:
                 raise(RuntimeError("Calculations incomplete for agent {} update.".format(self.id)))
         fitness = self._cleanup_calculations(self.__calc_manager)
-        oldBest = self.__positions.bestFitness
-        # oldBest listed first below to favor maintaining current best position during tie.
-        betterFit = self.__fit_compare.betterFitness(oldBest, fitness)
-        if betterFit == oldBest:
-            success = self.__positions.finishUpdate(fitness)
+        if self.hasStep(0):
+            oldBest = self.__positions.bestFitness
+            # oldBest listed first below to favor maintaining current best position during tie.
+            betterFit = FITNESS_SELECTOR.betterFitness(oldBest, fitness)
+            if betterFit == oldBest:
+                success = self.__positions.finishUpdate(fitness)
+            else:
+                success = self.__positions.finishUpdate(fitness, newBest=True)
         else:
             success = self.__positions.finishUpdate(fitness, newBest=True)
         self.__updating = False
         self.__next_step += 1
+        self._log_step()
         return success
     
+    @abstractmethod
     def _cleanup_calculations(self, calcManager):
         """
         Perform any state cleanup following calculation completion and return fitness.
@@ -425,7 +488,7 @@ class Agent(ABC):
         self.__velocity.components = self.__old_velocity.components
         self._unset_calculations()
     
-    @abstractmethod(self):
+    @abstractmethod
     def _unset_calculations(self):
         """
         Restore state to pre-update conditions.
@@ -463,6 +526,67 @@ class Agent(ABC):
     def velocity(self):
         return deepcopy(self.__velocity)
     
+    def _start_logs(self):
+        self.__pso_vals_fname = self.root/"psoValues.csv"
+        self.__tru_vals_fname = self.root/"trueValues.csv"
+        self.__velocity_fname = self.root/"velocities.csv"
+        self.__updates_fname = self.root/"updateAttempts.csv"
+        
+        # PsoValue data
+        lbl = ["step"]
+        lbl.append("bestStep")
+        lbl.append("fitness")
+        for v in self.variableSet.labels:
+            lbl.append(v)
+        writeCsvLine(self.__pso_vals_fname,lbl,'w')
+        
+        # TrueValue Data - use same labels as PsoValue data
+        writeCsvLine(self.__tru_vals_fname,lbl,'w')
+        
+        # Velocity data
+        lbl = ["step"]
+        for v in self.variableSet.labels:
+            lbl.append(v)
+        writeCsvLine(self.__velocity_fname,lbl,'w')
+        
+        # Update attempts
+        lbl = ["step"]
+        lbl.append("datatype")
+        for v in self.variableSet.labels:
+            lbl.append(v)
+        writeCsvLine(self.__updates_fname,lbl,'w')
+    
+    def _log_step(self):
+        # PsoValue data
+        dat = [self.lastStep]
+        dat.append(self.__positions.bestStep)
+        dat.append(self.__positions.stableFitness)
+        for p in self.__positions.stablePsoValues:
+            dat.append(p)
+        writeCsvLine(self.__pso_vals_fname,dat,'a')
+        #TrueValue Data
+        dat = [self.lastStep]
+        dat.append(self.__positions.bestStep)
+        dat.append(self.__positions.stableFitness)
+        for p in self.__positions.trueValues:
+            dat.append(p)
+        writeCsvLine(self.__tru_vals_fname,dat,'a')
+        # Velocity data
+        dat = [self.lastStep]
+        for v in self.__velocity.components:
+            dat.append(v)
+        writeCsvLine(self.__velocity_fname,dat,'a')
+    
+    def _log_update_attempt(self, position, velocity, accepted):
+        step = self.nextStep
+        datatypes = ['POSITION','VELOCITY','ACCEPTED']
+        datasources= [position, velocity, accepted]
+        for (lbl,src) in zip(datatypes,datasources):
+            dat = [step,lbl]
+            for p in src:
+                dat.append(p)
+            writeCsvLine(self.__updates_fname,dat,'a')
+    
     def __str__(self):
         s = "Agent {}:\n\tStable: {}\n\tBest: {}\n\tVelocity: {}"
         s = s.format(self.id, self.stablePoint, self.bestPoint, self.stableVelocity)
@@ -476,7 +600,7 @@ class FunctionAgent(Agent):
         super().__init__(*args, **kwargs)
     
     @property
-    def calculationsFinished(self):
+    def calculationFinished(self):
         """
         Returns True if the update calculations are complete.
         """
@@ -495,7 +619,7 @@ class FunctionAgent(Agent):
         """
         Read fitness from calculation result and return. 
         """
-        fitness = self.__last_launch.get([0.01])
+        fitness = self.__last_launch.get()
         self.__last_launch = None
         return fitness
     

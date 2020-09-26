@@ -1,15 +1,16 @@
 """
 Module defining methodology of PSO variable management.
 """
-
-# Library imports
-
-# Third Party Imports
+# Standard Library imports
 from abc import ABC, abstractmethod
 import copy
 from functools import total_ordering
 from enum import Enum, unique
+
+# Third Party Imports
 import numpy as np
+
+# Project Imports
 
 @unique
 class BoundTypes(Enum):
@@ -30,10 +31,7 @@ class VariableBase(ABC):
     def __init__(self, value, lower, upper, \
                 psoValues=True, \
                 boundsType=BoundTypes.reflective, \
-                label=None, \
-                initLower = None, \
-                initUpper = None, \
-                initIsPsoValue = True)
+                label=None):
         """
         Initialize a basic VariableBase object.
         
@@ -63,8 +61,8 @@ class VariableBase(ABC):
             A label to use when displaying values
         """
         # Define ID
-        self.__id = self.__class__.__next_ID
-        self.__class__.__next_ID += 1
+        self.__id = VariableBase.__next_ID
+        VariableBase.__next_ID += 1
         
         # create underlying memebers
         self.__psoLowerBound = None
@@ -150,12 +148,12 @@ class VariableBase(ABC):
     
     # abstract Methods
     @abstractmethod
-    def __pso_to_true(self, val):
+    def _pso_to_true(self, val):
         """
         Convert the scaled pso value to unscaled
         true value. This must perform the inverse
-        operation as __true_to_pso(...) such that 
-        val == self.__true_to_pso(self.__pso_to_true(val))
+        operation as _true_to_pso(...) such that 
+        val == self._true_to_pso(self._pso_to_true(val))
         is tautological (**within numerical precision**)
         
         Default behavior is to apply no scaling. Inheriting
@@ -169,10 +167,14 @@ class VariableBase(ABC):
         return val
         
     @abstractmethod
-    def __true_to_pso(self, val):
+    def _true_to_pso(self, val):
         return val
     
     # Properties
+    @property
+    def label(self):
+        return self.__label
+    
     @property
     def psoValue(self):
         return self.__psoValue
@@ -185,7 +187,7 @@ class VariableBase(ABC):
             else:
                 warnMsg = "{} rejected position update to {}"
                 warnMsg = warnMsg.format(self.__label, newValue)
-                raise(RuntimeWarning(warnMsg))
+                #raise(RuntimeWarning(warnMsg))
         elif self.boundStyle == BoundTypes.periodic:
             shiftVal = newValue - self.psoLowerBound
             modVal = shiftVal % self.psoRange
@@ -235,36 +237,36 @@ class VariableBase(ABC):
     
     @property
     def trueValue(self):
-        return self.__pso_to_true(self.psoValue)
+        return self._pso_to_true(self.psoValue)
     
     @trueValue.setter
     def trueValue(self,newVal):
-        self.psoValue = self.__true_to_pso(newVal)
+        self.psoValue = self._true_to_pso(newVal)
     
     @property
     def trueLowerBound(self):
-        return self.__pso_to_true(self.psoLowerBound)
+        return self._pso_to_true(self.psoLowerBound)
     
     @trueLowerBound.setter
     def trueLowerBound(self, newval):
-        self.psoLowerBound = self.__true_to_pso(newval)
+        self.psoLowerBound = self._true_to_pso(newval)
     
     @property
     def trueUpperBound(self):
-        return self.__pso_to_true(self.psoUpperBound)
+        return self._pso_to_true(self.psoUpperBound)
     
     @trueUpperBound.setter
     def trueUpperBound(self, newval):
-        self.psoUpperBound = self.__true_to_pso(newval)
+        self.psoUpperBound = self._true_to_pso(newval)
     
     @property
     def trueBounds(self):
         return [self.trueLowerBound, self.trueUpperBound]
     
-    @trueBound.setter
+    @trueBounds.setter
     def trueBounds(self, newvals):
-        psoLowBnd = self.__true_to_pso(newvals[0])
-        psoUpBnd = self.__true_to_pso(newvals[1])
+        psoLowBnd = self._true_to_pso(newvals[0])
+        psoUpBnd = self._true_to_pso(newvals[1])
         self.psoBounds = [psoLowBnd, psoUpBnd]
             
 class UnscaledVariable(VariableBase):
@@ -276,10 +278,10 @@ class UnscaledVariable(VariableBase):
     def __init__(self,*args,**kwargs):
         super().__init__(*args, **kwargs)
     
-    def __pso_to_true(self,val):
+    def _pso_to_true(self,val):
         return val
     
-    def __true_to_pso(self,val):
+    def _true_to_pso(self,val):
         return val
     
 class LinearScaledVariable(VariableBase):
@@ -296,10 +298,10 @@ class LinearScaledVariable(VariableBase):
         self.__scalefactor = scale
         super().__init__(*args, **kwargs)
         
-    def __pso_to_true(self, val):
+    def _pso_to_true(self, val):
         return val / self.__scalefactor
         
-    def __true_to_pso(self, val):
+    def _true_to_pso(self, val):
         return val * self.__scalefactor
     
 class LinearOffsetVariable(LinearScaledVariable):
@@ -315,11 +317,11 @@ class LinearOffsetVariable(LinearScaledVariable):
         self.__scaleoffset = offset
         super().__init__(*args, **kwargs)
     
-    def __pso_to_true(self, val):
-        return super().__pso_to_true(val) + self.__scaleoffset
+    def _pso_to_true(self, val):
+        return super()._pso_to_true(val) + self.__scaleoffset
     
-    def __true_to_pso(self, val):
-        return super().__true_to_pso(val - self.__scaleoffset)
+    def _true_to_pso(self, val):
+        return super()._true_to_pso(val - self.__scaleoffset)
     
 class LogScaledVariable(VariableBase):
     """
@@ -333,10 +335,10 @@ class LogScaledVariable(VariableBase):
         self.__scalefactor = scale
         super().__init__(*args, **kwargs)
         
-    def __pso_to_true(self, val):
+    def _pso_to_true(self, val):
         return np.exp(val)
         
-    def __true_to_pso(self, val):
+    def _true_to_pso(self, val):
         return np.log(val)
     
 

@@ -1,9 +1,11 @@
 
-# Third Party imports
+# Standard Library Imports
 from abc import ABC, abstractmethod
+
+# Third Party imports
 import numpy as np
 
-# Local Library imports
+# Project imports
 from psoinverse.pso.core import Point, FITNESS_SELECTOR
 from psoinverse.pso.agent import Agent
 
@@ -150,7 +152,7 @@ class StandardIntegrator(Integrator):
         
         # Random forcing terms
         e1 = self.randomGenerator.rand(len(position.components))
-        e2 = self.randomGenerator.rand(len(Position.components))
+        e2 = self.randomGenerator.rand(len(position.components))
         
         # new Velocity
         val1 = self.c1 * e1 * (pbest.components - position.components)

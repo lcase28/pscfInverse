@@ -3,19 +3,18 @@ Module defining pso variable sets and data managers.
 
 Data managers provide a simple interface for agents to update 
 their own data while allowing the possibility to easily add historical
-data tracking and enabling multt-stage updates to complement the 
+data tracking and enabling multi-stage updates to complement the 
 updating procedure of the agents themselves.
-
-
 """
-
-# Library imports
-from psoinverse.PSO.psovariables import PsoVariable
-from psoinverse.PSO.psovectors import Point, Velocity
+# Standard Library imports
+from enum import Enum
 
 # Third-party imports
 import numpy as np
-from enum import Enum
+
+# Project Imports
+from psoinverse.pso.variables import VariableBase
+from psoinverse.pso.core import Point, Velocity
 
 class ContainerStatusTypes(Enum):
     stable = 1
@@ -64,6 +63,9 @@ class PsoVariableSet(object):
         self.__nvar = 0
         self.__variables = []
         for v in variables:
+            if not isinstance(v, VariableBase):
+                msg = "Variable {} of type {} does not derive from PsoVariable"
+                raise(TypeError(msg.format(v,type(v))))
             self.__nvar += 1
             self.__variables.append(v)
         
@@ -242,6 +244,16 @@ class PsoVariableSet(object):
         return ContainerStatusTypes.stable
     
     @property
+    def labels(self):
+        """ A list of variable labels. """
+        return [ v.label for v in self.__variables ]
+    
+    @property
+    def variables(self):
+        """ A list containing all variables in the set. """
+        return [ v for v in self.__variables ]
+    
+    @property
     def inBounds(self):
         """ True if all stable pso values are in bounds for the variables. """
         tmp = True
@@ -402,6 +414,7 @@ class PsoPositionData(object):
         self.__next_step = 0
         self.__stable_history = [] # Point objects with psovalue coordinates
         self.__best_history = [] # Step numbers referencing the __stable_history points.
+        self.__status = ContainerStatusTypes.stable
         
     @classmethod
     def initializedInstance(cls, varSet, fitness):
@@ -460,6 +473,10 @@ class PsoPositionData(object):
     
     # Properties and accessing methods
     
+    @property
+    def nextStep(self):
+        return self.__next_step
+    
     def hasStep(self, step):
         """
         True if the container has data for step.
@@ -508,13 +525,6 @@ class PsoPositionData(object):
         return self.__variableSet.stablePsoValues
     
     @property
-    def stableTrueValues(self):
-        if self.__status == ContainerStatusTypes.uninitialized:
-            msg = "No stable state has yet been set. No stable data Available."
-            raise(ContainerStatusError(self.__class__, self.__status, "stableTrueValues", msg))
-        return self.__variableSet.stableTrueValues
-    
-    @property
     def stableFitness(self):
         if self.__status == ContainerStatusTypes.uninitialized:
             msg = "No stable state has yet been set. No stable data Available."
@@ -536,7 +546,7 @@ class PsoPositionData(object):
         return self.__variableSet.psoValues
         
     @property
-    def currentTrueValues(self):
+    def trueValues(self):
         return self.__variableSet.trueValues
     
     def currentPoint(self, currentFitness):
@@ -579,3 +589,11 @@ class PsoPositionData(object):
         """
         return self.__variableSet
     
+    @property
+    def inBounds(self):
+        return self.__variableSet.inBounds
+    
+    @property
+    def status(self):
+        return self.__status
+

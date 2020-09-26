@@ -9,22 +9,10 @@ import numpy as np
 import networkx as nx
 
 # Library imports
-from psoinverse.pso.core import Point, FITNESS_COMPARATOR
+from psoinverse.pso.core import Point, FITNESS_SELECTOR
 from psoinverse.pso.integrators import Integrator
 from psoinverse.pso.agent import Agent
-
-def checkPath(root):
-    root = root.resolve()
-    if root.exists() and root.is_dir():
-        return root.resolve(), True
-    try:
-        if not root.exists():
-            root.mkdir(parents=True)
-        if not root.is_dir():
-            root = root.parent
-        return root.resolve(), True
-    except (FileNotFoundError, FileExistsError, RuntimeError):
-        return None, False
+from psoinverse.util.iotools import checkPath, writeCsvLine
 
 def allHaveStep(neighbors, step):
     """ True if all agents have completed step """
@@ -33,11 +21,6 @@ def allHaveStep(neighbors, step):
             return False
     return True
 
-# =========================================================
-#
-# Swarm Class
-#
-# =========================================================
 class Swarm(object):
     def __init__(self, graph, agents, integrator, root = None):
         """ 
@@ -76,7 +59,7 @@ class Swarm(object):
         self.agents = agents
         self.graph = graph
         self.integrator = integrator
-        self.__fit_compare = FITNESS_COMPARATOR
+        self.__fit_compare = FITNESS_SELECTOR
         self.__next_step = 0
         # record-keeping
         if root is None:
@@ -137,7 +120,7 @@ class Swarm(object):
     
     def bestCurrentAgentId(self, step):
         cpos = [ a.stablePointAtStep(step) for a in self.agents ]
-        best, index = self.__fit_compare.bestPointIndex(bpos)
+        best, index = self.__fit_compare.bestPointIndex(cpos)
         return index
     
     def agentNeighbors(self, index):
@@ -182,11 +165,13 @@ class Swarm(object):
         """
         starttime = time.time()
         startproc = time.process_time()
+        loopcount = 0
         while not self.hasStep(nstep):
             self.finishAgents()
             self.startAgents(nstep)
             self.logData(nstep)
             time.sleep(tryCooldown)
+            loopcount += 1
         endtime = time.time()
         endproc = time.process_time()
         runtime = endtime - starttime
@@ -278,12 +263,9 @@ class Swarm(object):
         dat.append("currBestAgent")
         for (i,a) in enumerate(self.agents):
             dat.append("agent{}step".format(i))
-        self.__write_list_to_log(dat)
+        self.__write_list_to_log(dat,'w')
     
-    def __write_list_to_log(self,data):
+    def __write_list_to_log(self,data, writestyle='a'):
         logFile = self.root / "swarmLog.csv"
-        strline = ','.join(map(str,data))
-        strline = strline + '\n'
-        with open(logFile,'a') as f:
-            f.write(strline)
+        writeCsvLine(logFile,data,writestyle)
 
