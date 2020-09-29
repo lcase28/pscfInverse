@@ -1,0 +1,39 @@
+
+Future improvements to polymer components will include:
+
+    1.  Addition of pscfpp-interfacing components.
+    
+    2.  Extension of current simple search variables to a more
+        complex library of system-aware, self-constraining variables
+        to allow robust searching of more complex systems.
+        Implementation details are still being worked out, but a likely
+        approach will be in a system of linking "polymer parameter" components.
+        
+        In this system, a PolymerVariableSet would accept a set of variables
+        and constants which, together, fully define the system. The variable set
+        would trigger each individual variable to look for its 
+        "precedents" (those parameters whose values are required to calculate the current) and
+        "dependents" (those parameters whose values depend on the current).
+        This precedent-dependent heirarchy would be used to determine the update
+        order of the "variables" such that every update guarantees a final state
+        consistent with physical and user-defined constraints.
+        
+        The primary issue in this approach is in bounding of values. If a cascaded
+        series of updates (such as block fractions along a chain, defined in terms
+        of block ratios) leads to the final variable being out-of-bounds, which
+        pso variable(s) should be rejected as "out-of-bounds"?
+            Given that block fractions or block lengths are the most likely 
+            source of these situations, opening the search space to the full
+            range of physical values (with possible edge behaviors truncating 
+            extreme values to a fixed limit) could eliminate this problem.
+        
+        A secondary issue involves detection of reference cycles or dependency
+        cycles. The variable set would require a linear (or even branched)
+        dependency tree, but cyclic dependencies (if even realistically possible)
+        would need to be detected or otherwise resolved to avoid infinite recursion
+        issues.
+    
+    3.  Addition of a databased seed field library would reduce computational load 
+        by eliminating guess generation (and opening the search to morphologies
+        without robust generation approaches). Testing is underway to determine the 
+        extent required of these seed fields.
