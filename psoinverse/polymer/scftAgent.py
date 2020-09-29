@@ -1,10 +1,8 @@
 # Library imports
-from psoinverse.PSO.Agent import Agent
-from psoinverse.mesophases.phaseManagement import MesophaseManager
-
-# temporary imports (will be changing form later)
-# TODO: change these
-from psoinverse.PSO.Swarm import checkPath
+from psoinverse.polymer.phases import MesophaseManager
+from psoinverse.polymer.variables import PolymerVariableSet
+from psoinverse.pso.agent import Agent
+from psoinverse.util.iotools import checkPath
 
 # Other imports
 from copy import deepcopy
@@ -33,7 +31,7 @@ class ScftAgent(Agent):
         velocitySource : Velocity
             A template Velocity object.
             Values will be randomized on initial update.
-        runner : CalculationManager
+        calcManager : CalculationManager
             A parallel calculation manager for running calculations.
         parentRoot : pathlib.Path
             The parent directory of the Agent's output root.

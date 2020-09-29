@@ -3,9 +3,9 @@
 #from psoinverse.SCFT.PSCF.FileManagers.paramfile import ParamFile
 #from psoinverse.SCFT.PSCF.FileManagers.outfile import OutFile
 #from psoinverse.mesophases.FieldGenerators import FieldCalculator
-from psoinverse.mesophases.phaseManagement import MesophaseBase
-from psoinverse.mesophases.mesophaseVariables import MesophaseVariable
-from psoinverse.mesophases.mesophaseVariables import VariableTypes as varType
+from psoinverse.polymer.phases import MesophaseBase
+from psoinverse.polymer.variables import MesophaseVariable
+import psoinverse.polymer.parameters as parameters
 
 # Related Libraries
 from pscfFieldGen.fieldGenerators import FieldCalculator
@@ -19,92 +19,68 @@ import numpy as np
 import os
 import subprocess as sub    # Requires Python 3.5 --> System dependence
 
-class PSCFMesophase(MesophaseBase):
+class PscfMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
-    def __init__(self, ID, paramWrap, fieldGen, **kwargs):
+    def __init__(self, ID, paramWrap, fieldGen):
         """
-            Initialize the PSCF Mesophase using pre-formatted files.
-            
-            IMPLEMENTATION NOTE: Presently, no checks are done to ensure 
-            that all template files are compatible (that system definitions match).
-            These checks are assumed to have been done by the user.
-            
-            In parameter definitions, 'fileManager' refers to psoinverse.SCFT.PSCF.FileManagers
-            
-            Parameters
-            ----------
-            ID : string
-                The name of the phase (should be unique within the run, 
-                but this is not enforced)
-            param : filemanager.paramfile.ParamFile
-                A pre-populated param file. Should minimally contain definitional
-                fields (format, MONOMERS, CHAINS, SOLVENTS, ..., BASIS) as well as
-                the desired ITERATE fields.
-            fieldGen : psoinverse.mesophases.FieldGenerators.FieldGenerator
-                A pre-initialized FieldGenerator object, set to generate fields
-                for this phase.
+        Initialize the PSCF Mesophase using pre-formatted files.
+        
+        IMPLEMENTATION NOTE: Presently, no checks are done to ensure 
+        that all template files are compatible (that system definitions match).
+        These checks are assumed to have been done by the user.
+        
+        In parameter definitions, 'fileManager' refers to psoinverse.SCFT.PSCF.FileManagers
+        
+        Parameters
+        ----------
+        ID : string
+            The name of the phase (should be unique within the run, 
+            but this is not enforced)
+        param : PscfParam or pscf.ParamFile from pscfFieldGen.filemanagers
+            A pre-populated param file. Should minimally contain definitional
+            fields (format, MONOMERS, CHAINS, SOLVENTS, ..., BASIS) as well as
+            the desired ITERATE fields.
+        fieldGen : pscfFieldGen.fieldGenerators.FieldCalculator
+            A pre-initialized FieldGenerator object, set to generate fields
+            for this phase.
         """
-        #self.kgrid = kgrid
-        self.paramWrap = paramWrap
-        self.param = paramWrap.file
+        errmsg = "PscfMesophase requires paramWrap of type {}, or {}; gave {}"
+        if isinstance(paramWrap,PscfParam):
+            self.__paramWrap = paramWrap
+            self.__param = paramWrap.file
+        elif isinstance(paramWrap,ParamFile):
+            self.__param = paramWrap
+            self.__paramWrap = PscfParam(paramWrap)
+        else:
+            raise(TypeError(errmsg.format(PscfParam, ParamFile, type(paramWrap))))
         self.fieldGen = fieldGen
         super().__init__(ID)
     
-    @classmethod
-    def instanceFromFiles(cls, ID, paramFile, fieldGenFile, **kwargs):
-        """
-            Return an instance of PSCFMesophase initialized from given files.
-            
-            NOTE: No checks are done to ensure the specified files exist.
-            If file-related exceptions occur, these will cascade.
-            
-            IMPLEMENTATION NOTE: Presently, no checks are done to ensure 
-            that all template files are compatible (that system definitions match).
-            These checks are assumed to have been done by the user.
-            
-            In parameter definitions, 'fileManager' refers to psoinverse.SCFT.PSCF.FileManagers
-            
-            Parameters
-            ----------
-            ID : string
-                The name of the phase (should be unique within the run, 
-                but this is not enforced)
-            kgrid : pathlib.Path
-                An already-resolved path object to a kgrid field file.
-            param : pathlib.Path
-                An already-resolved path object to a param file.
-            fieldGen : pathlib.path
-                An already-resolved path object to a fieldGen source file.
-        """
-        param = PscfParam.fromFileName(paramFile.resolve())
-        fieldGen = FieldCalculator.from_file(fieldGenFile)
-        return cls(ID, param, fieldGen)
-    
     def startUpdate(self, VarSet, root, runner):
         """ 
-            Update phase variables, launch a simulation,
-            and update phase energy from result.
-            
-            If deriving classes override, they should end
-            with a call to super().update, and allow super
-            to run calls to setParams and _evaluate.
-            
-            Parameters
-            ----------
-            VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
-                The set of all variables to be updated, with their 
-                current values
-            root : pathlib.Path (OS-dependent type)
-                The root directory of the run. All files from the
-                simulation are to be placed in this directory.
-                If the directory does not exist, it will be created.
-            
-            Returns
-            -------
-            flag : bool
-                True if updated without error.
-                False otherwise.
+        Update phase variables, launch a simulation,
+        and update phase energy from result.
+        
+        If deriving classes override, they should end
+        with a call to super().update, and allow super
+        to run calls to setParams and _evaluate.
+        
+        Parameters
+        ----------
+        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+            The set of all variables to be updated, with their 
+            current values
+        root : pathlib.Path (OS-dependent type)
+            The root directory of the run. All files from the
+            simulation are to be placed in this directory.
+            If the directory does not exist, it will be created.
+        
+        Returns
+        -------
+        flag : bool
+            True if updated without error.
+            False otherwise.
         """
         return super().startUpdate(VarSet,root,runner)
     
@@ -194,71 +170,64 @@ class PSCFMesophase(MesophaseBase):
         
     def setParams(self, VarSet):
         """
-            Update the specified set of variables.
-            
-            Parameters
-            ----------
-            VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
-                The set of MesophaseVariable objects to be updated.
-            
-            Returns
-            -------
-            flag : bool
-                True if parameters updated without issue.
-                False otherwise
-            
-            NOTE:
-            Built-in Variable Types can be found in the mesophaseVariables
-            module.
-            
-            NOTE: 
-            A given variable type may or may not be implemented
-            by a derived Mesophase. See derived classes for details.
+        Update the specified set of variables.
+        
+        Parameters
+        ----------
+        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+            The set of MesophaseVariable objects to be updated.
+        
+        Returns
+        -------
+        flag : bool
+            True if parameters updated without issue.
+            False otherwise
         """
-        self._psoVars = VarSet
-        # TODO: Add aditional variable options.
-        for v in VarSet.items():
-            f = v.flag
-            if f == varType.BlockFraction:
-                # TODO: Add capability to have any block act as floating fraction
-                temp = deepcopy(self.param.block_length[v.polymer])
-                N = np.sum(np.array(temp))
-                newLen = v.scftValue * N
-                Nshift = temp[v.block] - newLen
-                temp[v.block] = newLen
-                temp[-1] = temp[-1] + Nshift
-                self.param.block_length[v.polymer] = temp
-            elif f == varType.Chi:
-                # TODO: Add capability to handle T-dependent chi
-                m1, m2 = v.monomerIDs
-                #print(self.param.chi,m1,m2)
-                self.param.chi[m2-1][m1-1] = v.scftValue
+        for p in VarSet.parameters:
+            if isinstance(p,parameters.BlockLength):
+                #temp = deepcopy(self.param.block_length[v.polymer])
+                #N = np.sum(np.array(temp))
+                #newLen = v.scftValue * N
+                #Nshift = temp[v.block] - newLen
+                #temp[v.block] = newLen
+                #temp[-1] = temp[-1] + Nshift
+                #self.param.block_length[v.polymer] = temp
+                temp = self.param.block_length[p.polymerID]
+                temp[p.blockID] = p.value
+                self.param.block_length[p.polymerID] = temp
+            elif isinstance(p,parameters.ChiN):
+                m1, m2 = p.monomerIDs
+                self.param.chi[m2-1][m1-1] = p.value
+            elif isinstance(p, parameters.KuhnLength):
+                mon = p.monomerID
+                self.kuhn[mon] = p.value
+            elif isinstance(p, parameters.PolymerBlendFraction):
+                self.phi_chain[p.polymerID] = p.value
             else:
-                # TODO: Adjust this to return False rather than raising error for unknowns
-                raise(NotImplementedError("Variable of Type " + str(f) + " not implemented"))
+                raise(NotImplementedError("{} is not an implemented parameter".format(type(p))))
         return True
     
     def _launchSim(self, root):
         """
-            Handle Launching of the simulation in given root 
-            directory
-         
-            Store completed process object in self.lastLaunch
-            
-            Parameters
-            ----------
-            root : pathlib.Path
-                The root directory of the run. 
-                All simulation files are
-                placed in this location. 
-                It is assumed that path has 
-                already been resolved.
-            
-            Returns
-            -------
-            flag : bool
-                True if simulation converged without issue.
-                False if an error occurred and no energy found.
+        Handle Launching of the simulation in given root 
+        directory
+        
+        Store completed process object in self.lastLaunch
+        
+        Parameters
+        ----------
+        root : pathlib.Path
+            The root directory of the run. 
+            All simulation files are
+            placed in this location. 
+            It is assumed that path has 
+            already been resolved.
+        
+        Returns
+        -------
+        flag : bool
+            True if simulation converged without issue.
+            False if an error occurred and no energy found.
         """
         # Create Input Files
         monFrac = self.paramWrap.getMonomerFractions()
@@ -270,9 +239,9 @@ class PSCFMesophase(MesophaseBase):
         kgrid.fields = newField
         ## TODO: Select Kgrid file name based on param file value.
         kgridFile = root / 'rho_kgrid_in'
-        self.kgrid.write(kgridFile.open(mode='x'))
+        self.kgrid.write(kgridFile.open(mode='w'))
         paramFile = root / 'param'
-        self.param.write(paramFile.open(mode='x'))
+        self.param.write(paramFile.open(mode='w'))
         # Launch Calculations
         infile = paramFile #root / "param"
         outfile = root / "simLog"

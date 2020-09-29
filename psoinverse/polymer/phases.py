@@ -16,7 +16,7 @@ import io
 import numpy as np
 
 # Project Imports
-from psoinverse.polymer.mesophaseVariables import VariableSet
+from psoinverse.polymer.variables import PolymerVariableSet
 from psoinverse.util.iotools import checkPath
 
 class MesophaseBase(ABC):
