@@ -6,9 +6,10 @@
 from psoinverse.polymer.phases import MesophaseBase
 from psoinverse.polymer.variables import MesophaseVariable
 import psoinverse.polymer.parameters as parameters
+import psoinverse.util.contexttools as contexttools
 
 # Related Libraries
-from pscfFieldGen.fieldGenerators import FieldCalculator
+from pscfFieldGen.generation import FieldCalculatorBase, read_input_file, generate_field_file
 from pscfFieldGen.filemanagers import PscfParam
 from pscfFieldGen.filemanagers.pscf import WaveVectFieldFile, ParamFile, OutFile
 
@@ -17,12 +18,13 @@ from copy import deepcopy
 import io
 import numpy as np
 import os
+import pathlib
 import subprocess as sub    # Requires Python 3.5 --> System dependence
 
 class PscfMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
-    def __init__(self, ID, paramWrap, fieldGen):
+    def __init__(self, ID, paramWrap, fieldGen, coreOptions=None):
         """
         Initialize the PSCF Mesophase using pre-formatted files.
         
@@ -44,18 +46,52 @@ class PscfMesophase(MesophaseBase):
         fieldGen : pscfFieldGen.fieldGenerators.FieldCalculator
             A pre-initialized FieldGenerator object, set to generate fields
             for this phase.
+        coreOptions : list-like of int
+            A list of monomer ID's which can be chosen as the "core" monomer.
+            At each evaluation, the monomer in this list with the lowest overall
+            volume fraction will be set as the core in initial guesses.
         """
         errmsg = "PscfMesophase requires paramWrap of type {}, or {}; gave {}"
         if isinstance(paramWrap,PscfParam):
-            self.__paramWrap = paramWrap
-            self.__param = paramWrap.file
+            self.paramWrap = paramWrap
+            self.param = paramWrap.file
         elif isinstance(paramWrap,ParamFile):
-            self.__param = paramWrap
-            self.__paramWrap = PscfParam(paramWrap)
+            self.param = paramWrap
+            self.paramWrap = PscfParam(paramWrap)
         else:
             raise(TypeError(errmsg.format(PscfParam, ParamFile, type(paramWrap))))
         self.fieldGen = fieldGen
+        self.coreOptions = coreOptions
         super().__init__(ID)
+    
+    @classmethod
+    def fromFieldGenFile(cls, ID, infile):
+        """
+        Use a pscfFieldGen input file to initialize a PscfMesophase object.
+        
+        The rules for the input file are identical to that of running pscfFieldGen.
+        Operations are performed within the directory of the input file,
+        creating no problems with distributed input files for multiple PscfMesophases.
+        
+        Parameters
+        ----------
+        ID : string
+            The name of the phase (should be unique within the run, 
+            but this is not enforced)
+        infile : pathlib.Path
+            The path to the file 
+        
+        Returns
+        -------
+        newPhase : PscfMesophase
+            An instance of PscfMesophase based on the input file.
+        """
+        infile = infile.resolve()
+        newdir = str(infile.parent)
+        with contexttools.cd(newdir):
+            param, calc, outfile, cmon = read_input_file(infile)
+        out = cls(ID, param, calc)
+        return out
     
     def startUpdate(self, VarSet, root, runner):
         """ 
@@ -108,17 +144,9 @@ class PscfMesophase(MesophaseBase):
                 True if simulation converged without issue.
                 False if an error occurred and no energy found.
         """
-        #monFrac = self._getMonomerFractions()
-        #ngrid = self.param.ngrid
-        #w = self._getinterface()
-        #newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
-        #self.kgrid.fields = newField
-        #kgridFile = root / 'rho_kgrid_in'
-        #self.kgrid.write(kgridFile.open(mode='x'))
-        #paramFile = root / 'param'
-        #self.param.write(paramFile.open(mode='x'))
-        # pass simulation launch to runner
-        #self._lastLaunch = runner.addTask(self._launchSim, root)
+        ngrid = self.param.ngrid
+        lattice = self.paramWrap.getLattice()
+        self.fieldGen.seedCalculator(ngrid,lattice)
         return root, True
     
     def finishUpdate(self, root):
@@ -158,14 +186,14 @@ class PscfMesophase(MesophaseBase):
         flag = True
         ## TODO: Check Field Similarity with symmetrized files for quicker I/O
         # Check field similarity
-        startFile = root/"rho_kgrid_in"
-        startField = WaveVectFieldFile(startFile.resolve())
-        endFile = root/"rho_kgrid"
-        endField = WaveVectFieldFile(endFile.resolve())
-        self.fieldSim = startField.fieldSimilarity(endField)
-        if np.min(self.fieldSim) <= 0.8:
-            ener = np.inf
-            flag = False
+        #startFile = root/"rho_kgrid_in"
+        #startField = WaveVectFieldFile(startFile.resolve())
+        #endFile = root/"rho_kgrid"
+        #endField = WaveVectFieldFile(endFile.resolve())
+        #self.fieldSim = startField.fieldSimilarity(endField)
+        #if np.min(self.fieldSim) <= 0.8:
+        #    ener = np.inf
+        #    flag = False
         return ener, flag
         
     def setParams(self, VarSet):
@@ -232,14 +260,18 @@ class PscfMesophase(MesophaseBase):
         # Create Input Files
         monFrac = self.paramWrap.getMonomerFractions()
         ngrid = self.param.ngrid
-        ## TODO: Figure out how to choose core monomer
-        w = self.paramWrap.getInterfaceWidth()
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w)
+        lattice = self.paramWrap.getLattice()
+        core_mon = self.coreOptions[0]
+        for i in self.coreOptions:
+            if monFrac[i] < monFrac[core_mon]:
+                core_mon = i
+        w = self.paramWrap.getInterfaceWidth(core_mon)
+        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w, coreindex=core_mon, lattice=lattice)
         kgrid = self.paramWrap.cleanFieldFile()
         kgrid.fields = newField
-        ## TODO: Select Kgrid file name based on param file value.
-        kgridFile = root / 'rho_kgrid_in'
-        self.kgrid.write(kgridFile.open(mode='w'))
+        kgridName = self.param.fieldTransforms[0][1] # Pull init guess filename from param file
+        kgridFile = root / kgridName
+        kgrid.write(kgridFile.open(mode='w'))
         paramFile = root / 'param'
         self.param.write(paramFile.open(mode='w'))
         # Launch Calculations
@@ -248,11 +280,11 @@ class PscfMesophase(MesophaseBase):
         try:
             with open(infile) as fin:
                 with open(outfile,'w') as fout:
-                    self.lastLaunch = sub.run("pscf",stdin=fin,stdout=fout, cwd=root)
-            self.lastLaunch.check_returncode()
+                    lastLaunch = sub.run("pscf",stdin=fin,stdout=fout, cwd=root)
+            lastLaunch.check_returncode()
         except sub.CalledProcessError as err:
             with open(root/"errorLog") as ferr:
-            ferr.write("Simuation error in: {}\n{}".format(root,err))
+                ferr.write("Simuation error in: {}\n{}".format(root,err))
             return False
         return True
         
