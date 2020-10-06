@@ -1,9 +1,0 @@
-This directory and sub-directories contain test scripts (and associated input files) related to the direct interaction of PSCF with the PSO code.
-
-(Topics considered here are read/write of PSCF input/output files, calling of PSCF)
-
-Subdirectory contents:
-
-    ParameterFileIO/    Tests related to the reading/writing of PSCF parameter files
-    
-    ** additional descriptions will be added as more tests are generated.

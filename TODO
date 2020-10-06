@@ -1,45 +1,22 @@
-Updated 8 November 2019
+Updated: 6 October 2020
 
-WRITE
--- Swarm log generation
-    -- Record Agent positions / fitnesses at each step
-    -- Neighbors Lists
--- Agent Logging
-    -- Update Agent to accept "root" directory at each update to write out logs
+Next steps in development:
 
--- Determine other structures needed for minimum functionality.
-
-
-Updated: 14 June 2019
-
-Next Tasks:
-    - Refactor Swarm.py
-            - Split Point into a simpler base class. Add complexity in derived classes.
-                - Split __eq__ method: __eq__ should cover fitness, samePoint should compare coordinates
-                **** DONE ****
-        - Move graph entirely into Swarm class (remove neighbors list from Agent)
-        - Handle Agent Position updating with Integrator???
-        - Define base class for "FitnessFunctions" ??? 
-            - Reduce dependency on derived agent classes?
-            - Seems to have high risk of circular dependencies, lowered efficiency
-            - Still not sure about this construct.
-        
-        - Completely remove simulation tracking from point classes
-            - This construct absolutely did not make any sense.
-            - Derived Agent classes (or actual simulation management classes)
-                should be made responsible for this.
-        
-        *** FLESH OUT DOCUMENTATION AS YOU REFACTOR***
-    
-    - Generate simple unit test for each class and method -- use pytest package
-    
-    - Generate easily-parsed output for swarm update tracking for easier verification of update procedure
-        - (Check out Pandas)
-    
-Other Tasks
-    - Split pscfppFactory from PolyFTSFactory class.
-        - Develop unit tests
-    
-    - Generate MorphologyAgent class for pscfpp
-    
-    - Generate PSCF tools for reading output files
+    -   Update handling of NaN energy in pscf output files to default to np.inf for
+        consistent behavior.
+    -   Add handling for non-particle phase types:
+        -   Lamellar:
+            Parameter handling is identical.
+            Initial guess field can be easily generated using symmetrized format.
+            In symmetrized format, composition is still the q=0 coefficient, then choose
+            small number (say 0.1 * <lowest_composition>) as coefficient of first star.
+            Parameter file will only need to convert from rho to omega before iteration.
+        -   Network:
+            Levelset method is known to have issues for other phases, but works for 
+            Gyroid phase, which is ok to start. Implement this in a field generation class.
+            Use similar approach to lamellar to start, then convert to rgrid using pscf.
+            Read rgrid file, and perform levelset method. Initial guess will be input as
+            rgrid file.
+    -   Implement a Distributed Calculation Manager. Likely to use mpi4py.MPIExecutorPool
+        as basis for new class (as multiprocessing.pool.Pool is in the local implementation).
+    -   Implement interface for pscfpp in addition to pscf interfaces.
