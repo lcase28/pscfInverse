@@ -2,7 +2,7 @@
 from psoinverse.polymer.phases import MesophaseManager
 from psoinverse.polymer.variables import PolymerVariableSet
 from psoinverse.pso.agent import Agent
-from psoinverse.util.iotools import checkPath
+from psoinverse.util.iotools import checkPath, writeCsvLine
 
 # Other imports
 from copy import deepcopy
@@ -51,7 +51,7 @@ class ScftAgent(Agent):
         """
         Determine if all phase calculations are complete.
         """
-        return self.__phaseManager.calculationFinished()
+        return self.__phaseManager.calculationFinished
         
     @property
     def readyForStartUpdate(self):
@@ -61,21 +61,37 @@ class ScftAgent(Agent):
     
     @property
     def readyForFinishUpdate(self):
-        out1 = self.__phaseManager.readyForFinishUpdate()
-        out2 = super().readyForFinishUpdate()
+        out1 = self.__phaseManager.readyForFinishUpdate
+        out2 = super().readyForFinishUpdate
         return out1 and out2
         
     def _setup_calculations(self, calcManager):
         stepRoot = self.root / "step{}".format(self.nextStep)
-        success = self.phaseManager.startUpdate(stepRoot, calcManager)
+        success = self.__phaseManager.startUpdate(self.variableSet, stepRoot, calcManager)
     
     def _cleanup_calculations(self, calcManager):
         stepRoot = self.root / "step{}".format(self.nextStep)
-        self.phaseManager.finishUpdate(stepRoot)
-        fitness = self.phaseManager.fitness
+        self.__phaseManager.finishUpdate(stepRoot)
+        fitness = self.__phaseManager.fitness
         return fitness
     
     def _unset_calculations(self):
-        self.phaseManager.cancelUpdate()
+        self.__phaseManager.cancelUpdate()
+    
+    def _start_logs(self):
+        super()._start_logs()
+        self.__phase_data_fname = self.root/"phaseEnergies.csv"
+        
+        lbl = ["step"]
+        for n in self.__phaseManager.labels:
+            lbl.append(n)
+        writeCsvLine(self.__phase_data_fname, lbl, 'w')
+    
+    def _log_step(self):
+        super()._log_step()
+        dat = [self.lastStep]
+        for e in self.__phaseManager.energies:
+            dat.append(e)
+        writeCsvLine(self.__phase_data_fname, dat, 'a')
     
         

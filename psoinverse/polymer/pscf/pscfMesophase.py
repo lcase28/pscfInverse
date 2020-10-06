@@ -19,7 +19,7 @@ import io
 import numpy as np
 import os
 import pathlib
-import subprocess as sub    # Requires Python 3.5 --> System dependence
+import subprocess as sub
 
 class PscfMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
@@ -61,11 +61,14 @@ class PscfMesophase(MesophaseBase):
         else:
             raise(TypeError(errmsg.format(PscfParam, ParamFile, type(paramWrap))))
         self.fieldGen = fieldGen
-        self.coreOptions = coreOptions
+        if coreOptions is None:
+            self.coreOptions = [ i for i in range(self.param.N_monomer) ]
+        else:
+            self.coreOptions = coreOptions
         super().__init__(ID)
     
     @classmethod
-    def fromFieldGenFile(cls, ID, infile):
+    def fromFieldGenFile(cls, ID, infile, coreOptions=None):
         """
         Use a pscfFieldGen input file to initialize a PscfMesophase object.
         
@@ -90,7 +93,7 @@ class PscfMesophase(MesophaseBase):
         newdir = str(infile.parent)
         with contexttools.cd(newdir):
             param, calc, outfile, cmon = read_input_file(infile)
-        out = cls(ID, param, calc)
+        out = cls(ID, param, calc, coreOptions)
         return out
     
     def startUpdate(self, VarSet, root, runner):
@@ -147,7 +150,7 @@ class PscfMesophase(MesophaseBase):
         ngrid = self.param.ngrid
         lattice = self.paramWrap.getLattice()
         self.fieldGen.seedCalculator(ngrid,lattice)
-        return root, True
+        return [root, self.paramWrap, self.fieldGen, self.coreOptions], True
     
     def finishUpdate(self, root):
         return super().finishUpdate(root)
@@ -225,7 +228,7 @@ class PscfMesophase(MesophaseBase):
                 self.param.block_length[p.polymerID] = temp
             elif isinstance(p,parameters.ChiN):
                 m1, m2 = p.monomerIDs
-                self.param.chi[m2-1][m1-1] = p.value
+                self.param.chi[m2][m1] = p.value
             elif isinstance(p, parameters.KuhnLength):
                 mon = p.monomerID
                 self.kuhn[mon] = p.value
@@ -235,7 +238,8 @@ class PscfMesophase(MesophaseBase):
                 raise(NotImplementedError("{} is not an implemented parameter".format(type(p))))
         return True
     
-    def _launchSim(self, root):
+    @staticmethod
+    def _launchSim(root, paramWrap, fieldGen, coreOptions):
         """
         Handle Launching of the simulation in given root 
         directory
@@ -257,23 +261,32 @@ class PscfMesophase(MesophaseBase):
             True if simulation converged without issue.
             False if an error occurred and no energy found.
         """
+        param = paramWrap.file
+        # Temporary code to verify setting of root
+        testfile = root/"test"
+        with testfile.open(mode='w') as f:
+            f.write("This is a test file in {}".format(root))
         # Create Input Files
-        monFrac = self.paramWrap.getMonomerFractions()
-        ngrid = self.param.ngrid
-        lattice = self.paramWrap.getLattice()
-        core_mon = self.coreOptions[0]
-        for i in self.coreOptions:
+        monFrac = paramWrap.getMonomerFractions()
+        ngrid = param.ngrid
+        lattice = paramWrap.getLattice()
+        core_mon = coreOptions[0]
+        for i in coreOptions:
             if monFrac[i] < monFrac[core_mon]:
                 core_mon = i
-        w = self.paramWrap.getInterfaceWidth(core_mon)
-        newField = self.fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w, coreindex=core_mon, lattice=lattice)
-        kgrid = self.paramWrap.cleanFieldFile()
+        w = paramWrap.getInterfaceWidth(core_mon)
+        newField = fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w, coreindex=core_mon, lattice=lattice)
+        kgrid = paramWrap.cleanFieldFile()
         kgrid.fields = newField
-        kgridName = self.param.fieldTransforms[0][1] # Pull init guess filename from param file
+        kgridName = param.fieldTransforms[0][1] # Pull init guess filename from param file
         kgridFile = root / kgridName
-        kgrid.write(kgridFile.open(mode='w'))
+        with kgridFile.open(mode='w') as f:
+            kgrid.write(f)
+        #kgrid.write(kgridFile.open(mode='w'))
         paramFile = root / 'param'
-        self.param.write(paramFile.open(mode='w'))
+        with paramFile.open(mode='w') as f:
+            param.write(f)
+        #self.param.write(paramFile.open(mode='w'))
         # Launch Calculations
         infile = paramFile #root / "param"
         outfile = root / "simLog"

@@ -37,20 +37,20 @@ class ChiN(object):
         self.__m2 = max(mon1,mon2)
         self.__value = value
         
-        # Ensure monomer id numbering starts at 1
+        # Ensure monomer id numbering starts at 0
         diff = self.monomer2 - self.monomer1
-        if self.monomer1 < 1:
-            raise(ValueError("Monomer IDs must be >= 1"))
+        if self.monomer1 < 0:
+            raise(ValueError("Monomer IDs must be >= 0"))
         if diff < 1:
             raise(ValueError("Monomer IDs must differ by at least 1"))
     
     @property
     def monomer1(self):
-        return self.__monomer1
+        return self.__m1
     
     @property
     def monomer2(self):
-        return self.__monomer2
+        return self.__m2
     
     @property
     def monomerIDs(self):

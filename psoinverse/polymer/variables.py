@@ -15,7 +15,7 @@ import numpy as np
 # Project Imports
 import psoinverse.polymer.parameters as params
 from psoinverse.pso.variables import VariableBase
-from psoinverse.pso.containers import VariableSet
+from psoinverse.pso.containers import PsoVariableSet
 
 @unique
 class VariableTypes(Enum):
@@ -91,7 +91,7 @@ class BlockFractionVariable(MesophaseVariable):
     
     @property
     def parameter(self):
-        return param.BlockLength(self.polymer,self.block,self.trueValue)
+        return params.BlockLength(self.polymer,self.block,self.trueValue)
     
 class DiblockFractionVariable(MesophaseVariable):
     """ A diblock copolymer composition """
@@ -133,8 +133,8 @@ class DiblockFractionVariable(MesophaseVariable):
     @property
     def parameter(self):
         out = []
-        out.append(param.BlockLength(self.polymer,0,self.trueValue))
-        out.append(param.BlockLength(self.polymer,1,1.0-self.trueValue))
+        out.append(params.BlockLength(self.polymer,0,self.trueValue))
+        out.append(params.BlockLength(self.polymer,1,1.0-self.trueValue))
         return out
     
 class ChiVariable(MesophaseVariable):
@@ -148,11 +148,11 @@ class ChiVariable(MesophaseVariable):
         ----------
         Monomer1 : int
             The first monomer ID.
-            Monomer indexing should start at 1.
+            Monomer indexing should start at 0.
         Monomer2 : int
             The second monomer ID.
             Not equal to Monomer1.
-            Monomer indexing should start at 1.
+            Monomer indexing should start at 0.
         val : optional real scalar. Default 0.0.
             The SCFT value of the block fraction.
         lower : keyword, optional, real scalar
@@ -163,15 +163,15 @@ class ChiVariable(MesophaseVariable):
         Raises
         ------
         ValueError
-            When MonomerIDs < 1, or when Monomer2 == Monomer1
+            When MonomerIDs < 0, or when Monomer2 == Monomer1
         """
         self.__monomer1 = min(Monomer1,Monomer2)
         self.__monomer2 = max(Monomer1,Monomer2)
         
         # Ensure monomer id numbering starts at 1
         diff = self.monomer2 - self.monomer1
-        if self.monomer1 < 1:
-            raise(ValueError("Monomer IDs must be >= 1"))
+        if self.monomer1 < 0:
+            raise(ValueError("Monomer IDs must be >= 0"))
         if diff < 1:
             raise(ValueError("Monomer IDs must differ by at least 1"))
         
@@ -190,16 +190,16 @@ class ChiVariable(MesophaseVariable):
     @property
     def monomerIDs(self):
         """ 
-        Monomer ID numbers, with indexing starting at 1 
+        Monomer ID numbers, with indexing starting at 0
         Monomer1 < Monomer2
         """
         return self.monomer1, self.monomer2
     
     @property
     def parameter(self):
-        return param.ChiN(self.monomer1, self.monomer2, self.trueValue)
+        return params.ChiN(self.monomer1, self.monomer2, self.trueValue)
 
-class PolymerVariableSet(VariableSet):
+class PolymerVariableSet(PsoVariableSet):
     """ A collection for polymeric variables """
     
     def __init__(self, Vars):
@@ -215,7 +215,8 @@ class PolymerVariableSet(VariableSet):
                 raise(TypeError(msg.format(v,type(v))))
         super().__init__(Vars)
     
-    def getParameters(self):
+    @property
+    def parameters(self):
         out = []
         for v in self.variables:
             p = v.parameter

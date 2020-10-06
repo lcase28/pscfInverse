@@ -9,9 +9,29 @@
 ################
 
 from abc import ABC, abstractmethod
-import multiprocessing as mp
-from queue import SimpleQueue
+import multiprocessing.pool as mp
 import os
+import psutil       # Installed by another dependence.
+import signal       # Standard Library
+import subprocess    # Requires Python 3.5 --> System dependence
+
+def kill_proc_tree(pid, sig=signal.SIGTERM, include_parent=True,
+                   timeout=None, on_terminate=None):
+    """
+    Kill a process tree (including grandchildren) with signal
+    "sig" and return a (gone, still_alive) tuple.
+    "on_terminate", if specified, is a callabck function which is
+    called as soon as a child terminates.
+    """
+    assert pid != os.getpid(), "won't kill myself"
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    if include_parent:
+        children.append(parent)
+    for p in children:
+        p.send_signal(sig)
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+    return (gone, alive)
 
 class BaseCalculationResult(ABC):
     def __init__(self, idnum):
@@ -31,19 +51,14 @@ class BaseCalculationResult(ABC):
         """ Return whether the calculation has completed. """
         pass
     
+    @abstractmethod
+    def successful(self):
+        pass
+    
 class BaseCalculationManager(ABC):
     """
     Base class for objects which act as continuous parallel processing task queues.
     """
-    
-    def __init__(self, num_proc):
-        self.__num_proc = num_proc
-    
-    @property
-    def width(self):
-        """ The number of processes set to run simultaneously. """
-        return self.__num_proc
-    
     @abstractmethod
     def addTask(self, func, args):
         """
@@ -64,10 +79,6 @@ class BaseCalculationManager(ABC):
             An object to track calculation progress and retrieve returns.
         """
         pass
-    
-    @abstractmethod
-    def finishAll(self):
-        """ Wait until all pending tasks complete """
 
 class LocalCalculationResult(BaseCalculationResult):
     """
@@ -91,31 +102,34 @@ class LocalCalculationResult(BaseCalculationResult):
     
     def ready(self):
         return self.__res.ready()
+    
+    def successful(self):
+        if self.ready():
+            return self.__res.successful()
+        else:
+            return False
 
-class LocalCalculationManager(BaseCalculationManager):
+class LocalCalculationManager(mp.Pool):
     """
     A local machine parallel manager, using the multiprocessing library.
-    """
-    def __init__(self, num_proc):
-        super().__init__(num_proc)
-        self.__next_task_id = 0
-        self.__pool = None #mp.Pool(processes=self.__num_proc)
     
-    def addTask(self, func, args):
+    This class is identical to mp.Pool, but also guarantees cleanup of any
+    subprocesses launched from the workers' tasks.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__next_task_id = 0
+    
+    def addTask(self, *args, **kwargs):
         jobid = self.__next_task_id
-        if self.__pool is None:
-            self.__startPool()
-        res = self.__pool.apply_async(func, args)
+        res = self.apply_async(*args, **kwargs)
         self.__next_task_id += 1
         return LocalCalculationResult(jobid,res)
     
-    def __startPool(self):
-        self.__pool = mp.Pool(processes=self.width)
+    def terminate(self):
+        # Terminate subprocess trees emanating from each worker (not workers themselves)
+        # Pool manages workers.
+        for p in self._pool:
+            kill_proc_tree(p.pid, include_parent=False)
+        super().terminate()
     
-    def finishAll(self):
-        """ Wait until all pending tasks complete """
-        if self.__pool is not None:
-            self.__pool.close()
-            self.__pool.join()
-            self.__pool = None
-
