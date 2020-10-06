@@ -19,4 +19,10 @@ Next steps in development:
             rgrid file.
     -   Implement a Distributed Calculation Manager. Likely to use mpi4py.MPIExecutorPool
         as basis for new class (as multiprocessing.pool.Pool is in the local implementation).
+    -   Upgrade PolymerVariableSet to be more intelligent library.
+        -   Expand Selection of Variable Types.
+        -   Add capability to include constants for logistic control.
+        -   Make Variables Capable of automatically detecting dependency relationships
+            with other constants or variables and automatically build evaluation networks
+            for vaiable updates.
     -   Implement interface for pscfpp in addition to pscf interfaces.
