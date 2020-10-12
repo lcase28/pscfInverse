@@ -5,9 +5,18 @@ import psoinverse.polymer.parameters as parameters
 import psoinverse.util.contexttools as contexttools
 
 # Related Libraries
-from pscfFieldGen.generation import FieldCalculatorBase, read_input_file, generate_field_file
+from pscfFieldGen.generation import (
+    read_input_file, 
+    generate_field_file 
+)
 from pscfFieldGen.filemanagers import PscfParam
-from pscfFieldGen.filemanagers.pscf import WaveVectFieldFile, ParamFile, OutFile
+from pscfFieldGen.filemanagers.pscf import (
+    WaveVectFieldFile, 
+    ParamFile, 
+    OutFile, 
+    SymFieldFile, 
+    CoordFieldFile 
+)
 
 # EXTERNAL IMPORTS
 from copy import deepcopy
@@ -181,18 +190,22 @@ class PscfMesophase(MesophaseBase):
         converged = metError and metIter
         if not converged:
             return np.inf, False
+        critVals = [outfile.final_error, outfile.f_Helmholtz, outfile.f_homo]
+        if not np.all(np.isfinite(critVals)):   
+            # infinite energy if error or energy not finite value (+/-inf or NaN)
+            return np.inf, False
         ener = outfile.f_Helmholtz - outfile.f_homo
         flag = True
-        ## TODO: Check Field Similarity with symmetrized files for quicker I/O
         # Check field similarity
-        #startFile = root/"rho_kgrid_in"
-        #startField = WaveVectFieldFile(startFile.resolve())
-        #endFile = root/"rho_kgrid"
-        #endField = WaveVectFieldFile(endFile.resolve())
-        #self.fieldSim = startField.fieldSimilarity(endField)
-        #if np.min(self.fieldSim) <= 0.8:
-        #    ener = np.inf
-        #    flag = False
+        infield = self.param.fieldTransforms[1][1] # Pull init guess file name from param
+        startFile = root/infield
+        startField = SymFieldFile(startFile.resolve())
+        endFile = root/"rho"
+        endField = SymFieldFile(endFile.resolve())
+        fieldSim = startField.fieldSimilarity(endField)
+        if np.min(fieldSim) <= 0.8:
+            ener = np.inf
+            flag = False
         return ener, flag
         
     def setParams(self, VarSet):
@@ -258,26 +271,23 @@ class PscfMesophase(MesophaseBase):
             False if an error occurred and no energy found.
         """
         param = paramWrap.file
-        # Temporary code to verify setting of root
-        testfile = root/"test"
-        with testfile.open(mode='w') as f:
-            f.write("This is a test file in {}".format(root))
         # Create Input Files
-        monFrac = paramWrap.getMonomerFractions()
-        ngrid = param.ngrid
-        lattice = paramWrap.getLattice()
+        #monFrac = paramWrap.getMonomerFractions()
+        #ngrid = param.ngrid
+        #lattice = paramWrap.getLattice()
         core_mon = coreOptions[0]
         for i in coreOptions:
             if monFrac[i] < monFrac[core_mon]:
                 core_mon = i
-        w = paramWrap.getInterfaceWidth(core_mon)
-        newField = fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w, coreindex=core_mon, lattice=lattice)
-        kgrid = paramWrap.cleanFieldFile()
-        kgrid.fields = newField
+        #w = paramWrap.getInterfaceWidth(core_mon)
+        #newField = fieldGen.to_kgrid(monFrac,ngrid,interfaceWidth=w, coreindex=core_mon, lattice=lattice)
+        #kgrid = paramWrap.cleanFieldFile()
+        #kgrid.fields = newField
         kgridName = param.fieldTransforms[0][1] # Pull init guess filename from param file
         kgridFile = root / kgridName
-        with kgridFile.open(mode='w') as f:
-            kgrid.write(f)
+        generateFieldFile(paramWrap,fieldGen,kgridFile,core=core_mon)
+        #with kgridFile.open(mode='w') as f:
+        #    kgrid.write(f)
         #kgrid.write(kgridFile.open(mode='w'))
         paramFile = root / 'param'
         with paramFile.open(mode='w') as f:
