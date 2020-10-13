@@ -323,9 +323,7 @@ class PolymerVariableSet(PsoVariableSet):
         """
         equationindex = 0
         for varlist in args:
-            print(varlist)
             for var in varlist:
-                print(equationindex,var)
                 # First time through, this will build up the equation list
                 if (equationindex+1) > self._equation_count:
                     self._add_equation()
@@ -361,8 +359,9 @@ class PolymerVariableSet(PsoVariableSet):
             param.value = self._x_vect[ind]
     
     def startUpdate(self, *args, **kwargs):
-        super().startUpdate(*args,**kwargs)
+        out = super().startUpdate(*args,**kwargs)
         self._evaluate_system()
+        return out
     
     def cancelUpdate(self, *args, **kwargs):
         super().cancelUpdate(*args, **kwargs)

@@ -7,7 +7,8 @@ import psoinverse.util.contexttools as contexttools
 # Related Libraries
 from pscfFieldGen.generation import (
     read_input_file, 
-    generate_field_file 
+    generate_field_file,
+    seed_calculator
 )
 from pscfFieldGen.filemanagers import PscfParam
 from pscfFieldGen.filemanagers.pscf import (
@@ -152,9 +153,7 @@ class PscfMesophase(MesophaseBase):
                 True if simulation converged without issue.
                 False if an error occurred and no energy found.
         """
-        ngrid = self.param.ngrid
-        lattice = self.paramWrap.getLattice()
-        self.fieldGen.seedCalculator(ngrid,lattice)
+        seed_calculator(self.fieldGen, self.paramWrap)
         return [root, self.paramWrap, self.fieldGen, self.coreOptions], True
     
     def finishUpdate(self, root):
@@ -183,30 +182,37 @@ class PscfMesophase(MesophaseBase):
             False if an error occurred and no energy found.
         """
         # Check output file
-        outfilename = root/"out"
+        outfilename = root/"{}out".format(self.param.output_prefix)
         outfile = OutFile(outfilename.resolve())
+        # check for finite values before any calculations
+        critVals = [outfile.final_error, outfile.f_Helmholtz, outfile.f_homo]
+        if not np.all(np.isfinite(critVals)):   
+            # infinite energy if error or energy not finite value (+/-inf or NaN)
+            return np.inf, False
+        # Check convergence
         metError = outfile.final_error <= outfile.error_max
         metIter = outfile.iterations <= outfile.max_itr
         converged = metError and metIter
         if not converged:
             return np.inf, False
-        critVals = [outfile.final_error, outfile.f_Helmholtz, outfile.f_homo]
-        if not np.all(np.isfinite(critVals)):   
-            # infinite energy if error or energy not finite value (+/-inf or NaN)
-            return np.inf, False
-        ener = outfile.f_Helmholtz - outfile.f_homo
-        flag = True
         # Check field similarity
-        infield = self.param.fieldTransforms[1][1] # Pull init guess file name from param
-        startFile = root/infield
-        startField = SymFieldFile(startFile.resolve())
-        endFile = root/"rho"
-        endField = SymFieldFile(endFile.resolve())
-        fieldSim = startField.fieldSimilarity(endField)
-        if np.min(fieldSim) <= 0.8:
-            ener = np.inf
-            flag = False
-        return ener, flag
+        try:
+            infield = "in.rho" # This specific file is currently a requirement.
+            startFile = root/infield
+            startField = SymFieldFile(startFile.resolve())
+            endFile = root/"{}rho".format(self.param.output_prefix)
+            endField = SymFieldFile(endFile.resolve())
+            fieldSim = startField.fieldSimilarity(endField)
+            if np.min(fieldSim) <= 0.7:
+                return np.inf, False
+        except ValueError as Err:
+            if self.param.dim > 1:
+                print("Error checking field similarity for in {}.".format(root))
+                print(Err)
+                return np.inf, False
+        # Calculate Energy
+        ener = outfile.f_Helmholtz - outfile.f_homo
+        return ener, True
         
     def setParams(self, VarSet):
         """
@@ -272,7 +278,7 @@ class PscfMesophase(MesophaseBase):
         """
         param = paramWrap.file
         # Create Input Files
-        #monFrac = paramWrap.getMonomerFractions()
+        monFrac = paramWrap.getMonomerFractions()
         #ngrid = param.ngrid
         #lattice = paramWrap.getLattice()
         core_mon = coreOptions[0]
@@ -285,7 +291,7 @@ class PscfMesophase(MesophaseBase):
         #kgrid.fields = newField
         kgridName = param.fieldTransforms[0][1] # Pull init guess filename from param file
         kgridFile = root / kgridName
-        generateFieldFile(paramWrap,fieldGen,kgridFile,core=core_mon)
+        generate_field_file(paramWrap,fieldGen,kgridFile,core=core_mon)
         #with kgridFile.open(mode='w') as f:
         #    kgrid.write(f)
         #kgrid.write(kgridFile.open(mode='w'))
