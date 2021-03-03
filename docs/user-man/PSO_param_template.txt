@@ -1,0 +1,90 @@
+PolymerDesigner{
+    version    0.1
+    SearchSpace{
+        Variables{
+            BlockRatio{
+                numerator_block        0  0
+                denominator_block      0  1
+                lower        -2.5
+                upper         2.5
+                velocity_cap  0.6
+            }
+            KuhnRatio{
+                numerator_monomer    1
+                denominator_monomer  0
+                lower        -0.7
+                upper         0.7
+                velocity_cap  0.2
+            }
+            ...
+            ChiInteraction{
+                monomers    0  1
+                lower        10.0
+                upper        30.0
+                velocity_cap  2.0
+            }
+        }
+        Constants{
+            BlockLength{
+                block    0  0
+                block    0  1
+                value    1.0
+            }
+            ...
+            KuhnLength{
+                monomer    0
+                value    1.0
+            }
+        }
+    }
+    Phases{
+        scft_solver    pscf
+        input_root    inputs/
+        TargetPhase{
+            name        bcc_A
+            model_file    bcc/model_A
+        }
+        TargetPhase{
+            name        bcc_B
+            model_file    bcc/model_B
+        }
+        ...
+        CompetingPhase{
+            name        hex
+            model_file    hex/model
+        }
+        ...
+    }
+    Parallelization{
+        nodes    1
+        n_proc    20
+    }
+    Pso{
+        output_root    path/to/output/root
+        random_seed    1234
+        StandardIntegrator{
+            constriction       0.7
+            self_weight        2.05
+            neighbor_weight    2.05
+        }
+        Swarm{
+            n_agent    5
+            AgentInitializationRule{
+                n_target       2
+                targets        0  1
+                lower_position    0.0   0.0  ...   10.5
+                upper_position    0.5   0.2  ...   11.5
+                lower_velocity    0.5   0.1  ...    1.5
+                upper_velocity    0.6   0.2  ...    2.0
+            }
+            NeighborGraph{
+                base_style       cycle
+                neighbor_pair    0  2
+            }
+        }
+        Search{
+            n_step          100
+            try_cooldown    1.0
+        }
+    }
+}
