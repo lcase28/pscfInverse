@@ -82,6 +82,8 @@ PolymerDesigner{
                 neighbor_pair    0  2
             }
         }
+    }
+    Commands{
         Search{
             n_step          100
             try_cooldown    1.0
