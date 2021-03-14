@@ -1,28 +1,66 @@
-Updated: 6 October 2020
+Updated: 14 October 2020
 
-Next steps in development:
 
-    -   Update handling of NaN energy in pscf output files to default to np.inf for
-        consistent behavior.
-    -   Add handling for non-particle phase types:
-        -   Lamellar:
-            Parameter handling is identical.
-            Initial guess field can be easily generated using symmetrized format.
-            In symmetrized format, composition is still the q=0 coefficient, then choose
-            small number (say 0.1 * <lowest_composition>) as coefficient of first star.
-            Parameter file will only need to convert from rho to omega before iteration.
-        -   Network:
-            Levelset method is known to have issues for other phases, but works for 
-            Gyroid phase, which is ok to start. Implement this in a field generation class.
-            Use similar approach to lamellar to start, then convert to rgrid using pscf.
-            Read rgrid file, and perform levelset method. Initial guess will be input as
-            rgrid file.
+Next steps in (basic) development:
+
     -   Implement a Distributed Calculation Manager. Likely to use mpi4py.MPIExecutorPool
         as basis for new class (as multiprocessing.pool.Pool is in the local implementation).
-    -   Upgrade PolymerVariableSet to be more intelligent library.
-        -   Expand Selection of Variable Types.
-        -   Add capability to include constants for logistic control.
-        -   Make Variables Capable of automatically detecting dependency relationships
-            with other constants or variables and automatically build evaluation networks
-            for vaiable updates.
+        
     -   Implement interface for pscfpp in addition to pscf interfaces.
+    
+    -   Create Main access point with user interface for the application.
+        This will include some additional logging to store random number seeds,
+        store characteristics of the calculation, among other data.
+
+
+Operational Adjustments
+
+    -   Change Output File Organization
+        
+        -   Lump Log Files (CSV data) into single directory. This will make it easier to 
+            pull partial data mid-run for analysis without having to avoid SCFT output.
+            
+            -   Possibly lump all Agents' log data into one: 
+                    Fewer files to manage. Would make analysis with tables much easier.
+                    No actual risk of deadlocking because Agents' internal operations
+                    are logically synchronous.
+        
+        -   With log files centrally located, Agent Classes are free to create their own
+            scratch/calculation directories. (thus, move all SCFT files here)
+        
+        -   Proposed structure for SCFT run is as follows
+    
+    -   Add some time-based logging of operational data.
+        -   Which step each agent is working on at a given time.
+
+
+Analysis
+
+    -   Perform memory and time profiling.
+        Time profiling probably not much use since most time is in SCFT
+        Memory profiling is necessary to offer guidelines on resource requirements.
+
+
+Advanced Development
+    
+    -   Develop Seed Library Database architecture.
+        
+        -   Explore guidelines for required expansiveness to be effective.
+            Study sensitivity to:
+                -   Lattice Parameters
+                -   Composition
+                -   Chi
+                -   Stat Seg Len
+            To determine ranges required for exclusive from-database operation
+            and how close a converged solution needs to be to be used as guess.
+        
+        -   Build Architecture
+        
+        -   Enable simultaneous interfacing of Mesophase Objects to both database
+            (when sufficient seed available) and guess generation.
+        
+    -   Develop a library of analysis tools.
+        
+        -   Parsing scripts to collate specs from SCFT calculations
+        
+        -   Plotting Scripts to automate common
