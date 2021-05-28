@@ -80,19 +80,14 @@ class ScftAgent(Agent):
     
     def _start_logs(self):
         super()._start_logs()
-        self.__phase_data_fname = self.root/"phaseEnergies.csv"
-        self.__param_data_fname = self.root/"paramValues.csv"
-        # phase data
-        lbl = ["step"]
+        self.__phase_data_fname = self.root/"phaseData.csv"
+        lbl = ["agent","step"]
+        formstr = "F_{}"
         for n in self.__phaseManager.labels:
-            lbl.append(n)
-        writeCsvLine(self.__phase_data_fname, lbl, 'w')
-        # parameter data
-        lbl = ["step"]
+            lbl.append(formstr.format(n))
         for n in self.variableSet.parameters:
             lbl.append(n.label)
-        writeCsvLine(self.__param_data_fname, lbl, 'w')
-        
+        writeCsvLine(self.__phase_data_fname, lbl, 'w')
     
     def _log_step(self):
         super()._log_step()

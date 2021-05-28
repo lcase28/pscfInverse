@@ -527,55 +527,40 @@ class Agent(ABC):
         return deepcopy(self.__velocity)
     
     def _start_logs(self):
-        self.__pso_vals_fname = self.root/"psoValues.csv"
-        self.__tru_vals_fname = self.root/"trueValues.csv"
-        self.__velocity_fname = self.root/"velocities.csv"
+        self.__pso_vals_fname = self.root/"psoData.csv"
         self.__updates_fname = self.root/"updateAttempts.csv"
         
         # PsoValue data
-        lbl = ["step"]
+        lbl = ["agent"]
+        lbl.append("step")
         lbl.append("bestStep")
         lbl.append("fitness")
+        formstr = "p_{}"
         for v in self.variableSet.labels:
-            lbl.append(v)
+            lbl.append(formstr.format(v))
+        formstr = "v_{}"
+        for v in self.variableSet.labels:
+            lbl.append(formstr.format(v))
         writeCsvLine(self.__pso_vals_fname,lbl,'w')
         
-        # TrueValue Data - use same labels as PsoValue data
-        writeCsvLine(self.__tru_vals_fname,lbl,'w')
-        
-        # Velocity data
-        lbl = ["step"]
-        for v in self.variableSet.labels:
-            lbl.append(v)
-        writeCsvLine(self.__velocity_fname,lbl,'w')
-        
         # Update attempts
-        lbl = ["step"]
+        lbl = ["agent"]
+        lbl.append("step")
         lbl.append("datatype")
         for v in self.variableSet.labels:
             lbl.append(v)
         writeCsvLine(self.__updates_fname,lbl,'w')
     
     def _log_step(self):
-        # PsoValue data
-        dat = [self.lastStep]
+        # Pso data
+        dat = [self.id,self.lastStep]
         dat.append(self.__positions.bestStep)
         dat.append(self.__positions.stableFitness)
         for p in self.__positions.stablePsoValues:
             dat.append(p)
-        writeCsvLine(self.__pso_vals_fname,dat,'a')
-        #TrueValue Data
-        dat = [self.lastStep]
-        dat.append(self.__positions.bestStep)
-        dat.append(self.__positions.stableFitness)
-        for p in self.__positions.trueValues:
-            dat.append(p)
-        writeCsvLine(self.__tru_vals_fname,dat,'a')
-        # Velocity data
-        dat = [self.lastStep]
         for v in self.__velocity.components:
             dat.append(v)
-        writeCsvLine(self.__velocity_fname,dat,'a')
+        writeCsvLine(self.__pso_vals_fname,dat,'a')
     
     def _log_update_attempt(self, position, velocity, accepted):
         step = self.nextStep
