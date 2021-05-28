@@ -9,6 +9,7 @@
 ################
 
 from abc import ABC, abstractmethod
+import distributed
 import multiprocessing.pool as mp
 import os
 import psutil       # Installed by another dependence.
@@ -132,4 +133,60 @@ class LocalCalculationManager(mp.Pool):
         for p in self._pool:
             kill_proc_tree(p.pid, include_parent=False)
         super().terminate()
+    
+class DaskCalculationResult(BaseCalculationResult):
+    def __init__(self, idnum, future):
+        self.__id = idnum
+        self.__future = future
+    
+    @property
+    def id(self):
+        return self.__id
+    
+    def get(self):
+        """ Return the result of the calculation. """
+        return self.__future.result()
+    
+    def ready(self):
+        """ Return whether the calculation has completed. """
+        return self.__future.done()
+    
+    def successful(self):
+        if self.ready():
+            return self.__future.exception() is None
+        else:
+            return False
+        
+
+class DaskCalculationManager(distributed.Client):
+    """
+    Base class for objects which act as continuous parallel processing task queues.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__next_task_id = 0
+    
+    def addTask(self, func, args):
+        """
+        Add the given calculation task to the job queue.
+        
+        Parameters
+        ----------
+        func : Function
+            The function to be performed.
+        args : list
+            The arguments for the function.
+        
+        Return
+        ------
+        taskID : int
+            An ID number for the task
+        res : CalculationResult
+            An object to track calculation progress and retrieve returns.
+        """
+        tid = self.__next_task_id
+        self.__next_task_id += 1
+        future = self.submit(func, *args)
+        return DaskCalculationResult(tid,future)
+    
     
