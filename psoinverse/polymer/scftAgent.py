@@ -91,13 +91,11 @@ class ScftAgent(Agent):
     
     def _log_step(self):
         super()._log_step()
-        dat = [self.lastStep]
+        dat = [self.id,self.lastStep]
         for e in self.__phaseManager.energies:
             dat.append(e)
-        writeCsvLine(self.__phase_data_fname, dat, 'a')
-        dat = [self.lastStep]
         for n in self.variableSet.parameters:
             dat.append(n.value)
-        writeCsvLine(self.__param_data_fname, dat, 'a')
+        writeCsvLine(self.__phase_data_fname, dat, 'a')
     
         

@@ -30,7 +30,7 @@ import subprocess as sub
 class PscfMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
-    def __init__(self, ID, paramWrap, fieldGen, coreOptions=None):
+    def __init__(self, ID, paramWrap, fieldGen, coreOptions=None, disorderCheckFilename=None, disorderCheckTolerance=0.001):
         """
         Initialize the PSCF Mesophase using pre-formatted files.
         
@@ -56,6 +56,16 @@ class PscfMesophase(MesophaseBase):
             A list of monomer ID's which can be chosen as the "core" monomer.
             At each evaluation, the monomer in this list with the lowest overall
             volume fraction will be set as the core in initial guesses.
+        disorderCheckFilename : string (optional)
+            The name, within the SCFT run directory,
+            of the coordinate grid file to check total
+            variation range in final disorder check.
+            Final check skipped if omitted.
+        disorderCheckTolerance : float (optional)
+            The minimum value of field variation that the field
+            must exceed to be accepted. If the total variation in
+            all components' fields are below this threshold,
+            the result is rejected. Default is 0.001
         """
         errmsg = "PscfMesophase requires paramWrap of type {}, or {}; gave {}"
         if isinstance(paramWrap,PscfParam):
@@ -71,10 +81,12 @@ class PscfMesophase(MesophaseBase):
             self.coreOptions = [ i for i in range(self.param.N_monomer) ]
         else:
             self.coreOptions = coreOptions
+        self._disorder_check_filename = disorderCheckFilename
+        self._disorder_check_tolerance = disorderCheckTolerance
         super().__init__(ID)
     
     @classmethod
-    def fromFieldGenFile(cls, ID, infile, coreOptions=None):
+    def fromFieldGenFile(cls, ID, infile, coreOptions=None, disorderCheckFilename=None, disorderCheckTolerance=0.001):
         """
         Use a pscfFieldGen input file to initialize a PscfMesophase object.
         
@@ -89,6 +101,16 @@ class PscfMesophase(MesophaseBase):
             but this is not enforced)
         infile : pathlib.Path
             The path to the file 
+        disorderCheckFilename : string (optional)
+            The name, within the SCFT run directory,
+            of the coordinate grid file to check total
+            variation range in final disorder check.
+            Final check skipped if omitted.
+        disorderCheckTolerance : float (optional)
+            The minimum value of field variation that the field
+            must exceed to be accepted. If the total variation in
+            all components' fields are below this threshold,
+            the result is rejected.
         
         Returns
         -------
@@ -99,7 +121,7 @@ class PscfMesophase(MesophaseBase):
         newdir = str(infile.parent)
         with contexttools.cd(newdir):
             param, calc, outfile, cmon = read_input_file(infile)
-        out = cls(ID, param, calc, coreOptions)
+        out = cls(ID, param, calc, coreOptions,disorderCheckFilename)
         return out
     
     def startUpdate(self, VarSet, root, runner):
@@ -210,6 +232,12 @@ class PscfMesophase(MesophaseBase):
                 print("Error checking field similarity for in {}.".format(root))
                 print(Err)
                 return np.inf, False
+        # Check for disorder by field variation range
+        if self._disorder_check_filename is not None:
+            dcfname = root / self._disorder_check_filename
+            gridfile = CoordFieldFile(dcfname.resolve())
+            if np.amax(gridfile.valueRanges()) < self._disorder_check_tolerance:
+                return np.inf, False
         # Calculate Energy
         ener = outfile.f_Helmholtz - outfile.f_homo
         return ener, True
@@ -246,9 +274,9 @@ class PscfMesophase(MesophaseBase):
                 self.param.chi[m2][m1] = p.value
             elif isinstance(p, parameters.KuhnLength):
                 mon = p.monomerID
-                self.kuhn[mon] = p.value
+                self.param.kuhn[mon] = p.value
             elif isinstance(p, parameters.PolymerBlendFraction):
-                self.phi_chain[p.polymerID] = p.value
+                self.param.phi_chain[p.polymerID] = p.value
             else:
                 raise(NotImplementedError("{} is not an implemented parameter".format(type(p))))
         return True

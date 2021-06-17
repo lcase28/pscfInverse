@@ -267,7 +267,7 @@ class KuhnVariable(MesophaseVariable):
     
     def __init__(self, monomer, value = 1, lower = 0.2, upper = 5.0):
         self._mon = monomer
-        lbl = "Kuhn_m{}".format(self.mon)
+        lbl = "Kuhn_m{}".format(self._mon)
         super().__init__(value, lower, upper, label = lbl)
     
     def getEquation(self):
@@ -306,13 +306,15 @@ class PolymerVariableSet(PsoVariableSet):
         newIndex = self._param_count - 1
         self._param_map.update({key:newIndex})
         self._param_set.update({key:deepcopy(param)})
-        self._A_matr.resize((self._equation_count,self._param_count))
+        newcol = np.zeros((self._equation_count,1))
+        self._A_matr = np.concatenate((self._A_matr, newcol), axis=1)
         self._x_vect.resize(self._param_count)
     
     def _add_equation(self):
         self._equation_count = next(self._next_equation)
-        self._A_matr.resize((self._equation_count,self._param_count))
-        self._b_vect.resize(self._equation_count)
+        newrow = np.zeros((1,self._param_count))
+        self._A_matr = np.concatenate((self._A_matr, newrow), axis=0)
+        self._b_vect = np.append(self._b_vect, 0.0)
     
     def _build_equation_system(self,*args):
         """
