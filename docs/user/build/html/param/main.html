@@ -1,0 +1,294 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Parameter File &#8212; pscfinverse 0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="PscfInverse User Manual" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="parameter-file">
+<span id="param-main"></span><h1>Parameter File<a class="headerlink" href="#parameter-file" title="Permalink to this headline">¶</a></h1>
+<p>While users can write their own scripts to perform a PSO search -
+perhaps to access custom features without the need to modify the
+main program, for example - calculations are typically run
+according to a parameter file, which contains both defines the pso
+parameters and lists the actions to be executed.</p>
+<p>The parameter file consists of a set of nested blocks enclosed by
+curly braces. At every level, block names use <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code> labels -
+in which distinct words capitalize the first letter, while remaining
+letters are lower-case - followed immediately by the opening bracket.
+No space is placed between the BlockName and the opening bracket.
+The end of a block is marked by a lone <code class="docutils literal notranslate"><span class="pre">}</span></code> with whitespace both
+preceeding and following the bracket.
+Blocks may be written linearly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockName</span><span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
+</pre></div>
+</div>
+<p>or they may be split over multiple lines:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockName</span><span class="p">{</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>according to user preference. Blocks then contain combinations of
+sub-blocks and parameter values.</p>
+<div class="section" id="summary-of-sections">
+<span id="param-sections-sec"></span><h2>Summary of Sections<a class="headerlink" href="#summary-of-sections" title="Permalink to this headline">¶</a></h2>
+<p>The entire parameter file is contained in one “parent” block with
+label <code class="docutils literal notranslate"><span class="pre">PscfInverse{</span></code> which indicates the “active” portions
+of the parameter file.
+Content written before or after this block is ignored, and can
+optionally be used for explanatory comments or other notes by the
+user.</p>
+<p>This parent block contains several sub-blocks, shown in skeletal
+form below, in order to group related information.
+The order of these blocks is pre-defined and should be followed.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PscfInverse</span><span class="p">{</span>
+    <span class="n">version</span> <span class="mf">0.1</span>
+    <span class="n">SearchSpace</span><span class="p">{</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="n">Phases</span><span class="p">{</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="n">Pso</span><span class="p">{</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="n">Commands</span><span class="p">{</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Each section is briefly described below, with more detailed
+information available on the block’s own page (linked
+alongside the brief summary).</p>
+<div class="section" id="searchspace-block">
+<h3>SearchSpace Block<a class="headerlink" href="#searchspace-block" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">SearchSpace{}</span></code> block defines all search variables
+to use in the PSO calculation, as well as all constraints
+required to uniquely define the values of all polymer
+parameters impacted by those search variables.</p>
+<p>More detail on the <a class="reference internal" href="searchspace.html#param-searchspace"><span class="std std-ref">SearchSpace Block Main Page</span></a></p>
+</div>
+<div class="section" id="phases-block">
+<h3>Phases Block<a class="headerlink" href="#phases-block" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Phases{}</span></code> block defines all phases considered in the search,
+whether they are a target or competitor, and which SCFT solver
+is to be used.</p>
+<p>More detail on the <a class="reference internal" href="phases.html#param-phases"><span class="std std-ref">Phases Block Main Page</span></a></p>
+</div>
+<div class="section" id="pso-block">
+<h3>PSO Block<a class="headerlink" href="#pso-block" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pso{}</span></code> block defines the structure of the PSO search.
+This includes defining the PSO parameters, swarm size, and
+communication graph.</p>
+<p>More detail on the <a class="reference internal" href="pso.html#param-pso"><span class="std std-ref">PSO Block Main Page</span></a></p>
+</div>
+<div class="section" id="commands-block">
+<h3>Commands Block<a class="headerlink" href="#commands-block" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">Commands{}</span></code> block defines all actions to be taken by the
+program.</p>
+<p>More detail on the <a class="reference internal" href="commands.html#param-commands"><span class="std std-ref">Commands Block Main Page</span></a></p>
+</div>
+</div>
+<div class="section" id="example">
+<span id="param-example-sec"></span><h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>Below is a complete example file for a 2-dimensional search in diblock
+polymer phase space varying fA and ChiN.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PolymerDesigner</span><span class="p">{</span>
+    <span class="n">version</span>    <span class="mf">0.1</span>
+    <span class="n">SearchSpace</span><span class="p">{</span>
+        <span class="n">Variables</span><span class="p">{</span>
+            <span class="n">BlockRatio</span><span class="p">{</span>
+                <span class="n">numerator_block</span>        <span class="mi">0</span>  <span class="mi">0</span>
+                <span class="n">denominator_block</span>      <span class="mi">0</span>  <span class="mi">1</span>
+                <span class="n">lower</span>        <span class="o">-</span><span class="mf">2.5</span>
+                <span class="n">upper</span>         <span class="mf">2.5</span>
+                <span class="n">velocity_cap</span>  <span class="mf">0.6</span>
+            <span class="p">}</span>
+            <span class="n">KuhnRatio</span><span class="p">{</span>
+                <span class="n">numerator_monomer</span>    <span class="mi">1</span>
+                <span class="n">denominator_monomer</span>  <span class="mi">0</span>
+                <span class="n">lower</span>        <span class="o">-</span><span class="mf">0.7</span>
+                <span class="n">upper</span>         <span class="mf">0.7</span>
+                <span class="n">velocity_cap</span>  <span class="mf">0.2</span>
+            <span class="p">}</span>
+            <span class="o">...</span>
+            <span class="n">ChiInteraction</span><span class="p">{</span>
+                <span class="n">monomers</span>    <span class="mi">0</span>  <span class="mi">1</span>
+                <span class="n">lower</span>        <span class="mf">10.0</span>
+                <span class="n">upper</span>        <span class="mf">30.0</span>
+                <span class="n">velocity_cap</span>  <span class="mf">2.0</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="n">Constants</span><span class="p">{</span>
+            <span class="n">BlockLength</span><span class="p">{</span>
+                <span class="n">block</span>    <span class="mi">0</span>  <span class="mi">0</span>
+                <span class="n">block</span>    <span class="mi">0</span>  <span class="mi">1</span>
+                <span class="n">value</span>    <span class="mf">1.0</span>
+            <span class="p">}</span>
+            <span class="o">...</span>
+            <span class="n">KuhnLength</span><span class="p">{</span>
+                <span class="n">monomer</span>    <span class="mi">0</span>
+                <span class="n">value</span>    <span class="mf">1.0</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">Phases</span><span class="p">{</span>
+        <span class="n">scft_solver</span>    <span class="n">pscf</span>
+        <span class="n">input_root</span>    <span class="n">inputs</span><span class="o">/</span>
+        <span class="n">TargetPhase</span><span class="p">{</span>
+            <span class="n">name</span>        <span class="n">bcc_A</span>
+            <span class="n">model_file</span>    <span class="n">bcc</span><span class="o">/</span><span class="n">model_A</span>
+        <span class="p">}</span>
+        <span class="n">TargetPhase</span><span class="p">{</span>
+            <span class="n">name</span>        <span class="n">bcc_B</span>
+            <span class="n">model_file</span>    <span class="n">bcc</span><span class="o">/</span><span class="n">model_B</span>
+        <span class="p">}</span>
+        <span class="o">...</span>
+        <span class="n">CompetingPhase</span><span class="p">{</span>
+            <span class="n">name</span>        <span class="nb">hex</span>
+            <span class="n">model_file</span>    <span class="nb">hex</span><span class="o">/</span><span class="n">model</span>
+        <span class="p">}</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="n">Parallelization</span><span class="p">{</span>
+        <span class="n">nodes</span>    <span class="mi">1</span>
+        <span class="n">n_proc</span>    <span class="mi">20</span>
+    <span class="p">}</span>
+    <span class="n">Pso</span><span class="p">{</span>
+        <span class="n">output_root</span>    <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">output</span><span class="o">/</span><span class="n">root</span>
+        <span class="n">random_seed</span>    <span class="mi">1234</span>
+        <span class="n">StandardIntegrator</span><span class="p">{</span>
+            <span class="n">constriction</span>       <span class="mf">0.7</span>
+            <span class="n">self_weight</span>        <span class="mf">2.05</span>
+            <span class="n">neighbor_weight</span>    <span class="mf">2.05</span>
+        <span class="p">}</span>
+        <span class="n">Swarm</span><span class="p">{</span>
+            <span class="n">n_agent</span>    <span class="mi">5</span>
+            <span class="n">AgentInitializationRule</span><span class="p">{</span>
+                <span class="n">n_target</span>       <span class="mi">2</span>
+                <span class="n">targets</span>        <span class="mi">0</span>  <span class="mi">1</span>
+                <span class="n">lower_position</span>    <span class="mf">0.0</span>   <span class="mf">0.0</span>  <span class="o">...</span>   <span class="mf">10.5</span>
+                <span class="n">upper_position</span>    <span class="mf">0.5</span>   <span class="mf">0.2</span>  <span class="o">...</span>   <span class="mf">11.5</span>
+                <span class="n">lower_velocity</span>    <span class="mf">0.5</span>   <span class="mf">0.1</span>  <span class="o">...</span>    <span class="mf">1.5</span>
+                <span class="n">upper_velocity</span>    <span class="mf">0.6</span>   <span class="mf">0.2</span>  <span class="o">...</span>    <span class="mf">2.0</span>
+            <span class="p">}</span>
+            <span class="n">NeighborGraph</span><span class="p">{</span>
+                <span class="n">base_style</span>       <span class="n">cycle</span>
+                <span class="n">neighbor_pair</span>    <span class="mi">0</span>  <span class="mi">2</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="n">Commands</span><span class="p">{</span>
+        <span class="n">Search</span><span class="p">{</span>
+            <span class="n">n_step</span>          <span class="mi">100</span>
+            <span class="n">try_cooldown</span>    <span class="mf">1.0</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pscfinverse</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Parameter File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#summary-of-sections">Summary of Sections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">PscfInverse User Manual</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Logan Case.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/param/main.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
