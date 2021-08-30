@@ -2,7 +2,7 @@
 .. |vars| replace:: ``Variables{}``
 .. |cons| replace:: ``Constraints{}``
 
-.. _param_searchspace:
+.. _param-searchspace:
 
 *****************
 SearchSpace Block
@@ -10,7 +10,7 @@ SearchSpace Block
 
 .. summary
 
-The |name| block defines all search variables
+The ``SearchSpace{}`` block defines all search variables
 to use in the PSO calculation, as well as all constraints
 required to uniquely define the values of all polymer
 parameters impacted by those search variables.
@@ -42,14 +42,14 @@ to map those variables to polymer parameters. These two
 roles ('variable' and 'constraint') are reflected in the
 structure of the block.
 
-.. literalinsert:: searchspace_ex
+.. .. literalinclude:: searchspace_ex
 
 As shown above, |name| contains two sub-blocks: |vars|
 and |cons|. Variables defined in the former represent
 searchable dimensions, while those defined in the latter
 represent fixed relationships.
 
-.. _param_vartype_sec:
+.. _param-vartype-sec:
 
 Variable Types
 ==============
@@ -70,6 +70,7 @@ that its fixed value be defined.
 
 Parameter Relationships:
 
+..
     ===========================   ====================================
     Variable                      Description
     ===========================   ====================================
@@ -88,27 +89,19 @@ Parameter Relationships:
                                   more species.
     :ref:`param-blendratio-sub`   Log of ratio between total volume
                                   fractions of one or more species.
-    :ref:`param-mu-sub`           Chemical potential of one species.
-    :ref:`param-solsize-sub`      Size of solvent, in units of monomer
-                                  reference volume.
     ===========================   ====================================
-
-.. include:: vars/blocklen.rst
-
-.. include:: vars/blockratio.rst
-
-.. include:: vars/kuhnlen.rst
-
-.. include:: vars/kuhnratio.rst
-
-.. include:: vars/chiinteraction.rst
-
-.. include:: vars/blendfrac.rst
-
-.. include:: vars/blendratio.rst
-
-.. include:: vars/mu.rst
-
-.. include:: vars/solventsize.rst
-
-
+    
+    .. include:: vars/blocklen.rst
+    
+    .. include:: vars/blockratio.rst
+    
+    .. include:: vars/kuhnlen.rst
+    
+    .. include:: vars/kuhnratio.rst
+    
+    .. include:: vars/chiinteraction.rst
+    
+    .. include:: vars/blendfrac.rst
+    
+    .. include:: vars/blendratio.rst
+    
