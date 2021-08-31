@@ -5,7 +5,7 @@ BlockLength
 
 .. summary
 
-A variable represents the sum of the lengths
+A variable representing the sum of the lengths
 of all constituent blocks.
 
 .. summary

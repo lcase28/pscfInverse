@@ -17,32 +17,72 @@ parameters impacted by those search variables.
 
 .. summary
 
-The variables seen by the PSO algorithm do not necessarily
-map identically to a particular polymer parameter or entry
-in a PSCF input file. Instead, the variables seen by the
-PSO algorithm may represent relationships between two or 
-more polymer parameters. Similarly, a polymer parameter may
-be related to two or more other parameters by two or more
-variables. This means that the available PSO variables
-are restricted to a pre-defined set; it also means that 
-more complex relationships can be represented as variables
-if separately implemented, as long as the relationship can
-be expressed as a linear relationship of parameters.
+When running SCFT calculations directly using the PSCF software,
+users define the polymer system, as well as other aspects
+of their calculation, in the PSCF Parameter File.
+The values defined in this file include, for example, 
+lengths of individual blocks in a polymer molecule,
+the statistical segment length of a particular monomer,
+and the Flory-Huggins interaction parameter between sets of monomers.
+These values directly define the polymer system at the coarse-grained
+level considered in the mean-field calculation
+and are referred to in the following text as "polymer parameters"
+or simply "parameters".
 
-The "parameter relationship" construction used to define 
-the search variables creates the possibility that the
-search variables alone may not adequately define the
-polymer parameters involved. In this instance, constraints
-must be defined in order to map variable values to polymer
-parameters.
+The PSO search performed by ``PscfInverse`` operates on its own
+set of search variables ("variables" in the following text).
+These variables do not necessarily
+map directly to a particular polymer parameter.
+Such direct-mapping variables are available in ``PscfInverse``,
+but generally, the variables seen by the PSO algorithm
+represent mathematically linearizeable relationships between
+two or more polymer parameter values.
+Indeed, at a program level, even direct-map variables are treated
+as a "relationship" involving only one parameter.
+During program operation,
+values of polymer parameters are determined from these relationships
+via solution of the linear equations defined by these relationships.
+While this construction does restricts the available PSO variables
+to a pre-defined set, it also allows more flexible control of
+the PSO search by allowing more complex relationships than a direct
+map from variables to paramters. The set of available search variables
+can also be expanded to include any linearizeable relationship of interest
+via modest programming effort.
 
-The |name| block of the parameter file defines
-both the search variables, and any constraints necessary
-to map those variables to polymer parameters. These two
-roles ('variable' and 'constraint') are reflected in the
-structure of the block.
+Depending on the search being performed, the search variables alone may not
+be sufficient to fully define a solvable set of linear parameter equations.
+To ensure that all systems are fully defined, any parameter relationship accessible
+as a variable can also be used as a fixed constraint on the system.
+In this case, the PSO algorithm does not modify the values in the relationship,
+but the relationship is still used in determination of the parameter values.
 
-.. .. literalinclude:: searchspace_ex
+Finally, the relationships defined in this section need only reference
+the parameters involved in the search variable relationships.
+For each phase considered in the calculation, the user must
+provide a template PSCF Parameter file.
+(For more information on this, see :ref:`Phases Block Main Page <param-phases>`).
+Parameters defined in the template file but not referenced in the
+variables or constraints retain the value defined in the template.
+Thus, in the case of a 2D search of neat diblock polymers over 
+:math:`f_{A}` and :math:`{\chi}N`, 
+the user need not define any variables or constraints
+related to statistical segment lengths, but can instead just set the
+fixed values in the template file.
+
+To differentiate variable relationships from constraint relationships,
+each set of relationships is defined in a separate sub-block.
+This gives the ``SearchSpace`` block the skeletal structure shown below.
+
+::
+
+        SearchSpace{
+            Variables{
+                ...
+            }
+            Constraints{
+                ...
+            }
+        }
 
 As shown above, |name| contains two sub-blocks: |vars|
 and |cons|. Variables defined in the former represent
@@ -51,10 +91,10 @@ represent fixed relationships.
 
 .. _param-vartype-sec:
 
-Variable Types
-==============
+Relationship Types
+==================
 
-Internally, |program| represents both variables and
+Internally, PscfInverse represents both variables and
 constraints with the same classes. Thus, any parameter
 relationship that can be used as a variable can also be
 used as a constraint. 
@@ -85,10 +125,6 @@ Parameter Relationships:
                                   segment lengths of two monomers.
     :ref:`param-chi-sub`          Interaction parameter between two
                                   monomers.
-    :ref:`param-blendfrac-sub`    Total volume fraction of one or 
-                                  more species.
-    :ref:`param-blendratio-sub`   Log of ratio between total volume
-                                  fractions of one or more species.
     ===========================   ====================================
     
     .. include:: vars/blocklen.rst
@@ -100,8 +136,3 @@ Parameter Relationships:
     .. include:: vars/kuhnratio.rst
     
     .. include:: vars/chiinteraction.rst
-    
-    .. include:: vars/blendfrac.rst
-    
-    .. include:: vars/blendratio.rst
-    
