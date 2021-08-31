@@ -1,12 +1,11 @@
-.. _param_blockratio_sub
+.. _param_chi_sub
 
 BlockRatio
 ----------
 
 .. summary
 
-A variable represents the sum of the lengths
-of all constituent blocks.
+Direct map of Flory-Huggins :math:`{\chi}` parameters.
 
 .. summary
 
