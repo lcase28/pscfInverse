@@ -1,12 +1,7 @@
-.. _param_blocklen_sub
+.. _param-blocklen-sub
 
 BlockLength
 -----------
-
-.. summary
-
-A variable representing the sum of the lengths
-of all constituent blocks.
 
 .. summary
 
@@ -22,6 +17,22 @@ Mathematically, the variable value is given by
 for a variable relating :math:`N` blocks,
 when :math:`Len_{p_i, b_i}` is the length of
 block :math:`b_i` in polymer :math:`p_i`.
+
+General format (selected fields depend on usage):
+
+::
+
+    BlockLength{
+        block   0   0
+        block   0   1
+        value   1.0
+        lower   0.5
+        upper   2.0
+        velocity_cap    1.0
+    }
+
+
+.. summary
 
 General Syntax
 ..............

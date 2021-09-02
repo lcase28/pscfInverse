@@ -37,7 +37,7 @@
 <p>While users can write their own scripts to perform a PSO search -
 perhaps to access custom features without the need to modify the
 main program, for example - calculations are typically run
-according to a parameter file, which contains both defines the pso
+according to a parameter file, which both defines the pso
 parameters and lists the actions to be executed.</p>
 <p>The parameter file consists of a set of nested blocks enclosed by
 curly braces. At every level, block names use <code class="docutils literal notranslate"><span class="pre">CamelCase</span></code> labels -
@@ -46,6 +46,7 @@ letters are lower-case - followed immediately by the opening bracket.
 No space is placed between the BlockName and the opening bracket.
 The end of a block is marked by a lone <code class="docutils literal notranslate"><span class="pre">}</span></code> with whitespace both
 preceeding and following the bracket.
+Here, “whitespace” includes such characters as spaces, tabs, line-breaks, etc.
 Blocks may be written linearly:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockName</span><span class="p">{</span> <span class="o">...</span> <span class="p">}</span>
 </pre></div>
@@ -56,7 +57,9 @@ Blocks may be written linearly:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>according to user preference. Blocks then contain combinations of
+<p>according to user preference as long as required whitespace separates
+all blocknames, data labels, data values, closing brackets, etc.
+Blocks then contain combinations of
 sub-blocks and parameter values.</p>
 <div class="section" id="summary-of-sections">
 <span id="param-sections-sec"></span><h2>Summary of Sections<a class="headerlink" href="#summary-of-sections" title="Permalink to this headline">¶</a></h2>
@@ -121,7 +124,7 @@ program.</p>
 <div class="section" id="example">
 <span id="param-example-sec"></span><h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <p>Below is a complete example file for a 2-dimensional search in diblock
-polymer phase space varying fA and ChiN.</p>
+polymer phase space varying fA and ChiN and targeting the BCC sphere phase.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PolymerDesigner</span><span class="p">{</span>
     <span class="n">version</span>    <span class="mf">0.1</span>
     <span class="n">SearchSpace</span><span class="p">{</span>
@@ -133,14 +136,6 @@ polymer phase space varying fA and ChiN.</p>
                 <span class="n">upper</span>         <span class="mf">2.5</span>
                 <span class="n">velocity_cap</span>  <span class="mf">0.6</span>
             <span class="p">}</span>
-            <span class="n">KuhnRatio</span><span class="p">{</span>
-                <span class="n">numerator_monomer</span>    <span class="mi">1</span>
-                <span class="n">denominator_monomer</span>  <span class="mi">0</span>
-                <span class="n">lower</span>        <span class="o">-</span><span class="mf">0.7</span>
-                <span class="n">upper</span>         <span class="mf">0.7</span>
-                <span class="n">velocity_cap</span>  <span class="mf">0.2</span>
-            <span class="p">}</span>
-            <span class="o">...</span>
             <span class="n">ChiInteraction</span><span class="p">{</span>
                 <span class="n">monomers</span>    <span class="mi">0</span>  <span class="mi">1</span>
                 <span class="n">lower</span>        <span class="mf">10.0</span>
@@ -154,38 +149,35 @@ polymer phase space varying fA and ChiN.</p>
                 <span class="n">block</span>    <span class="mi">0</span>  <span class="mi">1</span>
                 <span class="n">value</span>    <span class="mf">1.0</span>
             <span class="p">}</span>
-            <span class="o">...</span>
-            <span class="n">KuhnLength</span><span class="p">{</span>
-                <span class="n">monomer</span>    <span class="mi">0</span>
-                <span class="n">value</span>    <span class="mf">1.0</span>
-            <span class="p">}</span>
         <span class="p">}</span>
     <span class="p">}</span>
     <span class="n">Phases</span><span class="p">{</span>
         <span class="n">scft_solver</span>    <span class="n">pscf</span>
         <span class="n">input_root</span>    <span class="n">inputs</span><span class="o">/</span>
         <span class="n">TargetPhase</span><span class="p">{</span>
-            <span class="n">name</span>        <span class="n">bcc_A</span>
-            <span class="n">model_file</span>    <span class="n">bcc</span><span class="o">/</span><span class="n">model_A</span>
+            <span class="n">name</span>        <span class="n">bcc</span>
+            <span class="n">model_file</span>    <span class="n">bcc</span><span class="o">/</span><span class="n">model</span>
         <span class="p">}</span>
-        <span class="n">TargetPhase</span><span class="p">{</span>
-            <span class="n">name</span>        <span class="n">bcc_B</span>
-            <span class="n">model_file</span>    <span class="n">bcc</span><span class="o">/</span><span class="n">model_B</span>
-        <span class="p">}</span>
-        <span class="o">...</span>
         <span class="n">CompetingPhase</span><span class="p">{</span>
             <span class="n">name</span>        <span class="nb">hex</span>
             <span class="n">model_file</span>    <span class="nb">hex</span><span class="o">/</span><span class="n">model</span>
         <span class="p">}</span>
-        <span class="o">...</span>
+        <span class="n">CompetingPhase</span><span class="p">{</span>
+            <span class="n">name</span>        <span class="n">lam</span>
+            <span class="n">model_file</span>    <span class="n">lam</span><span class="o">/</span><span class="n">model</span>
+        <span class="p">}</span>
+        <span class="n">CompetingPhase</span><span class="p">{</span>
+            <span class="n">name</span>        <span class="n">gyr</span>
+            <span class="n">model_file</span>    <span class="n">gyr</span><span class="o">/</span><span class="n">model</span>
+        <span class="p">}</span>
     <span class="p">}</span>
     <span class="n">Parallelization</span><span class="p">{</span>
         <span class="n">nodes</span>    <span class="mi">1</span>
         <span class="n">n_proc</span>    <span class="mi">20</span>
     <span class="p">}</span>
     <span class="n">Pso</span><span class="p">{</span>
-        <span class="n">output_root</span>    <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">output</span><span class="o">/</span><span class="n">root</span>
-        <span class="n">random_seed</span>    <span class="mi">1234</span>
+        <span class="n">output_root</span>    <span class="o">.</span>
+        <span class="n">random_seed</span>    <span class="mi">100</span>
         <span class="n">StandardIntegrator</span><span class="p">{</span>
             <span class="n">constriction</span>       <span class="mf">0.7</span>
             <span class="n">self_weight</span>        <span class="mf">2.05</span>
@@ -193,17 +185,8 @@ polymer phase space varying fA and ChiN.</p>
         <span class="p">}</span>
         <span class="n">Swarm</span><span class="p">{</span>
             <span class="n">n_agent</span>    <span class="mi">5</span>
-            <span class="n">AgentInitializationRule</span><span class="p">{</span>
-                <span class="n">n_target</span>       <span class="mi">2</span>
-                <span class="n">targets</span>        <span class="mi">0</span>  <span class="mi">1</span>
-                <span class="n">lower_position</span>    <span class="mf">0.0</span>   <span class="mf">0.0</span>  <span class="o">...</span>   <span class="mf">10.5</span>
-                <span class="n">upper_position</span>    <span class="mf">0.5</span>   <span class="mf">0.2</span>  <span class="o">...</span>   <span class="mf">11.5</span>
-                <span class="n">lower_velocity</span>    <span class="mf">0.5</span>   <span class="mf">0.1</span>  <span class="o">...</span>    <span class="mf">1.5</span>
-                <span class="n">upper_velocity</span>    <span class="mf">0.6</span>   <span class="mf">0.2</span>  <span class="o">...</span>    <span class="mf">2.0</span>
-            <span class="p">}</span>
             <span class="n">NeighborGraph</span><span class="p">{</span>
                 <span class="n">base_style</span>       <span class="n">cycle</span>
-                <span class="n">neighbor_pair</span>    <span class="mi">0</span>  <span class="mi">2</span>
             <span class="p">}</span>
         <span class="p">}</span>
     <span class="p">}</span>

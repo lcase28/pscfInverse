@@ -33,8 +33,6 @@
             
   <div class="section" id="blocklength">
 <h1>BlockLength<a class="headerlink" href="#blocklength" title="Permalink to this headline">¶</a></h1>
-<p>A variable represents the sum of the lengths
-of all constituent blocks.</p>
 <p>A BlockLength variable relates one or more
 polymer blocks to a single, combined length
 value. These blocks need not be adjacent to
@@ -45,6 +43,17 @@ Mathematically, the variable value is given by</p>
 <p>for a variable relating <span class="math notranslate nohighlight">\(N\)</span> blocks,
 when <span class="math notranslate nohighlight">\(Len_{p_i, b_i}\)</span> is the length of
 block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.</p>
+<p>General format (selected fields depend on usage):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockLength</span><span class="p">{</span>
+    <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+    <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">value</span>   <span class="mf">1.0</span>
+    <span class="n">lower</span>   <span class="mf">0.5</span>
+    <span class="n">upper</span>   <span class="mf">2.0</span>
+    <span class="n">velocity_cap</span>    <span class="mf">1.0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 <div class="section" id="general-syntax">
 <h2>General Syntax<a class="headerlink" href="#general-syntax" title="Permalink to this headline">¶</a></h2>
 <p>Regardless of its use as a search variable or
@@ -231,6 +240,10 @@ the required parameter file.</p>
 
 
 <h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../main.html"> Parameter File</a></li>
+</ul>
 
 <div class="relations">
 <h3>Related Topics</h3>

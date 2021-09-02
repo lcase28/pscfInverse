@@ -110,29 +110,56 @@ that its fixed value be defined.
 
 Parameter Relationships:
 
-..
+
     ===========================   ====================================
     Variable                      Description
     ===========================   ====================================
-    :ref:`param-blocklen-sub`     Total length of one or more 
+    Block Lengths                 Total length of one or more 
                                   polymer blocks.
-    :ref:`param-blockratio-sub`   Log of ratio between total 
+    Block Length Ratios           Log of ratio between total 
                                   lengths of one or more polymer
                                   blocks.
-    :ref:`param-kuhnlen-sub`      Statistical segment length of
+    Statistical Segment Length    Statistical segment length of
                                   a monomer.
-    :ref:`param-kuhnratio-sub`    Log of ratio between statistical
+    Segment Length Ratio          Log of ratio between statistical
                                   segment lengths of two monomers.
-    :ref:`param-chi-sub`          Interaction parameter between two
+    :math:`{\chi}` Parameter      Interaction parameter between two
                                   monomers.
     ===========================   ====================================
+
+Block Lengths
+-------------
+
+.. include:: vars/blocklen.rst
+    :start-after: summary
+    :end-before: summary
     
-    .. include:: vars/blocklen.rst
-    
-    .. include:: vars/blockratio.rst
-    
-    .. include:: vars/kuhnlen.rst
-    
-    .. include:: vars/kuhnratio.rst
-    
-    .. include:: vars/chiinteraction.rst
+More details on :ref:`Main Page <vars/param-blocklen-sub>`.
+
+Block Length Ratios
+-------------------
+
+.. include:: vars/blockratio.rst
+    :start-after: summary
+    :end-before: summary
+
+Statistical Segment Lengths
+---------------------------
+
+.. include:: vars/kuhnlen.rst
+    :start-after: summary
+    :end-before: summary
+
+Statistical Segment Length Ratios
+---------------------------------
+
+.. include:: vars/kuhnratio.rst
+    :start-after: summary
+    :end-before: summary
+
+Flory-Huggins :math:`{\chi}` Parameters
+---------------------------------------
+
+.. include:: vars/chi.rst
+    :start-after: summary
+    :end-before: summary
