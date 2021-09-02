@@ -89,27 +89,160 @@ and |cons|. Variables defined in the former represent
 searchable dimensions, while those defined in the latter
 represent fixed relationships.
 
-.. _param-vartype-sec:
+.. _param-varconventions-sec:
 
-Relationship Types
-==================
+Conventions
+===========
+
+Polymer and Block Indexing
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While defining the search space, multiple available relationships
+refer to the length of various blocks in the polymer system.
+Within the PscfInverse parameter file, references to individual
+blocks are made with pairs of integer ID or index numbers.
+Each reference to a block in the polymer system is formatted as
+shown below, with the keyword ``block`` followed by the pair of
+ID numbers, represented by the labels ``[polymerID]`` and ``[blockID]``.
+
+::
+
+    block   [polymerID]     [blockID]
+
+As with other aspects of the parameter file, specific formatting
+of these references is flexible, as long as whitespace separates
+all three elements, and whitespace preceeds and follows the whole
+group.
+Most available relationships will use this format. If an alternate
+format is required for any relationships, they will be specified in
+that relationship's description below. In any case, indexing will
+be consistent.
+
+The values of the ID numbers are determined by the PSCF parameter
+file format. Both polymers and blocks are indexed starting at :math:`0`
+with individual polymers and blocks indexed as they appear.
+Thus, *polymer 0* will be the first polymer specified in the 
+PSCF parameter file, *polymer 1* is the second polymer specified, and
+so on. Block indexing is relative to each polymer ID. Thus,
+for each polymer, the first block specified will be *block 0* and the
+second block specified will be *block 1*.
+
+This indexing is well-illustrated by considering the format of the
+PSCF (Fortran) parameter file. In that format, block_monomer
+and block_length values are specified in multi-row arrays,
+with each row being potentially a different length, such that each
+row contains the data for one polymer species and each entry within
+a single row refer to different blocks in that polymer species.
+Thus, the block indexing used here is such that [polymerID] identifies
+the row of the block_length array, and [blockID] identifies the entry
+within that row that is being considered in the relationship.
+
+Using this convention, a blend of two diblock copolymers will have
+the following four references as possibilities:
+
+::
+
+    block   0   0
+    block   0   1
+    block   1   0
+    block   1   1
+
+Monomer Indexing
+^^^^^^^^^^^^^^^^
+
+As with polymers and blocks, monomers are indexed starting at :math:`0`.
+The order of the monomer indexing likewise matches the order in which
+the monomers are specified in the SCFT input file. In the case of
+PSCF (Fortran), monomers are (internally) indexed starting at 1
+in the order they are specified in the *kuhn* input array.
+In this case, the index used here for a monomer is one less than the
+index used in the PSCF parameter file, creating a "shift" in the indexing
+scheme. 
+
+.. _param-varvscon-sec:
+
+Variables versus Constraints
+============================
 
 Internally, PscfInverse represents both variables and
 constraints with the same classes. Thus, any parameter
 relationship that can be used as a variable can also be
-used as a constraint. 
-
-Because of their differing roles,
+used as a constraint. Because of their differing roles,
 the definition syntax for the same parameter relationship
-varies based on its placement in |vars| or |cons|.
+varies based on its placement in |vars| or |cons|, however
+the difference between the two uses is the same for all
+relationship types. This section summarizes the entries
+required for each relationship when used as a variable
+or a constraint. The entries specified here are in addition
+to the relationship-specific data outlined in the
+:ref:`Relationship Types Section <param-vartypes-sec>`.
+
+Relationships as Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 When defined in |vars|, the parameter relationship requires
 that a lower bound, upper bound, and maximum velocity magnitude
-be given.
+be given. Here, the lower bound and upper bound represent the
+lowest and highest values the variable can assume during the
+search. Altogether, the lower and upper bounds of all variables
+in the search define full bounds of the search space.
+The search bounds in PscfInverse are hard, reflective boundaries
+such that, in any dimension, if a given PSO step would carry an
+agent outside of these bounds, the position update in that dimension
+is rejected and its velocity in that dimension is reversed
+(as if the agent had "bounced" off a wall).
+The maximum velocity, due to the unit time step applied in the PSO
+algorithm, represents the maximum distance along that dimension
+any agent is permitted to move in a single PSO step.
+Any positive value may be chosen for this entry;
+however, given the use of reflective bounds, the largest step
+that can actually be taken is the full distance from lower to
+upper bound. Allowing velocity values to exceed this logical limit
+is permitted and, in theory, acceleration of the agent should
+eventually lower the velocity to a smaller value as the swarm converges.
+The effects of such large velocities on the performance of PscfInverse
+has not been investigated, and choosing a velocity cap below
+the full search space width is generally recommended.
+The bounding and velocity entries are formatted uniformly across
+relationship types and are summarized below.
+
+    ==============  ================    =========================
+    Variable        Label               Description
+    ==============  ================    =========================
+    Lower Bound     ``lower``           The lowest value allowed
+                                        for the variable during 
+                                        the search.
+    Upper Bound     ``upper``           The highest value allowed
+                                        for the variable during
+                                        the search.
+    Velocity Limit  ``velocity_cap``    *Optional*
+                                        The fastest an agent is
+                                        allowed to move in the 
+                                        positive or negative
+                                        direction along this 
+                                        search dimension.
+                                        (Symmetric about
+                                        :math:`velocity = 0.0`).
+                                        Default value is 
+                                        :math:`(upper - lower)`.
+    ==============  ================    =========================
+
+
+Relationships as Constraints
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 When defined in |cons|, the parameter relationship requires
-that its fixed value be defined.
+that its fixed value be defined. In this case, the bounds
+and velocity limit defined for use as a variable are not
+required. The constant value is specified with the label
+``value`` followed by whitespace followed by the numerical value.
 
-Parameter Relationships:
+Relationship Types
+==================
 
+Each of the following subsections defines and describes one of
+the available parameter relationships that can be used as variables
+or constraints in PscfInverse.
 
     ===========================   ====================================
     Variable                      Description
@@ -134,8 +267,6 @@ Block Lengths
     :start-after: summary
     :end-before: summary
     
-More details on :ref:`Main Page <vars/param-blocklen-sub>`.
-
 Block Length Ratios
 -------------------
 

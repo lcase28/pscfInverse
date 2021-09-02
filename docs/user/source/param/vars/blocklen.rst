@@ -34,62 +34,6 @@ General format (selected fields depend on usage):
 
 .. summary
 
-General Syntax
-..............
-
-Regardless of its use as a search variable or
-constraint, this relation requires the user
-to define which blocks count toward the total
-length. Within the variable's parameter file
-block, each contributing polymer block is 
-identified with a parameter labeled ``block``
-followed by a polymer and block id, all 
-separated by whitespace. If written on the same
-line, this would appear as ::
-
-    block   [polymer_id]    [block_id]
-
-with ``[polymer_id]`` representing the ID
-of the polymer containing the block and
-``[block_id]`` representing the ID of the 
-block within polymer *polymer_id*.
-
-Indexing of polymers and blocks starts at 0,
-with the order of indexing defined by the 
-SCFT solver's interface. Generally speaking,
-in instances when polymers and blocks are not
-explicitly given ID numbers in the SCFT
-solver's input files (such as the Fortan 
-version of PSCF), the polymers and blocks
-are indexed in the order they first appear in
-the SCFT input file. When the SCFT input does
-specify block or polymer ID numbers, the
-given IDs would be kept in order, but shifted
-to start indexing at 0. Thus if the SCFT input
-file specified blocks *1*, *2*, and *3* in
-polymer *1* (with no polymer *0*), these would
-be accessed, respectively, with ::
-
-    block   0   0
-    block   0   1
-    block   0   2
-
-For example, assume you wish to specify
-(as either a variable or constraint) the 
-total length of blocks *0* and *1* of
-polymer *0*. In this instance, the defining
-block in the parameter file would be ::
-
-    BlockLength{
-        block   0   0
-        block   0   1
-        ...
-    }
-
-where ``...`` acts as a placeholder for 
-required data to make this a variable or 
-constraint.
-
 Variable Syntax
 ...............
 
