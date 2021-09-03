@@ -102,21 +102,164 @@ This gives the <code class="docutils literal notranslate"><span class="pre">Sear
 and <code class="docutils literal notranslate"><span class="pre">Constraints{}</span></code>. Variables defined in the former represent
 searchable dimensions, while those defined in the latter
 represent fixed relationships.</p>
-<div class="section" id="relationship-types">
-<span id="param-vartype-sec"></span><h2>Relationship Types<a class="headerlink" href="#relationship-types" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="conventions">
+<span id="param-varconventions-sec"></span><h2>Conventions<a class="headerlink" href="#conventions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="polymer-and-block-indexing">
+<h3>Polymer and Block Indexing<a class="headerlink" href="#polymer-and-block-indexing" title="Permalink to this headline">¶</a></h3>
+<p>While defining the search space, multiple available relationships
+refer to the length of various blocks in the polymer system.
+Within the PscfInverse parameter file, references to individual
+blocks are made with pairs of integer ID or index numbers.
+Each reference to a block in the polymer system is formatted as
+shown below, with the keyword <code class="docutils literal notranslate"><span class="pre">block</span></code> followed by the pair of
+ID numbers, represented by the labels <code class="docutils literal notranslate"><span class="pre">[polymerID]</span></code> and <code class="docutils literal notranslate"><span class="pre">[blockID]</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="p">[</span><span class="n">polymerID</span><span class="p">]</span>     <span class="p">[</span><span class="n">blockID</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>As with other aspects of the parameter file, specific formatting
+of these references is flexible, as long as whitespace separates
+all three elements, and whitespace preceeds and follows the whole
+group.
+Most available relationships will use this format. If an alternate
+format is required for any relationships, they will be specified in
+that relationship’s description below. In any case, indexing will
+be consistent.</p>
+<p>The values of the ID numbers are determined by the PSCF parameter
+file format. Both polymers and blocks are indexed starting at <span class="math notranslate nohighlight">\(0\)</span>
+with individual polymers and blocks indexed as they appear.
+Thus, <em>polymer 0</em> will be the first polymer specified in the
+PSCF parameter file, <em>polymer 1</em> is the second polymer specified, and
+so on. Block indexing is relative to each polymer ID. Thus,
+for each polymer, the first block specified will be <em>block 0</em> and the
+second block specified will be <em>block 1</em>.</p>
+<p>This indexing is well-illustrated by considering the format of the
+PSCF (Fortran) parameter file. In that format, block_monomer
+and block_length values are specified in multi-row arrays,
+with each row being potentially a different length, such that each
+row contains the data for one polymer species and each entry within
+a single row refer to different blocks in that polymer species.
+Thus, the block indexing used here is such that [polymerID] identifies
+the row of the block_length array, and [blockID] identifies the entry
+within that row that is being considered in the relationship.</p>
+<p>Using this convention, a blend of two diblock copolymers will have
+the following four references as possibilities:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+<span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+<span class="n">block</span>   <span class="mi">1</span>   <span class="mi">0</span>
+<span class="n">block</span>   <span class="mi">1</span>   <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="monomer-indexing">
+<h3>Monomer Indexing<a class="headerlink" href="#monomer-indexing" title="Permalink to this headline">¶</a></h3>
+<p>As with polymers and blocks, monomers are indexed starting at <span class="math notranslate nohighlight">\(0\)</span>.
+The order of the monomer indexing likewise matches the order in which
+the monomers are specified in the SCFT input file. In the case of
+PSCF (Fortran), monomers are (internally) indexed starting at 1
+in the order they are specified in the <em>kuhn</em> input array.
+In this case, the index used here for a monomer is one less than the
+index used in the PSCF parameter file, creating a “shift” in the indexing
+scheme.</p>
+</div>
+</div>
+<div class="section" id="variables-versus-constraints">
+<span id="param-varvscon-sec"></span><h2>Variables versus Constraints<a class="headerlink" href="#variables-versus-constraints" title="Permalink to this headline">¶</a></h2>
 <p>Internally, PscfInverse represents both variables and
 constraints with the same classes. Thus, any parameter
 relationship that can be used as a variable can also be
-used as a constraint.</p>
-<p>Because of their differing roles,
+used as a constraint. Because of their differing roles,
 the definition syntax for the same parameter relationship
-varies based on its placement in <code class="docutils literal notranslate"><span class="pre">Variables{}</span></code> or <code class="docutils literal notranslate"><span class="pre">Constraints{}</span></code>.
-When defined in <code class="docutils literal notranslate"><span class="pre">Variables{}</span></code>, the parameter relationship requires
+varies based on its placement in <code class="docutils literal notranslate"><span class="pre">Variables{}</span></code> or <code class="docutils literal notranslate"><span class="pre">Constraints{}</span></code>, however
+the difference between the two uses is the same for all
+relationship types. This section summarizes the entries
+required for each relationship when used as a variable
+or a constraint. The entries specified here are in addition
+to the relationship-specific data outlined in the
+<a class="reference internal" href="#param-vartypes-sec"><span class="std std-ref">Relationship Types Section</span></a>.</p>
+<div class="section" id="relationships-as-variables">
+<h3>Relationships as Variables<a class="headerlink" href="#relationships-as-variables" title="Permalink to this headline">¶</a></h3>
+<p>When defined in <code class="docutils literal notranslate"><span class="pre">Variables{}</span></code>, the parameter relationship requires
 that a lower bound, upper bound, and maximum velocity magnitude
-be given.
-When defined in <code class="docutils literal notranslate"><span class="pre">Constraints{}</span></code>, the parameter relationship requires
-that its fixed value be defined.</p>
-<p>Parameter Relationships:</p>
+be given. Here, the lower bound and upper bound represent the
+lowest and highest values the variable can assume during the
+search. Altogether, the lower and upper bounds of all variables
+in the search define full bounds of the search space.
+The search bounds in PscfInverse are hard, reflective boundaries
+such that, in any dimension, if a given PSO step would carry an
+agent outside of these bounds, the position update in that dimension
+is rejected and its velocity in that dimension is reversed
+(as if the agent had “bounced” off a wall).
+The maximum velocity, due to the unit time step applied in the PSO
+algorithm, represents the maximum distance along that dimension
+any agent is permitted to move in a single PSO step.
+Any positive value may be chosen for this entry;
+however, given the use of reflective bounds, the largest step
+that can actually be taken is the full distance from lower to
+upper bound. Allowing velocity values to exceed this logical limit
+is permitted and, in theory, acceleration of the agent should
+eventually lower the velocity to a smaller value as the swarm converges.
+The effects of such large velocities on the performance of PscfInverse
+has not been investigated, and choosing a velocity cap below
+the full search space width is generally recommended.
+The bounding and velocity entries are formatted uniformly across
+relationship types and are summarized below.</p>
+<blockquote>
+<div><table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 29%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Label</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Lower Bound</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">lower</span></code></p></td>
+<td><p>The lowest value allowed
+for the variable during
+the search.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Upper Bound</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">upper</span></code></p></td>
+<td><p>The highest value allowed
+for the variable during
+the search.</p></td>
+</tr>
+<tr class="row-even"><td><p>Velocity Limit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">velocity_cap</span></code></p></td>
+<td><p><em>Optional</em>
+The fastest an agent is
+allowed to move in the
+positive or negative
+direction along this
+search dimension.
+(Symmetric about
+<span class="math notranslate nohighlight">\(velocity = 0.0\)</span>).
+Default value is
+<span class="math notranslate nohighlight">\((upper - lower)\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</div>
+<div class="section" id="relationships-as-constraints">
+<h3>Relationships as Constraints<a class="headerlink" href="#relationships-as-constraints" title="Permalink to this headline">¶</a></h3>
+<p>When defined in <code class="docutils literal notranslate"><span class="pre">Constraints{}</span></code>, the parameter relationship requires
+that its fixed value be defined. In this case, the bounds
+and velocity limit defined for use as a variable are not
+required. The constant value is specified with the label
+<code class="docutils literal notranslate"><span class="pre">value</span></code> followed by whitespace followed by the numerical value.</p>
+</div>
+</div>
+<div class="section" id="relationship-types">
+<span id="param-vartypes-sec"></span><h2>Relationship Types<a class="headerlink" href="#relationship-types" title="Permalink to this headline">¶</a></h2>
+<p>Each of the following subsections defines and describes one of
+the available parameter relationships that can be used as variables
+or constraints in PscfInverse.</p>
 <blockquote>
 <div><table class="docutils align-default">
 <colgroup>
@@ -161,39 +304,212 @@ value. These blocks need not be adjacent to
 each other, nor even in the same polymer chain.
 Mathematically, the variable value is given by</p>
 <div class="math notranslate nohighlight">
-\[BlockLength = \sum_{i=1}^{N} Len_{p_i,b_i}\]</div>
+\[BlockLength = \sum_{i=1}^{N} L_{p_i,b_i}\]</div>
 <p>for a variable relating <span class="math notranslate nohighlight">\(N\)</span> blocks,
-when <span class="math notranslate nohighlight">\(Len_{p_i, b_i}\)</span> is the length of
+when <span class="math notranslate nohighlight">\(L_{p_i, b_i}\)</span> is the length of
 block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.</p>
-<p>General format (selected fields depend on usage):</p>
+<p>The relationship is defined within a block
+named <code class="docutils literal notranslate"><span class="pre">BlockLength{</span> <span class="pre">...</span> <span class="pre">}</span></code> within either
+the variables or constraints block.
+Within the BlockLength block, the blocks to
+be accounted in the total are specified as
+a sequence of block references of the form
+<code class="docutils literal notranslate"><span class="pre">block</span> <span class="pre">[polymerId]</span> <span class="pre">[blockID]</span></code>.
+These block specifications should be placed
+before either the variable bounds or constraint
+values. Altogether, the general format would
+resemble one of the following, depending on use
+as a variable or constraint.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockLength</span><span class="p">{</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
-    <span class="n">value</span>   <span class="mf">1.0</span>
     <span class="n">lower</span>   <span class="mf">0.5</span>
     <span class="n">upper</span>   <span class="mf">2.0</span>
     <span class="n">velocity_cap</span>    <span class="mf">1.0</span>
 <span class="p">}</span>
+
+<span class="n">BlockLength</span><span class="p">{</span>
+    <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+    <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">value</span>   <span class="mf">1.0</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>More details on <span class="xref std std-ref">Main Page</span>.</p>
+<p>If both examples above refer to a system in which
+polymer 0 is a diblock copolymer, then the former
+considers the total length of the diblock to be a
+variable ranging from 0.5 to 2.0 (presumably relative
+to another polymer of length unity), while the latter
+fixes the total length of the diblock to unity
+(which would perhaps allow the block fractions to be
+varied at constant length).</p>
 </div>
 <div class="section" id="block-length-ratios">
 <h3>Block Length Ratios<a class="headerlink" href="#block-length-ratios" title="Permalink to this headline">¶</a></h3>
-<p>A variable represents the sum of the lengths
-of all constituent blocks.</p>
+<p>The BlockRatio relationship considers the ratio
+between the total lengths of two sets of blocks.
+These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by</p>
+<div class="math notranslate nohighlight">
+\[BlockRatio = \ln \frac{\sum_{i=1}^{N} L_{p_i,b_i}}{\sum_{i=1}^{D} L_{p_i,b_i}}\]</div>
+<p>for the ratio between blocks <span class="math notranslate nohighlight">\(N\)</span>
+and blocks <span class="math notranslate nohighlight">\(D\)</span>,
+when <span class="math notranslate nohighlight">\(L_{p_i, b_i}\)</span> is the length of
+block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.
+Here, logarithmic scaling is used to offer equal
+numerical representation between a ratio and its
+reciprocal.</p>
+<p>Block Length Ratio relationships are defined in
+<code class="docutils literal notranslate"><span class="pre">BlockRatio</span></code> blocks. The format of a <code class="docutils literal notranslate"><span class="pre">BlockRatio</span></code>
+block is similar to that used for <code class="docutils literal notranslate"><span class="pre">BlockLength</span></code>
+relationships, but the two sets of blocks
+accounted in the relationship are placed in their
+own sub-blocks. In this case,
+the blocks accounted in the top half of the ratio
+are specified within a <code class="docutils literal notranslate"><span class="pre">Numerator{</span> <span class="pre">...</span> <span class="pre">}</span></code> block,
+while those in the bottom half of the ratio
+are listed in the <code class="docutils literal notranslate"><span class="pre">Denominator{</span> <span class="pre">...</span> <span class="pre">}</span></code> block.
+In both sets, block references are formatted
+according to convention as
+<code class="docutils literal notranslate"><span class="pre">block</span> <span class="pre">[polymerID]</span> <span class="pre">[blockID]</span></code>.
+These block specifications should be placed before
+any variable bounds or constraint values.
+Note that all variable bounds and constraint values
+should refer directly to the logarithmic value.
+Depending on use as a variable or constraint,
+a BlockRatio relationship would thus be defined
+similarly to one of the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockRatio</span><span class="p">{</span>
+    <span class="n">Numerator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+    <span class="p">}</span>
+    <span class="n">Denominator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="p">}</span>
+    <span class="n">lower</span>   <span class="o">-</span><span class="mf">2.5</span>
+    <span class="n">upper</span>   <span class="mf">2.5</span>
+    <span class="n">velocity_cap</span>    <span class="mf">3.0</span>
+<span class="p">}</span>
+
+<span class="n">BlockRatio</span><span class="p">{</span>
+    <span class="n">Numerator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+    <span class="p">}</span>
+    <span class="n">Denominator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="p">}</span>
+    <span class="n">value</span>   <span class="mf">0.0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Consider a system in which polymer 0 is a diblock.
+In this case, the first definition would allow the
+log of the ratios of the
+block fractions to vary between -2.5 and 2.5; this
+is roughly equivallent to allowing <span class="math notranslate nohighlight">\(f_{A}\)</span> to
+vary from 0.075 to 0.925. The second definition
+would force the diblock to remain compositionally
+symmetric.</p>
 </div>
 <div class="section" id="statistical-segment-lengths">
 <h3>Statistical Segment Lengths<a class="headerlink" href="#statistical-segment-lengths" title="Permalink to this headline">¶</a></h3>
-<p>Direct map for statistical segment length of a single monomer.</p>
+<p>This simplified relationship offers a direct map
+to the statistical segment length (or similar metric
+used in the SCFT solver) from the PSO variable or
+constraint.
+The monomer being referenced is specified with an
+entry of the form <code class="docutils literal notranslate"><span class="pre">monomer</span> <span class="pre">[monomerID]</span></code> where
+<code class="docutils literal notranslate"><span class="pre">[monomerID]</span></code> follows the convention defined above.
+The simple syntax for use as a variable
+would resemble</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KuhnLength</span><span class="p">{</span>
+    <span class="n">monomer</span> <span class="mi">0</span>
+    <span class="n">lower</span>   <span class="mf">1.0</span>
+    <span class="n">upper</span>   <span class="mf">2.0</span>
+    <span class="n">velocity_cap</span>    <span class="mf">0.6</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>while use as a constraint (to fix the segment length)
+would resemble</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KuhnLength</span><span class="p">{</span>
+    <span class="n">monomer</span> <span class="mi">0</span>
+    <span class="n">value</span>   <span class="mf">1.0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="statistical-segment-length-ratios">
 <h3>Statistical Segment Length Ratios<a class="headerlink" href="#statistical-segment-length-ratios" title="Permalink to this headline">¶</a></h3>
-<p>Logarithmic ratio of statistical segment lengths of two monomers.</p>
+<p>This relationship references the ratio
+between the statistical segment lengths
+of two monomers. Similarly to the ratio of
+block lengths, the log of the ratio is used
+here as well. The relationship is defined in
+a <code class="docutils literal notranslate"><span class="pre">KuhnRatio{</span> <span class="pre">...</span> <span class="pre">}</span></code> block.
+Since only two monomers are considered in one
+relationship, both monomer IDs are specified
+in a single entry of the form
+<code class="docutils literal notranslate"><span class="pre">monomers</span>&#160; <span class="pre">[numeratorID]</span>&#160;&#160; <span class="pre">[denominatorID]</span></code>
+where <em>[numeratorID]</em> is the ID of the monomer
+in the numerator of the ratio and
+<em>[denominatorID]</em> is the ID of the monomer in
+the denominator of the ratio.
+As with the Block length ratio relationship,
+the KuhnRatio variable bounds and constraint
+values expect the logarithmic value.
+When used as a variable, the relationship
+would be specified with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KuhnRatio</span><span class="p">{</span>
+    <span class="n">monomers</span>    <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">lower</span>   <span class="o">-</span><span class="mf">1.0</span>
+    <span class="n">upper</span>   <span class="mf">1.0</span>
+    <span class="n">velocity_cap</span>    <span class="mf">1.0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>while use as a constraint would resemble</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KuhnRatio</span><span class="p">{</span>
+    <span class="n">monomers</span>    <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">value</span>   <span class="mf">0.693</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="flory-huggins-chi-parameters">
 <h3>Flory-Huggins <span class="math notranslate nohighlight">\({\chi}\)</span> Parameters<a class="headerlink" href="#flory-huggins-chi-parameters" title="Permalink to this headline">¶</a></h3>
-<p>Direct map of Flory-Huggins <span class="math notranslate nohighlight">\({\chi}\)</span> parameters.</p>
+<p>This relationship acts as a direct map to
+the Flory-Huggins interaction parameter,
+<span class="math notranslate nohighlight">\({\chi}_{i,j}\)</span> between monomers
+<span class="math notranslate nohighlight">\(i\)</span> and <span class="math notranslate nohighlight">\(j\)</span>.
+This relationship is specified within a
+<code class="docutils literal notranslate"><span class="pre">Chi{</span> <span class="pre">...</span> <span class="pre">}</span></code> block.
+Monomers are identified in a similar format
+to that used for segment length ratios,
+<code class="docutils literal notranslate"><span class="pre">monomers</span>&#160; <span class="pre">[monomerID_1]</span>&#160;&#160; <span class="pre">[monomerID_2]</span></code>
+where the two monomer IDs listed in brackets
+would be the integer index for the interacting
+monomers. The monomer IDs can be listed in any
+order, but by convention the lower index
+is typically listed first. The format of this
+relationship in the PscfInverse parameter file
+would be similar to one of</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Chi</span><span class="p">{</span>
+    <span class="n">monomers</span>    <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">lower</span>   <span class="mf">10.0</span>
+    <span class="n">upper</span>   <span class="mf">30.0</span>
+    <span class="n">velocity_cap</span>    <span class="mf">15.0</span>
+<span class="p">}</span>
+
+<span class="n">Chi</span><span class="p">{</span>
+    <span class="n">monomers</span>    <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="n">value</span>   <span class="mi">25</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The latter format, that for use as a constraint,
+currently should see limited use.</p>
 </div>
 </div>
 </div>

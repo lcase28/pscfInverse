@@ -18,17 +18,33 @@ for a variable relating :math:`N` blocks,
 when :math:`Len_{p_i, b_i}` is the length of
 block :math:`b_i` in polymer :math:`p_i`.
 
-General format (selected fields depend on usage):
+The relationship is defined within a block
+named ``BlockLength{ ... }`` within either
+the variables or constraints block.
+Within the BlockLength block, the blocks to
+be accounted in the total are specified as
+a sequence of block references of the form
+``block [polymerId] [blockID]``.
+These block specifications should be placed
+before either the variable bounds or constraint
+values. Altogether, the general format would
+resemble one of the following, depending on use
+as a variable or constraint.
 
 ::
 
     BlockLength{
         block   0   0
         block   0   1
-        value   1.0
         lower   0.5
         upper   2.0
         velocity_cap    1.0
+    }
+    
+    BlockLength{
+        block   0   0
+        block   0   1
+        value   1.0
     }
 
 

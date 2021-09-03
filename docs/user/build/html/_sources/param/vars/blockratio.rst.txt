@@ -5,8 +5,19 @@ BlockRatio
 
 .. summary
 
-A variable represents the sum of the lengths
-of all constituent blocks.
+The BlockRatio relationship considers the ratio
+between the total lengths of two sets of blocks.
+These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by
+
+.. math::
+    BlockRatio = \ln \frac{\sum_{i=1}^{N} L_{p_i,b_i}}{\sum_{i=1}^{D} L_{p_i,b_i}}
+
+for the ratio between blocks :math:`N`
+and blocks :math:`D`,
+when :math:`L_{p_i, b_i}` is the length of
+block :math:`b_i` in polymer :math:`p_i`.
 
 .. summary
 

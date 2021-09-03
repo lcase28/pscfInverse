@@ -43,70 +43,32 @@ Mathematically, the variable value is given by</p>
 <p>for a variable relating <span class="math notranslate nohighlight">\(N\)</span> blocks,
 when <span class="math notranslate nohighlight">\(Len_{p_i, b_i}\)</span> is the length of
 block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.</p>
-<p>General format (selected fields depend on usage):</p>
+<p>The relationship is defined within a block
+named <code class="docutils literal notranslate"><span class="pre">BlockLength{</span> <span class="pre">...</span> <span class="pre">}</span></code> within either
+the variables or constraints block.
+Within the BlockLength block, the blocks to
+be accounted in the total are specified as
+a sequence of block references of the form
+<code class="docutils literal notranslate"><span class="pre">block</span> <span class="pre">[polymerId]</span> <span class="pre">[blockID]</span></code>.
+These block specifications should be placed
+before either the variable bounds or constraint
+values. Altogether, the general format would
+resemble one of the following, depending on use
+as a variable or constraint.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockLength</span><span class="p">{</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
-    <span class="n">value</span>   <span class="mf">1.0</span>
     <span class="n">lower</span>   <span class="mf">0.5</span>
     <span class="n">upper</span>   <span class="mf">2.0</span>
     <span class="n">velocity_cap</span>    <span class="mf">1.0</span>
 <span class="p">}</span>
-</pre></div>
-</div>
-<div class="section" id="general-syntax">
-<h2>General Syntax<a class="headerlink" href="#general-syntax" title="Permalink to this headline">¶</a></h2>
-<p>Regardless of its use as a search variable or
-constraint, this relation requires the user
-to define which blocks count toward the total
-length. Within the variable’s parameter file
-block, each contributing polymer block is
-identified with a parameter labeled <code class="docutils literal notranslate"><span class="pre">block</span></code>
-followed by a polymer and block id, all
-separated by whitespace. If written on the same
-line, this would appear as</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="p">[</span><span class="n">polymer_id</span><span class="p">]</span>    <span class="p">[</span><span class="n">block_id</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>with <code class="docutils literal notranslate"><span class="pre">[polymer_id]</span></code> representing the ID
-of the polymer containing the block and
-<code class="docutils literal notranslate"><span class="pre">[block_id]</span></code> representing the ID of the
-block within polymer <em>polymer_id</em>.</p>
-<p>Indexing of polymers and blocks starts at 0,
-with the order of indexing defined by the
-SCFT solver’s interface. Generally speaking,
-in instances when polymers and blocks are not
-explicitly given ID numbers in the SCFT
-solver’s input files (such as the Fortan
-version of PSCF), the polymers and blocks
-are indexed in the order they first appear in
-the SCFT input file. When the SCFT input does
-specify block or polymer ID numbers, the
-given IDs would be kept in order, but shifted
-to start indexing at 0. Thus if the SCFT input
-file specified blocks <em>1</em>, <em>2</em>, and <em>3</em> in
-polymer <em>1</em> (with no polymer <em>0</em>), these would
-be accessed, respectively, with</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
-<span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
-<span class="n">block</span>   <span class="mi">0</span>   <span class="mi">2</span>
-</pre></div>
-</div>
-<p>For example, assume you wish to specify
-(as either a variable or constraint) the
-total length of blocks <em>0</em> and <em>1</em> of
-polymer <em>0</em>. In this instance, the defining
-block in the parameter file would be</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockLength</span><span class="p">{</span>
+
+<span class="n">BlockLength</span><span class="p">{</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
     <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
-    <span class="o">...</span>
+    <span class="n">value</span>   <span class="mf">1.0</span>
 <span class="p">}</span>
 </pre></div>
-</div>
-<p>where <code class="docutils literal notranslate"><span class="pre">...</span></code> acts as a placeholder for
-required data to make this a variable or
-constraint.</p>
 </div>
 <div class="section" id="variable-syntax">
 <h2>Variable Syntax<a class="headerlink" href="#variable-syntax" title="Permalink to this headline">¶</a></h2>

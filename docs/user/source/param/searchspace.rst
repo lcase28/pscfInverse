@@ -95,7 +95,7 @@ Conventions
 ===========
 
 Polymer and Block Indexing
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
 While defining the search space, multiple available relationships
 refer to the length of various blocks in the polymer system.
@@ -148,7 +148,7 @@ the following four references as possibilities:
     block   1   1
 
 Monomer Indexing
-^^^^^^^^^^^^^^^^
+----------------
 
 As with polymers and blocks, monomers are indexed starting at :math:`0`.
 The order of the monomer indexing likewise matches the order in which
@@ -178,7 +178,7 @@ to the relationship-specific data outlined in the
 :ref:`Relationship Types Section <param-vartypes-sec>`.
 
 Relationships as Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
 When defined in |vars|, the parameter relationship requires
 that a lower bound, upper bound, and maximum velocity magnitude
@@ -229,13 +229,15 @@ relationship types and are summarized below.
 
 
 Relationships as Constraints
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 When defined in |cons|, the parameter relationship requires
 that its fixed value be defined. In this case, the bounds
 and velocity limit defined for use as a variable are not
 required. The constant value is specified with the label
 ``value`` followed by whitespace followed by the numerical value.
+
+.. _param-vartypes-sec:
 
 Relationship Types
 ==================
@@ -263,34 +265,241 @@ or constraints in PscfInverse.
 Block Lengths
 -------------
 
-.. include:: vars/blocklen.rst
-    :start-after: summary
-    :end-before: summary
+A BlockLength variable relates one or more 
+polymer blocks to a single, combined length
+value. These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by
+
+.. math::
+    BlockLength = \sum_{i=1}^{N} L_{p_i,b_i}
+
+for a variable relating :math:`N` blocks,
+when :math:`L_{p_i, b_i}` is the length of
+block :math:`b_i` in polymer :math:`p_i`.
+
+The relationship is defined within a block
+named ``BlockLength{ ... }`` within either
+the variables or constraints block.
+Within the BlockLength block, the blocks to
+be accounted in the total are specified as
+a sequence of block references of the form
+``block [polymerId] [blockID]``.
+These block specifications should be placed
+before either the variable bounds or constraint
+values. Altogether, the general format would
+resemble one of the following, depending on use
+as a variable or constraint.
+
+::
+
+    BlockLength{
+        block   0   0
+        block   0   1
+        lower   0.5
+        upper   2.0
+        velocity_cap    1.0
+    }
     
+    BlockLength{
+        block   0   0
+        block   0   1
+        value   1.0
+    }
+
+If both examples above refer to a system in which
+polymer 0 is a diblock copolymer, then the former
+considers the total length of the diblock to be a
+variable ranging from 0.5 to 2.0 (presumably relative
+to another polymer of length unity), while the latter
+fixes the total length of the diblock to unity
+(which would perhaps allow the block fractions to be
+varied at constant length).
+
 Block Length Ratios
 -------------------
 
-.. include:: vars/blockratio.rst
-    :start-after: summary
-    :end-before: summary
+The BlockRatio relationship considers the ratio
+between the total lengths of two sets of blocks.
+These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by
+
+.. math::
+    BlockRatio = \ln \frac{\sum_{i=1}^{N} L_{p_i,b_i}}{\sum_{i=1}^{D} L_{p_i,b_i}}
+
+for the ratio between blocks :math:`N`
+and blocks :math:`D`,
+when :math:`L_{p_i, b_i}` is the length of
+block :math:`b_i` in polymer :math:`p_i`.
+Here, logarithmic scaling is used to offer equal
+numerical representation between a ratio and its
+reciprocal.
+
+Block Length Ratio relationships are defined in 
+``BlockRatio`` blocks. The format of a ``BlockRatio``
+block is similar to that used for ``BlockLength``
+relationships, but the two sets of blocks
+accounted in the relationship are placed in their
+own sub-blocks. In this case,
+the blocks accounted in the top half of the ratio
+are specified within a ``Numerator{ ... }`` block,
+while those in the bottom half of the ratio
+are listed in the ``Denominator{ ... }`` block.
+In both sets, block references are formatted
+according to convention as 
+``block [polymerID] [blockID]``.
+These block specifications should be placed before
+any variable bounds or constraint values.
+Note that all variable bounds and constraint values
+should refer directly to the logarithmic value.
+Depending on use as a variable or constraint,
+a BlockRatio relationship would thus be defined
+similarly to one of the following:
+
+::
+
+    BlockRatio{
+        Numerator{
+            block   0   0
+        }
+        Denominator{
+            block   0   1
+        }
+        lower   -2.5
+        upper   2.5
+        velocity_cap    3.0
+    }
+    
+    BlockRatio{
+        Numerator{
+            block   0   0
+        }
+        Denominator{
+            block   0   1
+        }
+        value   0.0
+    }
+
+Consider a system in which polymer 0 is a diblock.
+In this case, the first definition would allow the
+log of the ratios of the
+block fractions to vary between -2.5 and 2.5; this
+is roughly equivallent to allowing :math:`f_{A}` to
+vary from 0.075 to 0.925. The second definition
+would force the diblock to remain compositionally
+symmetric.
+
 
 Statistical Segment Lengths
 ---------------------------
 
-.. include:: vars/kuhnlen.rst
-    :start-after: summary
-    :end-before: summary
+This simplified relationship offers a direct map
+to the statistical segment length (or similar metric
+used in the SCFT solver) from the PSO variable or
+constraint. 
+The monomer being referenced is specified with an
+entry of the form ``monomer [monomerID]`` where
+``[monomerID]`` follows the convention defined above.
+The simple syntax for use as a variable
+would resemble
+
+::
+
+    KuhnLength{
+        monomer 0
+        lower   1.0
+        upper   2.0
+        velocity_cap    0.6
+    }
+
+while use as a constraint (to fix the segment length)
+would resemble
+
+::
+
+    KuhnLength{
+        monomer 0
+        value   1.0
+    }
+
+
 
 Statistical Segment Length Ratios
 ---------------------------------
 
-.. include:: vars/kuhnratio.rst
-    :start-after: summary
-    :end-before: summary
+This relationship references the ratio
+between the statistical segment lengths
+of two monomers. Similarly to the ratio of
+block lengths, the log of the ratio is used
+here as well. The relationship is defined in
+a ``KuhnRatio{ ... }`` block. 
+Since only two monomers are considered in one
+relationship, both monomer IDs are specified
+in a single entry of the form
+``monomers  [numeratorID]   [denominatorID]``
+where *[numeratorID]* is the ID of the monomer
+in the numerator of the ratio and 
+*[denominatorID]* is the ID of the monomer in
+the denominator of the ratio.
+As with the Block length ratio relationship,
+the KuhnRatio variable bounds and constraint
+values expect the logarithmic value.
+When used as a variable, the relationship
+would be specified with
+
+::
+
+    KuhnRatio{
+        monomers    0   1
+        lower   -1.0
+        upper   1.0
+        velocity_cap    1.0
+    }
+
+while use as a constraint would resemble
+
+::
+
+    KuhnRatio{
+        monomers    0   1
+        value   0.693
+    }
+
 
 Flory-Huggins :math:`{\chi}` Parameters
 ---------------------------------------
 
-.. include:: vars/chi.rst
-    :start-after: summary
-    :end-before: summary
+This relationship acts as a direct map to
+the Flory-Huggins interaction parameter,
+:math:`{\chi}_{i,j}` between monomers
+:math:`i` and :math:`j`.
+This relationship is specified within a
+``Chi{ ... }`` block.
+Monomers are identified in a similar format
+to that used for segment length ratios,
+``monomers  [monomerID_1]   [monomerID_2]``
+where the two monomer IDs listed in brackets
+would be the integer index for the interacting
+monomers. The monomer IDs can be listed in any
+order, but by convention the lower index 
+is typically listed first. The format of this
+relationship in the PscfInverse parameter file
+would be similar to one of
+
+::
+
+    Chi{
+        monomers    0   1
+        lower   10.0
+        upper   30.0
+        velocity_cap    15.0
+    }
+    
+    Chi{
+        monomers    0   1
+        value   25
+    }
+
+The latter format, that for use as a constraint, 
+currently should see limited use.
