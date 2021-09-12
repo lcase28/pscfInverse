@@ -31,6 +31,8 @@ from pscfinverse.util.iotools import FileParser
 
 client = DaskCalculationManager()
 
+## Helper methods
+
 def wrongKey(expected,got):
     msg = "Expected key '{}'; got '{}'"
     raise(ValueError(msg.format(expected,got)))
@@ -49,6 +51,8 @@ def ensureblockend(word):
 def closeblock(words):
     word = next(words)
     ensureblockend(word)
+
+## Search Space definition methods
 
 def parseSearchSpace(words,key):
     """
@@ -250,7 +254,59 @@ def parseConstraint(words,key):
     else:
         raise(ValueError("Invalid key for search variable declaration, {}.".format(key)))
     return varobj
-        
+
+## Phase list definition methods
+
+def parsePhases(words,key):
+    checkKey("Phases{",key)
+    key = next(words)
+    checkKey("scft_solver",key)
+    key = next(words)
+    checkKey("pscf",key)
+    key = next(words)
+    if key == "input_root":
+        root = pathlib.Path.cwd() / next(words)
+    else:
+        root = pathlib.Path.cwd()
+    hasPhase = True
+    tgts = []
+    cmps = []
+    while hasPhase:
+        key = next(words)
+        if key == "TargetPhase{":
+            tgts.append(parsePhaseDetails(words,root))
+        elif key == "CompetingPhase{":
+            cmps.append(parsePhaseDetails(words,root))
+        elif isblockend(key):
+            hasPhase = False
+        else:
+            msg = "Unexpected key in Phases block, {}"
+            raise(ValueError(msg.format(key)))
+    return MesophaseManager(cmps, tgts)
+
+def parsePhaseDetails(words,root):
+    key = next(words)
+    checkKey("name",key)
+    name = next(words)
+    key = next(words)
+    checkKey("model_file",key)
+    model = root / next(words)
+    key = next(words)
+    disfile = None
+    distol = 0.001
+    if key == "range_check":
+        disfile = next(words)
+        distol = words.next_float()
+        key = next(words)
+    coreOpts = None
+    if key == "core_option":
+        coreOpts = []
+        while key == "core_option":
+            coreOpts.append(words.next_int())
+            key = next(words)
+    ensureblockend(key) # At this point, key should hold block terminator "}"
+    return PscfMesophase.fromFieldGenFile(name, model, coreOpts, disfile, distol)
+
 
 if __name__ == '__main__':
     ### Operation
