@@ -27,6 +27,223 @@ import os
 import pathlib
 import subprocess as sub
 
+class PscfIterationData:
+    """
+    Helper class to store data on an individual iteration step.
+    """
+    def __init__(self, itr, tot_res, res, stress, cell_param, f_helm):
+        self.itr = itr
+        self.error = tot_res
+        self.res = res
+        if len(stress) == len(cell_param):
+            self.N_cell_param = len(cell_param)
+            self.stress = stress
+            self.cell_param = cell_param
+        else:
+            raise(ValueError("stress and cell_param must have the same number of elements."))
+        self.f_helm = f_helm
+    
+    @classmethod
+    def from_file(cls, f):
+        """
+        Initialize by reading directly from open, readable file f.
+        
+        If no next iteration is found, return None.
+        """
+        out = None
+        foundEntry = False
+        while not foundEntry:
+            line = f.readline()
+            if not line:
+                break
+            line = line.strip()
+            dat = line.split(maxsplit=1)
+            if len(dat) > 0:
+                if dat[0].strip() == "Iteration":
+                    foundEntry = True
+                    itr = int(dat[1].strip())
+        def parseline(src):
+            src = src.strip()
+            dat = src.split("=",maxsplit=1)
+            src = dat[1]
+            src = src.strip()
+            src = src.split()
+            pout = []
+            for s in src:
+                pout.append(float(s.strip()))
+            return pout
+        if foundEntry:
+            # SCF + stress residuals
+            line = f.readline()
+            if not line:
+                return None
+            tot_res = parseline(line)
+            # SCF residuals
+            line = f.readline()
+            if not line:
+                return None
+            res = parseline(line)
+            # stress
+            line = f.readline()
+            if not line:
+                return None
+            stress = parseline(line)
+            # cell param
+            line = f.readline()
+            if not line:
+                return None
+            cell_param = parseline(line)
+            # f_helmholtz
+            line = f.readline()
+            if not line:
+                return None
+            helm = parseline(line)
+            out = cls(itr,tot_res[0],res[0],stress,cell_param,helm[0])
+        return out
+    
+    @property
+    def csv_headers(self):
+        formstr = "{},{}"
+        s = formstr.format("itr","error")
+        s = formstr.format(s,"residuals")
+        for i in range(self.N_cell_param):
+            s = formstr.format(s,"stress_{}".format(i))
+        for i in range(self.N_cell_param):
+            s = formstr.format(s,"cell_param_{}".format(i))
+        s = formstr.format(s,"f_Helmholtz")
+        return "{}\n".format(s)
+    
+    @property
+    def csv_data(self):
+        formstr = "{},{}"
+        s = formstr.format(self.itr, self.error)
+        s = formstr.format(s,self.res)
+        for i in range(self.N_cell_param):
+            s = formstr.format(s,self.stress[i])
+        for i in range(self.N_cell_param):
+            s = formstr.format(s,self.cell_param[i])
+        s = formstr.format(s,self.f_helm)
+        return "{}\n".format(s)
+    
+    def write_csv(self, target, headers=False):
+        """
+        Write self to a CSV file.
+        
+        if headers is True, also write a header line.
+        """
+        if headers:
+            target.write(self.csv_headers)
+        target.write(self.csv_data)
+
+
+class PscfIterateLog:
+    """
+    Class to read the log from a PSCF ITERATE command.
+    
+    NOTE: Log must have been saved to file.
+    
+    NOTE: Presently does not handle SWEEP operations.
+    """
+    
+    def __init__(self, fname):
+        """
+        Initialize object by reading from file named fname.
+        
+        Argument expected_iterations is used to pre-allocate
+        arrays for efficiency. Should be an integer if included.
+        """
+        self._iter = []
+        with open(fname) as f:
+            while True:
+                newiter = PscfIterationData.from_file(f)
+                if newiter is None:
+                    break
+                self._iter.append(newiter)
+        self._itr = np.array([i.itr for i in self._iter])
+        self._error = np.array([i.error for i in self._iter])
+        self._res = np.array([i.res for i in self._iter])
+        self._stress = np.array([i.stress for i in self._iter])
+        self._cell = np.array([i.cell_param for i in self._iter])
+        self._helm = np.array([i.f_helm for i in self._iter])
+        
+        stackvect = np.column_stack( (self._itr, self._error, self._res, self._helm) )
+        left_stack = stackvect[:,0:-1]
+        right_stack = stackvect[:,-1:]
+        self._full = np.concatenate( (left_stack, self._stress, self._cell, right_stack), axis=1)
+    
+    @property
+    def niter(self):
+        return len(self._iter)
+    
+    @property
+    def start_iteration(self):
+        """ Return the iteration number that was given at the start of the log (0 or 1) """
+        return self._itr[0]
+    
+    @property
+    def end_iteration(self):
+        """ Return the iteration number that was given for the last found iteration. """
+        return self._itr[-1]
+    
+    @property
+    def itr(self):
+        return np.array(self._itr)
+    
+    @property
+    def error(self):
+        return np.array(self._error)
+    
+    @property
+    def residual(self):
+        return np.array(self._res)
+    
+    @property
+    def stress(self):
+        return np.array(self._stress)
+    
+    @property
+    def N_cell_param(self):
+        return self._iter[0].N_cell_param
+    
+    @property
+    def cell_param(self):
+        return np.array(self._cell)
+    
+    @property
+    def f_Helmholtz(self):
+        return np.array(self._helm)
+    
+    def csv_headers(self, prepend=""):
+        prepend = prepend.strip()
+        prepend = prepend.strip(",")
+        return "{},{}\n".format(prepend,self._iter[0].csv_headers)
+    
+    def csv_data(self, prepend=""):
+        s = ""
+        prepend = prepend.strip()
+        prepend = prepend.strip(",")
+        for itr in self._iter:
+            s = s + "{},{}\n".format(prepend,itr.csv_data)
+        return s
+    
+    def csv_string(self, prepend_header="", prepend_data=""):
+        head = self.csv_headers(prepend_header)
+        data = self.csv_data(prepend_data)
+        return "{}{}".format(head,data)
+    
+    def write_csv(self, target, prepend_data="", write_header=False, prepend_header=""):
+        if write_header:
+            target.write(self.csv_string(prepend_header, prepend_data))
+        else:
+            target.write(self.csv_data(prepend_data))
+    
+    def __len__(self):
+        return self.niter
+    
+    def __array__(self):
+        return np.array(self._full)
+    
+
 class PscfMesophase(MesophaseBase):
     """ A Mesophase manager for simulating in PSCF. """
     
