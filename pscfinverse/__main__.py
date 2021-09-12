@@ -35,17 +35,221 @@ def wrongKey(expected,got):
     msg = "Expected key '{}'; got '{}'"
     raise(ValueError(msg.format(expected,got)))
 
+def checkKey(expected,got):
+    if not (got == expected):
+        wrongKey(expected,got)
+
+def isblockend(word):
+    return (word == "}")
+
+def ensureblockend(word):
+    if not isblockend(word):
+        raise(ValueError("Expected end of block. Got {}.".format(word)))
+
+def closeblock(words):
+    word = next(words)
+    ensureblockend(word)
+
 def parseSearchSpace(words,key):
     """
     Read the input file to collate variables and constraints.
     """
     if not (key == "SearchSpace{"):
         raise(ValueError("Invalid key for SearchSpace block {}".format(key)))
-    word = next(words)
-    if not (key == "Variables{"):
+    word = next(words) # Checking for start of variables block
+    if not (word == "Variables{"):
         wrongKey("Variables{",word)
+    variables = []
+    velcap = []
+    endblock = False
+    while not endblock:
+        word = next(words)
+        if word == "}":
+            endblock = True
+        else:
+            v1, v2 = parseVariable(words,word)
+            variables.append(v1)
+            velcap.append(v2)
+    word = next(words) # checking for start of constraints block
+    if not (word == "Constraints{"):
+        wrongKey("Constraints{",word)
+    constraints = []
+    endblock = False
+    while not endblock:
+        word = next(words)
+        if isblockend(word):
+            endblock = True
+        else:
+            constraints.append(parseConstraint(words,word))
+    closeblock(words)
+    return variables, constraints, velcap
+
+def parseVarBounds(words,word):
+    checkKey("lower",word)
+    lower = words.next_float()
+    word = next(words)
+    checkKey("upper",word)
+    upper = words.next_float()
+    word = next(words)
+    ckeckKey("velocity_cap",word)
+    velcap = words.next_float()
+    initval = lower + ( (upper - lower) / 2 )
+    closeblock(words)
+    return lower, upper, velcap, initval
+
+def parseVariable(words,key):
+    """
+    Read input data for search variable and return the variable object.
+    """
+    if key == "BlockLength{":
+        blocks = []
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            blocks.append((pnum,bnum))
+            word = next(words)
+        lower, upper, velcap, initval = parseVarBounds(words, word)
+        varobj = BlockLengthVariable(blocks=blocks,value=initval, lower=lower, upper=upper)
+    elif key == "BlockRatio{":
+        nblocks = []
+        dblocks = []
+        # numerator
+        word = next(words)
+        checkKey("Numerator{",word)
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            nblocks.append( (pnum,bnum) )
+            word = next(words)
+        ensureblockend(word)
+        # denominator
+        word = next(words)
+        checkKey("Denominator{",word)
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            dblocks.append( (pnum,bnum) )
+            word = next(words)
+        ensureblockend(word)
+        word = next(words)
+        lower, upper, velcap, initval = parseVarBounds(words, word)
+        varobj = BlockRatioVariable(nblocks, dblocks, initval, lower, upper)
+    elif key == "Chi{":
+        word = next(words)
+        checkKey("monomers", word)
+        mon1 = words.next_int()
+        mon2 = words.next_int()
+        word = next(words)
+        lower, upper, velcap, initval = parseVarBounds(words, word)
+        varobj = ChiVariable(mon1, mon2, initval, lower, upper)
+    elif key == "KuhnLength{":
+        word = next(words)
+        checkKey("monomer", word)
+        mon1 = words.next_int()
+        word = next(words)
+        lower, upper, velcap, initval = parseVarBounds(words, word)
+        varobj = KuhnVariable(mon1, initval, lower, upper)
+    elif key == "KuhnRatio{":
+        word = next(words)
+        checkKey("monomers", word)
+        mon1 = words.next_int()
+        mon2 = words.next_int()
+        word = next(words)
+        lower, upper, velcap, initval = parseVarBounds(words, word)
+        varobj = KuhnRatioVariable(mon1, mon2, initval, lower, upper)
+    else:
+        raise(ValueError("Invalid key for search variable declaration, {}.".format(key)))
+    return varobj, velcap
+
+def parseConstraintValue(words,word):
+    checkKey("value",word)
+    value = words.next_float()
+    lower = value - 0.1
+    upper = value + 0.1
+    closeblock(words)
+    return value, lower, upper
     
-    
+def parseConstraint(words,key):
+    """
+    Read input data for search constraint and return the variable object.
+    """
+    if key == "BlockLength{":
+        # block length
+        blocks = []
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            blocks.append((pnum,bnum))
+            word = next(words)
+        initval, lower, upper = parseConstraintValue(words,word)
+        varobj = BlockLengthVariable(blocks=blocks,value=initval, lower=lower, upper=upper)
+    elif key == "BlockRatio{":
+        # block ratio
+        nblocks = []
+        dblocks = []
+        # numerator
+        word = next(words)
+        checkKey("Numerator{",word)
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            nblocks.append( (pnum,bnum) )
+            word = next(words)
+        ensureblockend(word)
+        # denominator
+        word = next(words)
+        checkKey("Denominator{",word)
+        word = next(words)
+        checkKey("block",word)
+        while word == "block":
+            pnum = words.next_int()
+            bnum = words.next_int()
+            dblocks.append( (pnum,bnum) )
+            word = next(words)
+        ensureblockend(word)
+        # value
+        word = next(words)
+        initval, lower, upper = parseConstraintValue(words,word)
+        varobj = BlockRatioVariable(nblocks, dblocks, initval, lower, upper)
+    elif key == "Chi{":
+        # chi
+        word = next(words)
+        checkKey("monomers", word)
+        mon1 = words.next_int()
+        mon2 = words.next_int()
+        word = next(words)
+        initval, lower, upper = parseConstraintValue(words,word)
+        varobj = ChiVariable(mon1, mon2, initval, lower, upper)
+    elif key == "KuhnLength{":
+        # Kuhn length
+        word = next(words)
+        checkKey("monomer", word)
+        mon1 = words.next_int()
+        word = next(words)
+        initval, lower, upper = parseConstraintValue(words,word)
+        varobj = KuhnVariable(mon1, initval, lower, upper)
+    elif key == "KuhnRatio{":
+        # Kuhn Ratio
+        word = next(words)
+        checkKey("monomers", word)
+        mon1 = words.next_int()
+        mon2 = words.next_int()
+        word = next(words)
+        initval, lower, upper = parseConstraintValue(words,word)
+        varobj = KuhnRatioVariable(mon1, mon2, initval, lower, upper)
+    else:
+        raise(ValueError("Invalid key for search variable declaration, {}.".format(key)))
+    return varobj
         
 
 if __name__ == '__main__':
@@ -66,28 +270,12 @@ if __name__ == '__main__':
         # Set core parameters
         FITNESS_SELECTOR.optimizationType = OptimizationType.maximize
         
+        # Search Space definition
         word = next(words)
         expected = "SearchSpace{"
-        if not word == expected:
-            wrongKey(expected,word)
-        else:
-            variables, constants = parseSearchSpace(words,word)
-        
-        # Create Variables and VariableSet
-        variables = []
-        variables.append( BlockRatioVariable((0,0),(0,1), value=0.0, lower=-2.5, upper=2.5 ) )
-        print("Made {}".format(variables[0]))
-        variables.append( ChiVariable( 0, 1, value=15, lower=10, upper=20 ) )
-        print("Made {}".format(variables[1]))
-        variables.append( KuhnVariable( 0, value=1.5, lower=1.0, upper=2.0 ) )
-        print("Made {}".format(variables[2]))
-        
-        # Create Constants
-        constants = []
-        constants.append( BlockLengthVariable( [ (0,0),(0,1) ], value=1.0, upper=2.0 ) )
-        
+        checkKey(expected,word)
+        variables, constants, velcap = parseSearchSpace(words,word)
         varset = PolymerVariableSet(variables,constants)
-        print("Made Variable Set")
         
         # Create Mesophases and Phase Managers
         pwd = pathlib.Path.cwd()
