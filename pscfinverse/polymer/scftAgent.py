@@ -1,8 +1,8 @@
 # Library imports
-from psoinverse.polymer.phases import MesophaseManager
-from psoinverse.polymer.variables import PolymerVariableSet
-from psoinverse.pso.agent import Agent
-from psoinverse.util.iotools import checkPath, writeCsvLine
+from pscfinverse.polymer.phases import MesophaseManager
+from pscfinverse.polymer.variables import PolymerVariableSet
+from pscfinverse.pso.agent import Agent
+from pscfinverse.util.iotools import checkPath, writeCsvLine
 
 # Other imports
 from copy import deepcopy

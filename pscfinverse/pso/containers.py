@@ -13,8 +13,8 @@ from enum import Enum
 import numpy as np
 
 # Project Imports
-from psoinverse.pso.variables import VariableBase
-from psoinverse.pso.core import Point, Velocity
+from pscfinverse.pso.variables import VariableBase
+from pscfinverse.pso.core import Point, Velocity
 
 class ContainerStatusTypes(Enum):
     stable = 1
@@ -32,7 +32,7 @@ class ContainerStatusError(Exception):
     ----------
         caller_class
             The Class of the container raising the error
-        caller_status : psoinverse.PSO.psocontainers.ContainerStatusTypes
+        caller_status : pscfinverse.PSO.psocontainers.ContainerStatusTypes
             The status of the caller at the time of the error
         trigger_action
             The attempted action (as a method object) which triggered

@@ -1,8 +1,8 @@
 # LIBRARY IMPORTS
-from psoinverse.polymer.phases import MesophaseBase
-from psoinverse.polymer.variables import MesophaseVariable
-import psoinverse.polymer.parameters as parameters
-import psoinverse.util.contexttools as contexttools
+from pscfinverse.polymer.phases import MesophaseBase
+from pscfinverse.polymer.variables import MesophaseVariable
+import pscfinverse.polymer.parameters as parameters
+import pscfinverse.util.contexttools as contexttools
 
 # Related Libraries
 from pscfFieldGen.generation import (
@@ -255,7 +255,7 @@ class PscfMesophase(MesophaseBase):
         that all template files are compatible (that system definitions match).
         These checks are assumed to have been done by the user.
         
-        In parameter definitions, 'fileManager' refers to psoinverse.SCFT.PSCF.FileManagers
+        In parameter definitions, 'fileManager' refers to pscfinverse.SCFT.PSCF.FileManagers
         
         Parameters
         ----------
@@ -352,7 +352,7 @@ class PscfMesophase(MesophaseBase):
         
         Parameters
         ----------
-        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+        VarSet : pscfinverse.mesophases.mesophaseVariables.VariableSet
             The set of all variables to be updated, with their 
             current values
         root : pathlib.Path (OS-dependent type)
@@ -465,7 +465,7 @@ class PscfMesophase(MesophaseBase):
         
         Parameters
         ----------
-        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+        VarSet : pscfinverse.mesophases.mesophaseVariables.VariableSet
             The set of MesophaseVariable objects to be updated.
         
         Returns

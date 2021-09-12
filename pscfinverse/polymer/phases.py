@@ -16,8 +16,8 @@ import io
 import numpy as np
 
 # Project Imports
-from psoinverse.polymer.variables import PolymerVariableSet
-from psoinverse.util.iotools import checkPath
+from pscfinverse.polymer.variables import PolymerVariableSet
+from pscfinverse.util.iotools import checkPath
 
 class MesophaseBase(ABC):
     """ 
@@ -94,7 +94,7 @@ class MesophaseBase(ABC):
         
         Parameters
         ----------
-        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+        VarSet : pscfinverse.mesophases.mesophaseVariables.VariableSet
             The set of all variables to be updated, with their 
             current values
         root : pathlib.Path (OS-dependent type)
@@ -225,7 +225,7 @@ class MesophaseBase(ABC):
         
         Parameters
         ----------
-        VarSet : psoinverse.mesophases.mesophaseVariables.VariableSet
+        VarSet : pscfinverse.mesophases.mesophaseVariables.VariableSet
             The set of MesophaseVariable objects to be updated.
         
         Returns

@@ -14,9 +14,9 @@ import re
 import numpy as np
 
 # Project Imports
-import psoinverse.polymer.parameters as params
-from psoinverse.pso.variables import VariableBase
-from psoinverse.pso.containers import PsoVariableSet
+import pscfinverse.polymer.parameters as params
+from pscfinverse.pso.variables import VariableBase
+from pscfinverse.pso.containers import PsoVariableSet
 
 @unique
 class VariableTypes(Enum):

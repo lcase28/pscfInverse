@@ -9,9 +9,9 @@ import pathlib
 import numpy as np
 
 # Project imports
-from psoinverse.pso.containers import PsoPositionData, PsoVariableSet
-from psoinverse.pso.core import Point, Velocity, FitnessComparator, FITNESS_SELECTOR
-from psoinverse.util.iotools import writeCsvLine, checkPath
+from pscfinverse.pso.containers import PsoPositionData, PsoVariableSet
+from pscfinverse.pso.core import Point, Velocity, FitnessComparator, FITNESS_SELECTOR
+from pscfinverse.util.iotools import writeCsvLine, checkPath
 
 class Agent(ABC):
     """Abstract base class for PSO Agents."""

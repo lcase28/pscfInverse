@@ -12,7 +12,7 @@ class ReportLevel(Enum):
 
 class Debug(object):
     """
-    Stores debugging state for full psoinverse module.
+    Stores debugging state for full pscfinverse module.
     Called thoughout project stack with various printouts.
     Only prints those at set detail.
     """

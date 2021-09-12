@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 # Project imports
-from psoinverse.pso.core import Point, FITNESS_SELECTOR
-from psoinverse.pso.agent import Agent
+from pscfinverse.pso.core import Point, FITNESS_SELECTOR
+from pscfinverse.pso.agent import Agent
 
 class Integrator(ABC):
     """

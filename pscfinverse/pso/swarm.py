@@ -9,10 +9,10 @@ import numpy as np
 import networkx as nx
 
 # Library imports
-from psoinverse.pso.core import Point, FITNESS_SELECTOR
-from psoinverse.pso.integrators import Integrator
-from psoinverse.pso.agent import Agent
-from psoinverse.util.iotools import checkPath, writeCsvLine
+from pscfinverse.pso.core import Point, FITNESS_SELECTOR
+from pscfinverse.pso.integrators import Integrator
+from pscfinverse.pso.agent import Agent
+from pscfinverse.util.iotools import checkPath, writeCsvLine
 
 def allHaveStep(neighbors, step):
     """ True if all agents have completed step """
@@ -31,14 +31,14 @@ class Swarm(object):
         graph : networkx.Graph (undirected)
             A graph describing the communication links in the swarm.
             Nodes should be integers corresponding to the Agent IDs.
-        agents : list of psoinverse.PSO.Agent.Agent
+        agents : list of pscfinverse.PSO.Agent.Agent
             A list containing all agents in the swarm. List indexes
             should correspond with the Agent IDs, such that 
             Agent_n can be accessed through agents[n].
             All agents should have had their initialization started
             (Calculations need not have finished, but should be 
             awaiting step 0 calculation results)
-        integrator : psoinverse.PSO.Integrators.Integrator child class object
+        integrator : pscfinverse.PSO.Integrators.Integrator child class object
             An object derived from the Integrator abstract base class
             representing the update procedure for the swarming behavior.
         root : pathlib.path, optional.
