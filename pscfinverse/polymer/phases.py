@@ -290,8 +290,8 @@ class MesophaseManager(object):
             The set of initialized candidate phases.
             All should be capable of launching simulations
             as-is.
-        target : MesophaseBase sub class
-            The phase object to be treated as the "target" phase.
+        target : MesophaseBase sub-class or list of MesophaseBase sub class
+            The phase objects to be treated as the "target" phases.
             As with competitors, should be initialized and ready to run.
         """
         ## Ensure target is not in candidate phases
@@ -302,11 +302,20 @@ class MesophaseManager(object):
                 raise(ValueError(duplicationMsg.format(c.phaseName)))
             else:
                 names.append(c.phaseName)
-        if target.phaseName in names:
-            raise(ValueError(duplicationMsg.format(target.phaseName)))
+        if isinstance(target,MesophaseBase):
+            targetlist = [target]
+        elif isinstance(target,list):
+            targetlist = target
+        else:
+            raise(TypeError("Invalid type for input target: {}".format(type(target))))
+        for t in targetlist:
+            if t.phaseName in names:
+                raise(ValueError(duplicationMsg.format(t.phaseName)))
+            else:
+                names.append(t.phaseName)
                 
         self._competitors = competitors
-        self._target = target
+        self._target = targetlist
         self._fitness = np.NINF
     
     @property
@@ -316,7 +325,7 @@ class MesophaseManager(object):
     
     @property
     def target(self):
-        """ The target phase. """
+        """ The list of target phases. """
         return self._target
     
     @property
@@ -324,7 +333,9 @@ class MesophaseManager(object):
         """
         Specifies if all competing phases are stable.
         """
-        flag = self.target.stable
+        flag = True
+        for t in self.target:
+            flag = flag and t.stable
         for c in self.competitors:
             flag = flag and c.stable
         return flag
@@ -334,7 +345,9 @@ class MesophaseManager(object):
         """
         True if any candidate is still updating.
         """
-        flag = self.target.updating
+        flag = False
+        for t in self.target:
+            flag = flag or t.updating
         for c in self.competitors:
             flag = flag or c.updating
         return flag
@@ -344,7 +357,9 @@ class MesophaseManager(object):
         """
         True if all competitors are finished calculating
         """
-        flag = self.target.calculationFinished
+        flag = True
+        for t in self.target:
+            flag = flag and t.calculationFinished
         for c in self.competitors:
             flag = flag and c.calculationFinished
         return flag
@@ -354,7 +369,9 @@ class MesophaseManager(object):
         """
         True if all candidates are ready for an update.
         """
-        flag = self.target.readyForStartUpdate
+        flag = True
+        for t in self.target:
+            flag = flag and t.readyForStartUpdate
         for c in self.competitors:
             flag = flag and c.readyForStartUpdate
         return flag
@@ -364,7 +381,9 @@ class MesophaseManager(object):
         """
         True if all candidates are ready for finishUpdate call.
         """
-        flag = self.target.readyForFinishUpdate
+        flag = True
+        for t in self.target:
+            flag = flag and t.readyForFinishUpdate
         for c in self.competitors:
             flag = flag and c.readyForFinishUpdate
         return flag
@@ -404,10 +423,11 @@ class MesophaseManager(object):
             raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
         
         flag = True
-        phaseRoot = root/self.target.phaseName
-        success = self.target.startUpdate(varSet, phaseRoot, runner)
-        if not success:
-            flag = False  # if target fails, error state
+        for t in self.target:
+            phaseRoot = root/t.phaseName
+            success = t.startUpdate(varSet, phaseRoot, runner)
+            if not success:
+                flag = False  # if target fails, error state
         for c in self.competitors:
             phaseRoot = root/c.phaseName
             success = c.startUpdate(varSet, phaseRoot, runner)
@@ -421,9 +441,10 @@ class MesophaseManager(object):
             raise(ValueError("PhaseManager root path {} is invalid.".format(root)))
         
         flag = True
-        phaseRoot = root/self.target.phaseName
-        success = self.target.finishUpdate(phaseRoot)
-        flag = flag or success
+        for t in self.target:
+            phaseRoot = root/t.phaseName
+            success = t.finishUpdate(phaseRoot)
+            flag = flag or success
         for c in self.competitors:
             phaseRoot = root/c.phaseName
             success = c.finishUpdate(phaseRoot)
@@ -434,7 +455,13 @@ class MesophaseManager(object):
         return flag
     
     def _evaluate_fitness(self):
-        tgtE = self.target.energy
+        startphase = self.target[0]
+        tgtE = startphase.energy
+        # Consider most stable target for fitness
+        for t in self.target:
+            test = t.energy
+            if test < tgtE:
+                tgtE = test
         # Mesophase energies are defined relative to homogeneous
         # disorder. Initializing 'fit' to -tgtE effectively acts
         # to consider the disordered phase as a candidate.
@@ -465,9 +492,12 @@ class MesophaseManager(object):
         "<lbl>_<phaseName>" where <lbl> represents its status flag (tgt or cmp),
         and <phaseName> is the unique phase name assigned to the candidate.
         
-        The target phase is always placed at the start of the list.
+        The target phases are always placed at the start of the list.
         """
-        lbl = ["tgt_{}".format(self.target.phaseName)]
+        lbl = []
+        formstr = "tgt_{}"
+        for v in self.target:
+            lbl.append(formstr.format(v.phaseName))
         formstr = "cmp_{}"
         for v in self.competitors:
             lbl.append(formstr.format(v.phaseName))
@@ -481,7 +511,9 @@ class MesophaseManager(object):
         The energy at each list position corresponds to the candidate phase
         in the same position of the MesophaseManager.labels property.
         """
-        out = [self.target.energy]
+        out = []
+        for v in self.target:
+            out.append(v.energy)
         for v in self.competitors:
             out.append(v.energy)
         return out
@@ -491,10 +523,10 @@ class MesophaseManager(object):
         s = self.__class__.__name__ + ", "
         s += "Fitness = {}, ".format(self.fitness)
         formstring = "{}({}) = {:E}"
-        c = self.target
-        s += formstring.format("Tgt", c.phaseName, c.energy)
+        for t in self.target:
+            s += formstring.format("Tgt", t.phaseName, t.energy)
         for c in self.competitors:
-            s += formstring.format("Comp", c.phaseName, c.energy)
+            s += formstring.format("Cmp", c.phaseName, c.energy)
         s += "\n"
         return s
             
