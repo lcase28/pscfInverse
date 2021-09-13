@@ -104,14 +104,18 @@ parameters impacted by those search variables.</p>
 <h3>Phases Block<a class="headerlink" href="#phases-block" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">Phases{}</span></code> block defines all phases considered in the search,
 whether they are a target or competitor, and which SCFT solver
-is to be used.</p>
+is to be used. The energies of each of these phases is used to
+calculate the Fitness at each point in search space, <span class="math notranslate nohighlight">\({\Omega}\)</span>,
+using</p>
+<p>for set <span class="math notranslate nohighlight">\(T\)</span> of target phases and set <span class="math notranslate nohighlight">\(C\)</span> of competitors,
+and where <span class="math notranslate nohighlight">\(F_{i}\)</span> is the free energy of phase <span class="math notranslate nohighlight">\(i\)</span>.</p>
 <p>More detail on the <a class="reference internal" href="phases.html#param-phases"><span class="std std-ref">Phases Block Main Page</span></a></p>
 </div>
 <div class="section" id="pso-block">
 <h3>PSO Block<a class="headerlink" href="#pso-block" title="Permalink to this headline">¶</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">Pso{}</span></code> block defines the structure of the PSO search.
+<p>The <code class="docutils literal notranslate"><span class="pre">Pso{}</span></code> block defines details of the PSO search.
 This includes defining the PSO parameters, swarm size, and
-communication graph.</p>
+communication graph, and length of the search.</p>
 <p>More detail on the <a class="reference internal" href="pso.html#param-pso"><span class="std std-ref">PSO Block Main Page</span></a></p>
 </div>
 <div class="section" id="commands-block">

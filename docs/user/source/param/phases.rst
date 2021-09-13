@@ -55,6 +55,7 @@ cylinders (hex), double gyroid (gyr), and lamellae (lam).
         CompetingPhase{
             name    lam
             model_file  lam/model
+            range_check rho_rgrid.out   0.001
         }
     }
 
@@ -120,6 +121,8 @@ Specific requirements for the model file can be found in instructions
 for PscfFieldGen.
 
 Each phase block can also include the optional label ``range_check``.
+This optional input should be placed immediately following the model
+file input.
 If present, this label sets the phase to check the total variation
 in the final real-space density field to screen for a collapse
 to disorder. In order to use this check, the template PSCF parameter file
@@ -138,3 +141,31 @@ rgrid density field file, relative to the SCFT working directory
 *FIELD_TO_RGRID* command), and where ``[field_tolerance]``
 is a floating point value identifying the minimum required 
 variation in the density field to be considered "not disordered".
+
+Finally, each phase block allows a set of core monomer options to be
+to be specified (core monomer inputs in the model file are ignored).
+These should be listed after the ``range_check``
+input (if present) and should be the last inputs included for the phase.
+For each monomer that should be considered an option for selecting the
+structure cores, include the entry ``core_option    [monomerID]``.
+If no core options are specified, all monomers in the system are considered
+potential core monomers. **Note: If the phase being described is lamellar, 
+these core options are ignored during field generation.**
+
+Thus, a hypothetical phase declaration block with all optional details could
+look like the following:
+
+::
+
+    TargetPhase{
+        name    bcc
+        model_file  bcc/model
+        range_check out.rho_rgrid   0.001
+        core_option 0
+        core_option 2
+        core_option 3
+    }
+
+In this example, a range check is used on the final rgrid field to
+check for disorder. Additionally, monomer 1 is omitted from the core
+selection process (as are monomers 4+, if they exist in the system.)

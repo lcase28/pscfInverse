@@ -502,4 +502,14 @@ would be similar to one of
     }
 
 The latter format, that for use as a constraint, 
-currently should see limited use.
+currently should see limited use. Given that
+:math:`{\chi}` parameters are not presently used
+in any relationships other than direct maps, and
+that the program leaves unmodified any portion of
+the PSCF parameter file not referenced from the
+variables or constraints, :math:`{\chi}` parameters
+not used as variables can simply be specified at their
+constant values within the parameter file and excluded
+from the PSO search space definition;
+the value in the parameter file would then be left
+as a constant throughout the search.

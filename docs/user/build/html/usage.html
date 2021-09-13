@@ -1,0 +1,167 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Usage &#8212; pscfinverse 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Parameter File" href="param/main.html" />
+    <link rel="prev" title="Installation" href="install.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="usage">
+<span id="usage-main"></span><h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="inputs">
+<h2>Inputs<a class="headerlink" href="#inputs" title="Permalink to this headline">¶</a></h2>
+<p>Running a PSO inverse design calculation requires several files:</p>
+<ul>
+<li><p>A Parameter File</p></li>
+<li><p>For each phase:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>A model file</p></li>
+<li><p>A template PSCF Parameter File</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p>Each of these is described on the Parameter File page.</p>
+</div>
+<div class="section" id="command-line-usage">
+<h2>Command Line Usage<a class="headerlink" href="#command-line-usage" title="Permalink to this headline">¶</a></h2>
+<p>PscfInverse must be run in an MPI environment to allow parallel execution
+of SCFT calculations. This means that an MPI implementation must be
+available on the system used to run the calculation. On many
+supercomputing systems, the MPI implementation can be made available
+with (assuming use of the OpenMPI) <code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">ompi</span></code>.
+After the MPI implementation is loaded, the program will be executed
+with the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mpiexec</span> <span class="o">-</span><span class="n">np</span> <span class="p">[</span><span class="n">MPI_NODES</span><span class="p">]</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pscfinverse</span> <span class="o">-</span><span class="n">f</span> <span class="n">param</span>
+</pre></div>
+</div>
+<p>This command can be considered in three parts. The first three
+entries (<code class="docutils literal notranslate"><span class="pre">mpiexec</span> <span class="pre">-np</span> <span class="pre">[MPI_NODES]</span></code>) tell the computer to
+execute the program in an MPI environment (<code class="docutils literal notranslate"><span class="pre">mpiexec</span></code>),
+and that the MPI environment should use a specific number (<em>[MPI_NODES</em>)
+of cores/nodes/workers for the execution.
+(On typical high-performance computing systems, mpiexec will automatically
+determine the specific hardware available to the calculation and will
+spread the MPI “nodes” accross this hardware.)</p>
+<p>The next three terms (<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pscfinverse</span></code>) tell the system to start a python
+interpreter and execute the <code class="docutils literal notranslate"><span class="pre">__main__</span></code> method of the <code class="docutils literal notranslate"><span class="pre">pscfinverse</span></code> python
+package, which is, of course, the main method of PscfInverse.</p>
+<p>The final two terms (<code class="docutils literal notranslate"><span class="pre">-f</span> <span class="pre">param</span></code>) are arguments passed to the main method of
+PscfInverse. The flag <code class="docutils literal notranslate"><span class="pre">-f</span></code> tells PscfInverse to expect the name of the
+parameter file for this run, and <code class="docutils literal notranslate"><span class="pre">param</span></code> is the name of the parameter file.</p>
+<p>Output from the program can be redirected directly to a file with the following
+command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mpiexec</span> <span class="o">-</span><span class="n">np</span> <span class="p">[</span><span class="n">MPI_NODES</span><span class="p">]</span> <span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pscfinverse</span> <span class="o">-</span><span class="n">f</span> <span class="n">param</span> <span class="o">&gt;</span> <span class="n">logfile</span>
+</pre></div>
+</div>
+<p>which is identical to the first command except that <code class="docutils literal notranslate"><span class="pre">&gt;</span> <span class="pre">logfile</span></code> tells the
+operating system to redirect the output to a file named <em>logfile</em>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pscfinverse</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html"> Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html"> Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#inputs">Inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#command-line-usage">Command Line Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="param/main.html"> Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output.html"> Output</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="install.html" title="previous chapter">Installation</a></li>
+      <li>Next: <a href="param/main.html" title="next chapter">Parameter File</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Logan Case.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/usage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
