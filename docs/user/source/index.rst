@@ -23,7 +23,6 @@ software
    :maxdepth: 2
    :caption: Contents:
     
-    Introduction    <intro>
     Installation    <install>
     Usage           <usage>
     Parameter File <param/main>
