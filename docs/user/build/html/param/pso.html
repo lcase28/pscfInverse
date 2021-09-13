@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>PSO Block &#8212; pscfinverse 0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="pso-block">
+<span id="param-pso"></span><h1>PSO Block<a class="headerlink" href="#pso-block" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pso{}</span></code> block defines details of the PSO search.
+This includes defining the PSO parameters, swarm size, and
+communication graph, and length of the search.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pso{</span> <span class="pre">...</span> <span class="pre">}</span></code> block defines the details of the PSO algorithm itself.
+The general format of this block is as shown below.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pso</span><span class="p">{</span>
+    <span class="n">random_seed</span>     <span class="mi">1234</span>
+    <span class="n">StandardIntegrator</span><span class="p">{</span>
+        <span class="n">constriction</span>    <span class="mf">0.729</span>
+        <span class="n">self_weight</span>     <span class="mf">2.05</span>
+        <span class="n">neighbor_weight</span> <span class="mf">2.05</span>
+    <span class="p">}</span>
+    <span class="n">Swarm</span><span class="p">{</span>
+        <span class="n">n_agent</span> <span class="mi">5</span>
+    <span class="p">}</span>
+    <span class="n">n_step</span>  <span class="mi">100</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The first entry in this block is the (optional) specification
+of the random number generator seed. This entry uses the
+form <code class="docutils literal notranslate"><span class="pre">random_seed</span>&#160; <span class="pre">[seed]</span></code> followed by an integer
+with 0 &lt;= [seed] &lt;= (2^32 - 1). If this option is omitted,
+a seed will be automatically selected based on the system
+clock. In either case (included or omitted), the random seed
+used in the calculation is printed to standard output.</p>
+<p>The next entry is an optional block specifying parameters for
+the PSO integration. The <code class="docutils literal notranslate"><span class="pre">StandardIntegrator{</span> <span class="pre">...</span> <span class="pre">}</span></code> block
+accepts three optional parameters corresponding to the
+standard PSO update equation. If any parameter is omitted,
+its standard value (shown in the above example) is selected.
+If the block overall is omitted, all standard values are used
+(giving the PSO “Standard” update equation).</p>
+<p>The first required input in the <code class="docutils literal notranslate"><span class="pre">Pso{</span> <span class="pre">...</span> <span class="pre">}</span></code> block is the
+<code class="docutils literal notranslate"><span class="pre">Swarm{</span> <span class="pre">...</span> <span class="pre">}</span></code> block. At present, the swarm block requires
+only the number of agents in the swarm (using the label <em>n_agent</em>
+followed by an integer), and has no optional entries.
+Several options will be available for the swarm block in future
+updates (this is the reason we use a separate sub-block
+for the swarm data), but these are still under development.</p>
+<p>Finally, the number of steps to be completed in the PSO search
+is given after the swarm block in the form <code class="docutils literal notranslate"><span class="pre">n_step</span> <span class="pre">[step_count]</span></code>,
+where <em>[step_count]</em> is a positive integer. When the search is complete
+each agent will have visited <em>( [step_count] + 1)</em> positions,
+specifically an initial position 0, and a position at the end of
+each step (1 through <em>[step_count]</em>).</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pscfinverse</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html"> Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html"> Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html"> Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main.html"> Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html"> Output</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Logan Case.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/param/pso.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

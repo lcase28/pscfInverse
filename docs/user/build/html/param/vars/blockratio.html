@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>BlockRatio &#8212; pscfinverse 0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="blockratio">
+<h1>BlockRatio<a class="headerlink" href="#blockratio" title="Permalink to this headline">¶</a></h1>
+<p>The BlockRatio relationship considers the ratio
+between the total lengths of two sets of blocks.
+These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by</p>
+<div class="math notranslate nohighlight">
+\[BlockRatio = \ln \frac{\sum_{i=1}^{N} L_{p_i,b_i}}{\sum_{i=1}^{D} L_{p_i,b_i}}\]</div>
+<p>for the ratio between blocks <span class="math notranslate nohighlight">\(N\)</span>
+and blocks <span class="math notranslate nohighlight">\(D\)</span>,
+when <span class="math notranslate nohighlight">\(L_{p_i, b_i}\)</span> is the length of
+block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.</p>
+<p>The BlockRatio relationship considers the ratio
+between the total lengths of two sets of blocks.
+These blocks need not be adjacent to
+each other, nor even in the same polymer chain.
+Mathematically, the variable value is given by</p>
+<div class="math notranslate nohighlight">
+\[BlockRatio = \ln \frac{\sum_{i=1}^{N} Len_{p_i,b_i}}{\sum_{i=1}^{N} Len_{p_i,b_i}}\]</div>
+<p>for a variable relating <span class="math notranslate nohighlight">\(N\)</span> blocks,
+when <span class="math notranslate nohighlight">\(Len_{p_i, b_i}\)</span> is the length of
+block <span class="math notranslate nohighlight">\(b_i\)</span> in polymer <span class="math notranslate nohighlight">\(p_i\)</span>.</p>
+<div class="section" id="general-syntax">
+<h2>General Syntax<a class="headerlink" href="#general-syntax" title="Permalink to this headline">¶</a></h2>
+<p>Similar to the BlockLength relationship,
+the BlockRatio relationship requires
+users to specify sets of polymer blocks
+to contribute to sums of lengths.
+Within the variable’s parameter file
+block, each contributing polymer block is
+identified with a parameter labeled <code class="docutils literal notranslate"><span class="pre">block</span></code>
+followed by a polymer and block id, all
+separated by whitespace. If written on the same
+line, this would appear as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="p">[</span><span class="n">polymer_id</span><span class="p">]</span>    <span class="p">[</span><span class="n">block_id</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>with <code class="docutils literal notranslate"><span class="pre">[polymer_id]</span></code> representing the ID
+of the polymer containing the block and
+<code class="docutils literal notranslate"><span class="pre">[block_id]</span></code> representing the ID of the
+block within polymer <em>polymer_id</em>.</p>
+<p>Indexing of polymers and blocks starts at 0,
+with the order of indexing defined by the
+SCFT solver’s interface. Generally speaking,
+in instances when polymers and blocks are not
+explicitly given ID numbers in the SCFT
+solver’s input files (such as the Fortan
+version of PSCF), the polymers and blocks
+are indexed in the order they first appear in
+the SCFT input file. When the SCFT input does
+specify block or polymer ID numbers, the
+given IDs would be kept in order, but shifted
+to start indexing at 0. Thus if the SCFT input
+file specified blocks <em>1</em>, <em>2</em>, and <em>3</em> in
+polymer <em>1</em> (with no polymer <em>0</em>), these would
+be accessed, respectively, with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+<span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+<span class="n">block</span>   <span class="mi">0</span>   <span class="mi">2</span>
+</pre></div>
+</div>
+<p>For example, assume you wish to specify
+(as either a variable or constraint) the
+ratio between the lengths of blocks <em>0</em> and <em>1</em> of
+polymer <em>0</em>. In this instance, the defining
+block in the parameter file would be</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BlockRatio</span><span class="p">{</span>
+    <span class="n">Numerator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+    <span class="p">}</span>
+    <span class="n">Denominator</span><span class="p">{</span>
+        <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">1</span>
+    <span class="p">}</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">...</span></code> acts as a placeholder for
+required data to make this a variable or
+constraint.</p>
+</div>
+<div class="section" id="variable-syntax">
+<h2>Variable Syntax<a class="headerlink" href="#variable-syntax" title="Permalink to this headline">¶</a></h2>
+<p>When using <code class="docutils literal notranslate"><span class="pre">BlockLength</span></code> as a search variable,
+the user must specify search bounds and a maximum
+velocity (magnitude) allowed for the agents in the
+swarm. The following table summarizes these input
+parameters.</p>
+<blockquote>
+<div><table class="docutils align-default">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 27%" />
+<col style="width: 49%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Label</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Lower Bound</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">lower</span></code></p></td>
+<td><p>The lowest value allowed
+for the variable during
+the search.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Upper Bound</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">upper</span></code></p></td>
+<td><p>The highest value allowed
+for the variable during
+the search.</p></td>
+</tr>
+<tr class="row-even"><td><p>Velocity Limit</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">velocity_cap</span></code></p></td>
+<td><p><em>Optional</em>
+The fastest an agent is
+allowed to move in the
+positive or negative
+direction along this
+search dimension.
+(Symmetric about
+<span class="math notranslate nohighlight">\(velocity = 0.0\)</span>).
+Default value is
+<span class="math notranslate nohighlight">\((upper - lower) / 10\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Because PscfInverse uses a unit time step in agent
+updates, the velocity limit is numerically
+equvallent to the farthest an agent is allowed
+to travel in a single step.</p>
+</div>
+<p>Consider a researcher studying neat
+<em>ABA’C</em> tetrablock terpolymer systems.
+If this researcher want to run a search
+allowing the total fraction of <em>A</em> to
+vary between 0.1 and 0.5. Assuming they
+wish to allow velocities up to <span class="math notranslate nohighlight">\(1/4\)</span>
+of the total width. The following could
+be an excerpt from their parameter file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PscfInverse</span><span class="p">{</span>
+    <span class="n">SearchSpace</span><span class="p">{</span>
+        <span class="n">Variables</span><span class="p">{</span>
+            <span class="o">...</span>
+            <span class="n">BlockLength</span><span class="p">{</span>
+                <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">0</span>
+                <span class="n">block</span>   <span class="mi">0</span>   <span class="mi">2</span>
+                <span class="n">lower</span>   <span class="mf">0.1</span>
+                <span class="n">upper</span>   <span class="mf">0.5</span>
+                <span class="n">velocity_cap</span>    <span class="mf">0.1</span>
+            <span class="p">}</span>
+            <span class="o">...</span>
+        <span class="p">}</span>
+        <span class="o">...</span>
+    <span class="p">}</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="constraint-syntax">
+<h2>Constraint Syntax<a class="headerlink" href="#constraint-syntax" title="Permalink to this headline">¶</a></h2>
+<p>When using <code class="docutils literal notranslate"><span class="pre">BlockLength</span></code> as a search constraint
+the user must specify the fixed total length.
+This is specified with the label <code class="docutils literal notranslate"><span class="pre">value</span></code> followed
+by a real number.</p>
+<p>Suppose that polymer 1 is a diblock copolymer.
+Suppose, also, that the user wishes to normalize it
+to unit length (such that the total length of the
+polymer is 1). The following could be an excerpt from
+the required parameter file.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PscfInverse</span><span class="p">{</span>
+    <span class="n">SearchSpace</span><span class="p">{</span>
+        <span class="o">...</span>
+        <span class="n">Constraints</span><span class="p">{</span>
+            <span class="o">...</span>
+            <span class="n">BlockLength</span><span class="p">{</span>
+                <span class="n">block</span>   <span class="mi">1</span>   <span class="mi">0</span>
+                <span class="n">block</span>   <span class="mi">1</span>   <span class="mi">1</span>
+                <span class="n">value</span>   <span class="mf">1.0</span>
+            <span class="p">}</span>
+            <span class="o">...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="o">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">pscfinverse</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../main.html"> Parameter File</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Logan Case.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../../_sources/param/vars/blockratio.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

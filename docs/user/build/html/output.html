@@ -1,0 +1,387 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Output &#8212; pscfinverse 0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Parameter File" href="param/main.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="output">
+<h1>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h1>
+<p>Several forms of output are produced by PscfInverse during a calculation.
+All of this output is placed within the directory from which the program
+was invoked. All of the output falls into one of three categories:
+Runtime information, agent-specific data, and swarm-level data.</p>
+<div class="section" id="runtime-information">
+<h2>Runtime Information<a class="headerlink" href="#runtime-information" title="Permalink to this headline">¶</a></h2>
+<p>During program execution, some information is printed to standard output
+(<em>i.e.</em> printed to the console or piped to an output file).
+The majority of this runtime information is produced while parsing
+the parameter file to set up the problem. In particular, as the parameter
+file is read, the program prints each “token” or “word” as it is read from
+the file. If an error occurs during the setup of the problem, this output
+can be used to identify when the error occurred and where, roughly, the
+mistake may be in the parameter file (since the mistake is generally highlighted
+by one of the last tokens read from the file). In addition to tracing the
+interpretation of the parameter file, values chosen for certain parameters
+are also output. One key piece of data is the number used as the seed for
+the random number generator. If not specified, the program generates a seed
+automatically based on the system clock, and this value is printed to
+standard output in a line of the form <code class="docutils literal notranslate"><span class="pre">Random</span> <span class="pre">Seed</span> <span class="pre">Used:</span> <span class="pre">[seed]</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">[seed]</span></code> would be replaced by the integer value of the random seed.</p>
+<p>After the PSO calculation is complete, some time data is output.
+This data is printed in a line similar to</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Finished</span> <span class="n">Running</span><span class="p">:</span>   <span class="n">run_time</span> <span class="mf">3852.9761612415314</span><span class="n">s</span><span class="p">;</span>   <span class="n">process_time</span> <span class="mf">39.253919947</span><span class="n">s</span>
+</pre></div>
+</div>
+<p>In this line, the number following the label <code class="docutils literal notranslate"><span class="pre">run_time</span></code> indicates the wall (clock)
+time that elapsed from the start to the end of the PSO search.
+The number following the label <code class="docutils literal notranslate"><span class="pre">process_time</span></code> is an estimate of the amount of time
+spent actively performing operations in the PSO search, including checking for
+completion of SCFT calculations, parsing SCFT results, and updating agent positions.
+This <code class="docutils literal notranslate"><span class="pre">process_time</span></code> metric excludes time spent idling while waiting for SCFT calculations
+to complete. In general, the core PSO operations are substantially lighter and faster than
+the underlying SCFT calculations, which are the true bottle-neck in program operation.
+Because of this, the process time for a PSO calculation is several orders of magnitude
+smaller than the overall runtime.</p>
+</div>
+<div class="section" id="agent-level-data">
+<h2>Agent-Level Data<a class="headerlink" href="#agent-level-data" title="Permalink to this headline">¶</a></h2>
+<p>Each agent in the swarm outputs a significant amount of data throughout the calculation.
+In order to organize this data, each agent generates their own dedicated directory within
+the running directory. These directories are given the name <code class="docutils literal notranslate"><span class="pre">agent[ID]</span></code> where <code class="docutils literal notranslate"><span class="pre">[ID]</span></code>
+would be replaced with the agent’s integer ID number. These ID numbers range in value
+from 0 to <em>n_agent</em>.</p>
+<p>Within each <code class="docutils literal notranslate"><span class="pre">agent[ID]</span></code> directory are three data files in Comma-Separated Value (CSV)
+format, as well as a collection of further sub-directories with names following the
+format <code class="docutils literal notranslate"><span class="pre">step[##]</span></code> where <code class="docutils literal notranslate"><span class="pre">[##]</span></code> would be replaced with an integer step number.
+Here, we first detail the structure of the step sub-directories, and then describe the
+CSV data files.</p>
+<div class="section" id="scft-calculation-output">
+<h3>SCFT Calculation Output<a class="headerlink" href="#scft-calculation-output" title="Permalink to this headline">¶</a></h3>
+<p>Each <code class="docutils literal notranslate"><span class="pre">step[##]</span></code> sub-directory is used to keep each of the SCFT calculations performed
+by an agent on a given step in one place, separate from other steps.
+Numbering of the steps starts at 0, which are the SCFT calculations performed at the
+Agent’s initial position, before any PSO steps have been completed.
+Subsequent step numbers indicate that the contained SCFT calculations were performed
+at the Agent’s position following the PSO step with the same number.
+Thus, calculations within directory <code class="docutils literal notranslate"><span class="pre">step1</span></code> are done at the agent’s position
+following the first PSO position update (the first PSO step). Similarly is <code class="docutils literal notranslate"><span class="pre">step2</span></code>
+for the position following the second update during the second PSO step.
+This continues out until <code class="docutils literal notranslate"><span class="pre">step[n_step]</span></code> which are calculations for the
+agent’s final position, after <em>n_step</em> PSO steps have been completed.
+Altogether, each agent visits ( <em>n_step + 1</em> ) total positions.
+Within each of these step directories, yet another sub-directory is generated for each
+phase’s SCFT calculation, which are named according to the <code class="docutils literal notranslate"><span class="pre">name</span></code> assigned to
+each phase in the parameter file. These phase directories are the actual working
+directories set for each of the SCFT calculations, and all output for each individual
+SCFT calculation is stored in one of these phase sub-directories.</p>
+</div>
+<div class="section" id="pso-data-file">
+<h3>PSO Data File<a class="headerlink" href="#pso-data-file" title="Permalink to this headline">¶</a></h3>
+<p>Within each of the agent directories, the file <code class="docutils literal notranslate"><span class="pre">psoData.csv</span></code> contains
+a tabulation of PSO-relevant data for the agent, tabulated in CSV format.
+The file is summarized by the following generalized column headers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">agent</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">bestStep</span><span class="p">,</span> <span class="n">fitness</span><span class="p">,</span> <span class="p">[</span> <span class="n">Variable_Positions</span> <span class="p">],</span> <span class="p">[</span> <span class="n">Variable_Velocities</span> <span class="p">]</span>
+</pre></div>
+</div>
+<p>The first four headers are uniform across all calculations.
+Here, the <code class="docutils literal notranslate"><span class="pre">agent</span></code> column contains the ID number of the agent (the same
+as that used in the agent’s directory name).
+The <code class="docutils literal notranslate"><span class="pre">step</span></code> column identifies the current step being detailed. These
+numbers correspond directly to the numbers used in the <code class="docutils literal notranslate"><span class="pre">step[##]</span></code> directory
+names, and indicate that the values detailed in that row are the current values
+at the agent’s position following the PSO step number given in this column.
+The number in the <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> column indicates the step number on which the
+agent’s current personal best position was seen. Rather than output duplicate data
+for an agent’s current and best position histories, the <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> column is used
+as an internally-referential tracker. For any step in the agent’s history,
+the personal best position seen by the agent up to that point in the search can be
+found by taking the value in the <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> column and tracing backward to the row
+in which the same value is found in the <code class="docutils literal notranslate"><span class="pre">step</span></code> column. Thus, <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> values
+only change when the agent finds a new personal best position, and on the step when
+that new best position is found, the values in <code class="docutils literal notranslate"><span class="pre">step</span></code> and <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> will always
+be equal. The value in the <code class="docutils literal notranslate"><span class="pre">fitness</span></code> column is the fitness of the agent at that step.</p>
+<p>The remaining columns will depend on the search being performed. These columns specify
+the position and velocity of the agent at each step according to the PSO search variables.
+One column corresponding with each search variable is placed within the space designated
+by <code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">Variable_Positions</span> <span class="pre">]</span></code>. The headers placed here depend on the search variables
+themselves, but all follow the general format of <code class="docutils literal notranslate"><span class="pre">p_[label]</span></code> where <code class="docutils literal notranslate"><span class="pre">p_</span></code> indicates
+position data and <code class="docutils literal notranslate"><span class="pre">[label]</span></code> would be replaced by a unique label for the search variable.
+Similar organization is used for velocity data, which is put in place of
+<code class="docutils literal notranslate"><span class="pre">[</span> <span class="pre">Variable_Velocities</span> <span class="pre">]</span></code>, with column headers <code class="docutils literal notranslate"><span class="pre">v_[label]</span></code> where <code class="docutils literal notranslate"><span class="pre">v_</span></code> indicates
+velocity data and <code class="docutils literal notranslate"><span class="pre">[label]</span></code> is the same as in the corresponding position column.
+These labels are algorithmically generated according to a few rules detailed below.
+Depending on the detaild of the search, these labels can get very long, but will fully
+specify the search variable.</p>
+<blockquote>
+<div><ul>
+<li><p>The variable type is identified by the first part of the label.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Total Block Length : Length</p></li>
+<li><p>Block Length Ratio : LengthRatio</p></li>
+<li><p>Kuhn Length : Kunn</p></li>
+<li><p>Kuhn Ratio : KuhnRatio</p></li>
+<li><p>Chi parameter : ChiN</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Specific polymer blocks are listed with <code class="docutils literal notranslate"><span class="pre">_p[pid]b[bid]</span></code> for block <em>[bid]</em> in polymer <em>[pid]</em>.</p></li>
+<li><p>Monomers are identified with <code class="docutils literal notranslate"><span class="pre">_m[mid]</span></code> for monomer <em>[mid]</em></p></li>
+<li><p>For ratio variables, the components in the numerator are listed immediately following
+the variable type, followed by the key <code class="docutils literal notranslate"><span class="pre">_r</span></code> for ratio, followed by the components in the
+denominator.</p></li>
+</ul>
+</div></blockquote>
+<p>An example of possible labels for each variable type are listed below:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Total Block Length:  <code class="docutils literal notranslate"><span class="pre">Length_p0b0_p0b1</span></code> for total length of a diblock copolymer.</p></li>
+<li><p>Block Length Ratio:  <code class="docutils literal notranslate"><span class="pre">LengthRatio_p0b0_r_p0b1</span></code> for ratio between blocks of diblock polymer.</p></li>
+<li><p>Kuhn Length : <code class="docutils literal notranslate"><span class="pre">Kuhn_m0</span></code> for statistical segment length of monomer 0.</p></li>
+<li><p>Kuhn Ratio : <code class="docutils literal notranslate"><span class="pre">KuhnRatio_m0_r_m1</span></code> for ratio between segment lengths of monomers 0 and 1.</p></li>
+<li><p>Chi :  <code class="docutils literal notranslate"><span class="pre">ChiN_m0_m1</span></code> for interaction parameter between monomers 0 and 1.</p></li>
+</ul>
+</div></blockquote>
+<p>The Following is an example of the first four steps of psoData.csv for search in conformationally
+symmetric diblock copolymers.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">agent</span><span class="p">,</span><span class="n">step</span><span class="p">,</span><span class="n">bestStep</span><span class="p">,</span><span class="n">fitness</span><span class="p">,</span><span class="n">p_LengthRatio_p0b0_r_p0b1</span><span class="p">,</span><span class="n">p_ChiN_m0_m1</span><span class="p">,</span><span class="n">v_LengthRatio_p0b0_r_p0b1</span><span class="p">,</span><span class="n">v_ChiN_m0_m1</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span><span class="o">-</span><span class="mf">1.5424027481055385</span><span class="p">,</span><span class="mf">22.442175420796637</span><span class="p">,</span><span class="o">-</span><span class="mf">0.06227226099288552</span><span class="p">,</span><span class="mf">1.1414343348550768</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span><span class="mf">2.0836140548746216</span><span class="p">,</span><span class="mf">18.86587413498185</span><span class="p">,</span><span class="mf">3.0</span><span class="p">,</span><span class="o">-</span><span class="mf">3.5763012858147856</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span><span class="mf">2.2586988939857373</span><span class="p">,</span><span class="mf">28.28532777914046</span><span class="p">,</span><span class="mf">0.17508483911111555</span><span class="p">,</span><span class="mf">9.419453644158606</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="n">inf</span><span class="p">,</span><span class="mf">0.1366481769710699</span><span class="p">,</span><span class="mf">28.28532777914046</span><span class="p">,</span><span class="o">-</span><span class="mf">2.1220507170146674</span><span class="p">,</span><span class="o">-</span><span class="mf">6.689718874699529</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="o">-</span><span class="mf">0.14269907049999997</span><span class="p">,</span><span class="mf">0.1366481769710699</span><span class="p">,</span><span class="mf">20.989136121554353</span><span class="p">,</span><span class="mf">2.871803070474223</span><span class="p">,</span><span class="o">-</span><span class="mf">7.296191657586108</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="phase-data-file">
+<h3>Phase Data File<a class="headerlink" href="#phase-data-file" title="Permalink to this headline">¶</a></h3>
+<p>Within the Agent directory, the file phaseData.csv contains a summary of polymer-specific
+data includin phase energies and polymer parameters. The general format of the file, by
+generalized column header outline, is given below.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">agent</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="p">[</span><span class="n">Target_Energies</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="n">Competitor_Energies</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="p">[</span><span class="n">Polymer_Parameters</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The first two columns match the columns of the same name from the PSO data files,
+with agent ID numbers and step numbers. Each of the following three bracketed items
+can vary in length. The first two <code class="docutils literal notranslate"><span class="pre">[Target_Energies,</span> <span class="pre">...]</span></code> and <code class="docutils literal notranslate"><span class="pre">[Competitor_Energies,</span> <span class="pre">...]</span></code>
+contain the Free energy, relative to disorder, of each target or competing phase.
+The column labels are structured as <code class="docutils literal notranslate"><span class="pre">F_tgt_[phaseName]</span></code> for target phases
+and <code class="docutils literal notranslate"><span class="pre">F_cmp_[phaseName]</span></code> for competitors, where <code class="docutils literal notranslate"><span class="pre">[phaseName]</span></code> would be replaced
+with the name assigned to the phase in the parameter file.</p>
+<p>The columns placed in the <code class="docutils literal notranslate"><span class="pre">[Polymer_Parameter,</span> <span class="pre">...]</span></code> section at the end of the line
+are the final values of the SCFT-relevant polymer parameters used in the calculation.
+As with variable labels in the PSO data, these are algorithmically generated basaed on
+the parameter type and identifying information. Presently, three types of Parameters
+can appear here (as only three types of parameters are currently involed in variable
+relationships). The first is block lengths for individual blocks which given a label
+of the form <code class="docutils literal notranslate"><span class="pre">Block_Len_p[pid]_b[bid]</span></code> for block <em>[bid]</em> in polymer <em>[pid]</em> (both of
+which are integer-indexed as they were specified in the SearchSpace section of the
+parameter file). The second is the Statistical Segment Length of a monomer using the
+label <code class="docutils literal notranslate"><span class="pre">Kuhn_m[mid]</span></code> for monomer <em>[mid]</em>. Finally, interaction parameters labeled
+with <code class="docutils literal notranslate"><span class="pre">ChiN_m[mid_1]_m[mid_2]</span></code> for the interaction between monomers [mid_1] and <em>[mid_2]</em>.
+For both the segment length and the interaction parameters, the bracketed terms
+would be the same integer-indexed monomer IDs used in declaration of the search space.</p>
+<p>The following is an example of the first four steps for a search in conformationally
+symmetric diblocks targeting BCC Spheres with cometitors Hexagonally-packed cylinders (hex),
+double gyroid (gyr) and lamellae (lam).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">agent</span><span class="p">,</span><span class="n">step</span><span class="p">,</span><span class="n">F_tgt_bcc</span><span class="p">,</span><span class="n">F_cmp_gyr</span><span class="p">,</span><span class="n">F_cmp_hex</span><span class="p">,</span><span class="n">F_cmp_lam</span><span class="p">,</span><span class="n">Block_Len_p0_b0</span><span class="p">,</span><span class="n">Block_Len_p0_b1</span><span class="p">,</span><span class="n">ChiN_m0_m1</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.17618625733950488</span><span class="p">,</span><span class="mf">0.8238137426604951</span><span class="p">,</span><span class="mf">22.442175420796637</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.8893003207531411</span><span class="p">,</span><span class="mf">0.11069967924685886</span><span class="p">,</span><span class="mf">18.86587413498185</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.9053982471445895</span><span class="p">,</span><span class="mf">0.09460175285541045</span><span class="p">,</span><span class="mf">28.28532777914046</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="n">inf</span><span class="p">,</span><span class="o">-</span><span class="mf">2.252871698</span><span class="p">,</span><span class="o">-</span><span class="mf">2.4048796454</span><span class="p">,</span><span class="mf">0.5341089851136952</span><span class="p">,</span><span class="mf">0.46589101488630474</span><span class="p">,</span><span class="mf">28.28532777914046</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="o">-</span><span class="mf">1.0064940203</span><span class="p">,</span><span class="o">-</span><span class="mf">1.0877293566000001</span><span class="p">,</span><span class="o">-</span><span class="mf">1.040020104</span><span class="p">,</span><span class="o">-</span><span class="mf">1.1491930907999999</span><span class="p">,</span><span class="mf">0.5341089851136952</span><span class="p">,</span><span class="mf">0.46589101488630474</span><span class="p">,</span><span class="mf">20.989136121554353</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="swarm-level-data">
+<h2>Swarm-Level Data<a class="headerlink" href="#swarm-level-data" title="Permalink to this headline">¶</a></h2>
+<p>Swarm-level data is placed in a single CSV file in the main working directory for the program.
+<code class="docutils literal notranslate"><span class="pre">swarmLog.csv</span></code> contains data related to the asynchronicity of the agents, as well
+as information on the best historical and current positions throughout the swarm.
+The general format of the columns in this file are</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">step</span><span class="p">,</span> <span class="n">minStep</span><span class="p">,</span> <span class="n">maxStep</span><span class="p">,</span> <span class="n">histBestAgent</span><span class="p">,</span> <span class="n">currBestAgent</span><span class="p">,</span> <span class="p">[</span> <span class="n">agent</span><span class="p">[</span><span class="n">ID</span><span class="p">]</span><span class="n">step</span><span class="p">,</span> <span class="o">...</span> <span class="p">]</span>
+</pre></div>
+</div>
+<p>During operation, agent updates are allowed to proceed asynchronously to maximize
+use of computational resources and minimize idling time. Any agent is permitted to
+begin the next PSO step as long as itself and all of its neighbors have completed
+the current step. For example: Assume agent 1 has agents 0 and 2 as neighbors.
+If each of agents 0, 1, and 2 have completed all required SCFT calculations for
+their step 2 positions and have determined the fitness of their step 2 positions,
+agent 1 is able to begin its update for step 3 and launch the required SCFT calculations
+for step 3, even if agents 0 and 2 must wait for their own neighbors to complete step
+2 calculations. Thus, for a period of time agent 1 is technically a step ahead of its
+neighbors.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">swarmLog.csv</span></code>, the column <code class="docutils literal notranslate"><span class="pre">step</span></code> indicates the most recent step to have been
+completed by all agents. The columns <code class="docutils literal notranslate"><span class="pre">histBestAgent</span></code> and <code class="docutils literal notranslate"><span class="pre">currBestAgent</span></code> both
+specify information assuming that all agents had just completed the current step,
+ignoring the asynchronicity. The <code class="docutils literal notranslate"><span class="pre">histBestAgent</span></code> value gives the ID number of
+the agent whose personal best seen position by the current step has the best fitness
+among the personal best positions of all agents in the swarm; essentially, the agent
+whose personal best-seen position is the best-seen position by the entire swarm
+or the “global best” position at the end of that step.
+The <code class="docutils literal notranslate"><span class="pre">currBestAgent</span></code> is the ID number of the agent whose current position has the
+best fitness among all agent’s current positions; this considers only the current
+position of each agent at the end of the current step, independent of the personal
+histories of the agents.</p>
+<p>The remaining columns all relate to the asynchronicity of the agent updates.
+<code class="docutils literal notranslate"><span class="pre">minStep</span></code> indicate the lowest step number completed by any agent,
+and should match the <code class="docutils literal notranslate"><span class="pre">step</span></code> value. <code class="docutils literal notranslate"><span class="pre">maxStep</span></code> indicates the highest step
+number completed by any agent. The remaining columns (<code class="docutils literal notranslate"><span class="pre">agent[ID]step</span></code>) indicate
+the most recent step completed by each agent, with one column per agent, and with <em>[ID]</em>
+replaced by the integer ID of the agent in the header. Together, these columns give
+a snapshot of how out-of-sync the swarm was at the moment when the last agent completed
+the final calculation for the step identified in the <code class="docutils literal notranslate"><span class="pre">step</span></code> column.</p>
+<p>An example of this file for the first four steps of a 5-agent search are shown below
+(taken from the same calculation as the last two examples on this page).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">step</span><span class="p">,</span><span class="n">minStep</span><span class="p">,</span><span class="n">maxStep</span><span class="p">,</span><span class="n">histBestAgent</span><span class="p">,</span><span class="n">currBestAgent</span><span class="p">,</span><span class="n">agent0step</span><span class="p">,</span><span class="n">agent1step</span><span class="p">,</span><span class="n">agent2step</span><span class="p">,</span><span class="n">agent3step</span><span class="p">,</span><span class="n">agent4step</span>
+<span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span>
+<span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span>
+<span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span>
+<span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span>
+<span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">4</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tools-for-analysis-of-output">
+<h2>Tools for Analysis of Output<a class="headerlink" href="#tools-for-analysis-of-output" title="Permalink to this headline">¶</a></h2>
+<p>PscfInverse generates a lot of output files, and analysis of much of this data
+requires cross-referencing several of these tabulated datasets. To assist in
+analysis of the PSO data, a Matlab script is included with the <code class="docutils literal notranslate"><span class="pre">matlab</span></code> directory
+of the repository to assist in this cross-referencing.
+This script, defining the Matlab function <code class="docutils literal notranslate"><span class="pre">parsePsoData</span></code>, should be run from
+the program’s working directory (where <code class="docutils literal notranslate"><span class="pre">swarmLog.csv</span></code> is located) and takes
+the number of agents in the swarm as an argument. The function then collects data
+from all of the output files and returns three Matlab table objects representing
+collations of the data files. The first of these is <code class="docutils literal notranslate"><span class="pre">agentdata</span></code>, which
+combines the <code class="docutils literal notranslate"><span class="pre">psoData.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">phaseData.csv</span></code> files from each agent into
+a single table listing the data collected for each agent at each step.
+The second table <code class="docutils literal notranslate"><span class="pre">pbest</span></code> uses the <code class="docutils literal notranslate"><span class="pre">bestStep</span></code> data to list the data from
+each agent’s personal best position at each step. Unlike in the original CSV
+files or in the agentdata table, for each step that an agent does not find a new
+best position, the data from the reigning best position is repeated in the row.
+In this table all position and energy data listed is that at the best position seen
+by the agent through the specified step, rather than the current position data at that
+step.
+The final table is <code class="docutils literal notranslate"><span class="pre">gbest</span></code> which lists data about the best position seen in the entire
+swarm’s history by the end of the step identified in the <code class="docutils literal notranslate"><span class="pre">step</span></code> column. This table
+contains only one row per PSO step, identifying the best positions seen by the swarm
+over time.</p>
+<p>This function would be called with the line</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">agentdata</span><span class="p">,</span> <span class="n">gbest</span><span class="p">,</span> <span class="n">pbest</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsePsoData</span><span class="p">(</span><span class="n">n_agent</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>After these three tables are returned from the function, they may be saved to
+.mat files in order to use them for later analyses without having to re-run the
+parsing script.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pscfinverse</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html"> Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html"> Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html"> Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="param/main.html"> Parameter File</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Output</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-information">Runtime Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#agent-level-data">Agent-Level Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#swarm-level-data">Swarm-Level Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tools-for-analysis-of-output">Tools for Analysis of Output</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="param/main.html" title="previous chapter">Parameter File</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Logan Case.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/output.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
