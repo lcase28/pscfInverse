@@ -334,52 +334,82 @@ if __name__ == '__main__':
         varset = PolymerVariableSet(variables,constants)
         
         # Create Mesophases and Phase Managers
+        word = next(words)
+        pman = parsePhases(words,word)
+        
+        # Check for start of Pso block
+        key = next(words)
+        checkKey("Pso{",key)
+        
+        # Check for specified random seed
+        key = next(words)
+        if key == "random_seed":
+            seed = words.next_int()
+            key = next(words)
+        else:
+            seed = time.time_ns() % (2**32)
+        print("Random Seed Used: {}".format(seed))
+        randGen = np.random.RandomState(seed)
+        
+        # Check for integrator specification
+        if key == "StandardIntegrator{":
+            # Read integrator specification
+            key = next(words)
+            if key == "constriction":
+                chi = abs(words.next_float())
+                key = next(words)
+            else:
+                chi = 0.729
+            print("Using Constriction Factor: {}".format(chi))
+            if key == "self_weight":
+                eps1 = abs(words.next_float())
+                key = next(words)
+            else:
+                eps1 = 2.05
+            print("Using Self-Weight: {}".format(eps1))
+            if key == "neighbor_weight":
+                eps2 = abs(words.next_float())
+                key = next(words)
+            else:
+                eps2 = 2.05
+            print("Using Neighbor-Weight: {}".format(eps2))
+            ensureblockend(key)
+            integrator = StandardIntegrator(randGen, chi=chi, c1=eps1, c2=eps2
+            key = next(words)
+        else:
+            integrator = StandardIntegrator(randGen)
+        
+        # Read Swarm Block
+        checkKey("Swarm{",key)
+        key = next(words)
+        checkKey("n_agent",key)
+        nagent = words.next_int()
+        if nagent <= 0:
+            raise(ValueError("Must have a positive number of agents; gave {}".format(nagent)))
+        print("Using {} agents.".format(nagent))
+        closeblock(words)
+        key = next(words)
+        checkKey("n_step",key)
+        nstep = words.next_int()
+        if nstep <= 0:
+            raise(ValueError("Must have a positive number of steps; gave {}".format(nstep)))
+        print("Running {} steps.".format(nstep))
+        
+        velcap = np.array(velcap)
+        velval = np.zeros_like(velcap)
+        velsrc = Velocity(velval,velcap)
         pwd = pathlib.Path.cwd()
-        inRoot = pwd / "inputs"
-        
-        p = "sigma"
-        tgt = PscfMesophase.fromFieldGenFile(p,inRoot/p/"model")
-        print("Made target {}".format(p))
-        
-        phases = []
-        phaseNames = [ "a15", "fcc", "bcc", "gyr", "hex", "lam" ]
-        for p in phaseNames:
-            phases.append(PscfMesophase.fromFieldGenFile(p,inRoot/p/"model"))
-            print("Made mesophase {}".format(p))
-        
-        pman = MesophaseManager(phases, tgt)
-        print("Made MesophaseManager")
-        
-        # Create Integrator
-        randGen = np.random.RandomState(300)
-        integrator = StandardIntegrator(randGen)
-        print("Created Integrator")
-        
-        # Set Run parameters
-        nagent = 10
-        nphases = 7
-        nstep = 100
-        
         # Create Agents
-        velVal = np.ones(3)
-        velCap = np.array([2.5, 6, 0.6])
-        velsrc = Velocity(velVal,velCap)
-        print("Created Velocity")
         agentList = ScftAgent.createSeveral(nagent,varset,pman,velsrc,client,pwd)
-        print("Created Agents")
         agentList = ScftAgent.randomizeSeveral(agentList,randGen)
-        print("Randomized Agents")
-        
         # Create Swarm
         graph = nx.cycle_graph(nagent)
         sm = Swarm(graph, agentList, integrator, pwd)
-        print("Created Swarm")
         
         ## Run iterations
         tryCooldown = 0.1
-        print("StartingRun")
         runtime, proctime = sm.run(nstep,tryCooldown)
-        print("Finished Running:\trun {}s;\tproc {}s".format(runtime,proctime))
+        print("Finished Running:\trun_time {}s;\tprocess_time {}s".format(runtime,proctime))
 
 client.close()
 sys.stdout.flush()
