@@ -41,10 +41,6 @@ Summary of Sections
 The entire parameter file is contained in one "parent" block with
 label ``PscfInverse{`` which indicates the "active" portions 
 of the parameter file. 
-Content written before or after this block is ignored, and can
-optionally be used for explanatory comments or other notes by the
-user.
-
 This parent block contains several sub-blocks, shown in skeletal 
 form below, in order to group related information.
 The order of these blocks is pre-defined and should be followed. 
@@ -52,7 +48,6 @@ The order of these blocks is pre-defined and should be followed.
 ::
 
     PscfInverse{
-        version 0.1
         SearchSpace{
             ...
         }
@@ -60,9 +55,6 @@ The order of these blocks is pre-defined and should be followed.
             ...
         }
         Pso{
-            ...
-        }
-        Commands{
             ...
         }
     }
@@ -98,15 +90,6 @@ PSO Block
 
 More detail on the :ref:`PSO Block Main Page <param-pso>`
 
-Commands Block
---------------
-
-.. include:: commands.rst
-    :start-after: summary
-    :end-before: summary
-
-More detail on the :ref:`Commands Block Main Page <param-commands>`
-
 .. _param-example-sec:
 
 Example
@@ -115,4 +98,68 @@ Example
 Below is a complete example file for a 2-dimensional search in diblock
 polymer phase space varying fA and ChiN and targeting the BCC sphere phase.
 
-.. literalinclude:: diblock
+::
+
+    PscfInverse{
+        SearchSpace{
+            Variables{
+                BlockRatio{
+                    Numerator{
+                        block   0   0
+                    }
+                    Denominator{
+                        block   0   1
+                    }
+                    lower   -2.5
+                    upper   2.5
+                    velocity_cap    3.0
+                }
+                Chi{
+                    monomers    0   1
+                    lower   10
+                    upper   30
+                    velocity_cap    10
+                }
+            }
+            Constraints{
+                BlockLength{
+                    block   0   0
+                    block   0   1
+                    value   1.0
+                }
+            }
+        }
+        Phases{
+            scft_solver pscf
+            input_root  inputs
+            TargetPhase{
+                name    bcc
+                model_file  bcc/model
+            }
+            CompetingPhase{
+                name    gyr
+                model_file  gyr/model
+            }
+            CompetingPhase{
+                name    hex
+                model_file  hex/model
+            }
+            CompetingPhase{
+                name    lam
+                model_file  lam/model
+            }
+        }
+        Pso{
+            random_seed 1234
+            StandardIntegrator{
+                constriction    0.7
+                self_weight     2.05
+                neighbor_weight 2.05
+            }
+            Swarm{
+                n_agent 5
+            }
+            n_step  4
+        }
+    }
+

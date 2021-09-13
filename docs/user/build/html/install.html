@@ -35,6 +35,112 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="software-requirements">
+<h2>Software Requirements<a class="headerlink" href="#software-requirements" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="python-environment">
+<h3>Python Environment<a class="headerlink" href="#python-environment" title="Permalink to this headline">¶</a></h3>
+<p>This program is written for use on Unix-type operating systems.
+Use of PscfInverse requires at least Python 3.5 or later, but Python 3.7 is the minimum
+recommended version, as this is the Python version used in development.
+The following libraries should be included in most standard Python installations,
+but are required for operation of the software</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>abc</p></li>
+<li><p>collections</p></li>
+<li><p>contextlib</p></li>
+<li><p>copy</p></li>
+<li><p>enum</p></li>
+<li><p>functools</p></li>
+<li><p>io</p></li>
+<li><p>itertools</p></li>
+<li><p>multiprocessing</p></li>
+<li><p>numbers</p></li>
+<li><p>os</p></li>
+<li><p>pathlib</p></li>
+<li><p>psutil</p></li>
+<li><p>re</p></li>
+<li><p>signal</p></li>
+<li><p>subprocess</p></li>
+<li><p>time</p></li>
+</ul>
+</div></blockquote>
+<p>In addition, the following non-standard libraries are also required:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>dask</p></li>
+<li><p>numpy</p></li>
+<li><p>networkx</p></li>
+</ul>
+</div></blockquote>
+<p>Users can verify that these libraries are available in the Python environment by
+opening an interactive python terminal and attempting to import each.</p>
+<p>Finally, installation of the field generation tool, pscfFieldGen, is
+also required in the python environment. Information about these can be found
+on the <cite>PSCF website &lt;https://pscf.cems.umn.edu/&gt;</cite></p>
+</div>
+<div class="section" id="other-dependencies">
+<h3>Other Dependencies<a class="headerlink" href="#other-dependencies" title="Permalink to this headline">¶</a></h3>
+<p>The open-source SCFT software, PSCF, must be installed on the system.</p>
+<p>PscfInverse must be run in an MPI environment using, for example, OpenMPI.
+Such MPI implementations are typically already installed in most
+supercomputing systems.</p>
+</div>
+</div>
+<div class="section" id="hardware-requirements">
+<h2>Hardware Requirements<a class="headerlink" href="#hardware-requirements" title="Permalink to this headline">¶</a></h2>
+<p>Execution of PscfInverse is a very computationally intensive process, typically
+requiring more computer power than is available on a typical desktop system
+in order to run in a reasonable time. Users are advised to run these PSO searches
+on high-performance computing clusters, or dedicated high-performance computer systems.
+This is because PSO runs typically require the execution of hundreds or thousands
+of SCFT calculations and PscfInverse searches will complete most quickly when these
+SCFT calculations can be significantly parallelized using the high numbers of processing
+cores available on supercomputing systems.</p>
+</div>
+<div class="section" id="obtaining-the-source-code">
+<h2>Obtaining the Source Code<a class="headerlink" href="#obtaining-the-source-code" title="Permalink to this headline">¶</a></h2>
+<p>Presently, the source code is available for download from the PSCF
+website. After downloading the .zip file, extract the contents to
+the directory you wish to use as the root directory for the install.
+In descriptions that follow, the filler <code class="docutils literal notranslate"><span class="pre">path/to/root</span></code> will be used
+to indicate the path to this directory.
+After extracting the source, the repository should be contained in
+a new directory called <code class="docutils literal notranslate"><span class="pre">path/to/root/pscfInverse</span></code>.</p>
+</div>
+<div class="section" id="modifying-python-paths">
+<h2>Modifying Python Paths<a class="headerlink" href="#modifying-python-paths" title="Permalink to this headline">¶</a></h2>
+<p>To allow Python to find this library, it must be added to the python search path.</p>
+<div class="section" id="pythonpath">
+<h3>PythonPath<a class="headerlink" href="#pythonpath" title="Permalink to this headline">¶</a></h3>
+<p>Many python installations make use of the environment variable PYTHONPATH when
+searching for libraries. To add PscfInverse to this search path, use the following
+command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PYTHONPATH=$PYTHONPATH:/path/to/root/pscfInverse
+</pre></div>
+</div>
+<p>Executing this on the command line only modifies the path until the end of
+the terminal session. To make the change permanent,
+add the above command to the file ~/.bashrc (on linux) or to ~/.profile (on Mac OS).</p>
+</div>
+<div class="section" id="anaconda-python">
+<h3>Anaconda Python<a class="headerlink" href="#anaconda-python" title="Permalink to this headline">¶</a></h3>
+<p>For Anaconda Python and other conda-managed environments, changes to PYTHONPATH are not
+reliably reflected in the python interpreter’s path.</p>
+<p>To install to a conda-managed environment, first activate the desired environment using
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span></code> before proceeding. From here, the easiest way to install PscfInverse
+is using the conda-develop command included in the conda-build package.
+Install conda-build using</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="n">conda</span><span class="o">-</span><span class="n">build</span>
+</pre></div>
+</div>
+<p>After completing that installation, use the command</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span><span class="o">-</span><span class="n">develop</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">root</span><span class="o">/</span><span class="n">pscfInverse</span>
+</pre></div>
+</div>
+<p>After this, PscfInverse should now be available in your python environment.</p>
+</div>
+</div>
 </div>
 
 
@@ -57,7 +163,13 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html"> Introduction</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"> Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#software-requirements">Software Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hardware-requirements">Hardware Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#obtaining-the-source-code">Obtaining the Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modifying-python-paths">Modifying Python Paths</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html"> Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="param/main.html"> Parameter File</a></li>
 <li class="toctree-l1"><a class="reference internal" href="output.html"> Output</a></li>

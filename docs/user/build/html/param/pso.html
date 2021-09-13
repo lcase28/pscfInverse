@@ -36,8 +36,8 @@
 <p>The <code class="docutils literal notranslate"><span class="pre">Pso{}</span></code> block defines details of the PSO search.
 This includes defining the PSO parameters, swarm size, and
 communication graph, and length of the search.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">Pso{</span> <span class="pre">...</span> <span class="pre">}</span></code> block defines the details of the search.
-The general format of this block is as follows:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Pso{</span> <span class="pre">...</span> <span class="pre">}</span></code> block defines the details of the PSO algorithm itself.
+The general format of this block is as shown below.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Pso</span><span class="p">{</span>
     <span class="n">random_seed</span>     <span class="mi">1234</span>
     <span class="n">StandardIntegrator</span><span class="p">{</span>
@@ -46,7 +46,7 @@ The general format of this block is as follows:</p>
         <span class="n">neighbor_weight</span> <span class="mf">2.05</span>
     <span class="p">}</span>
     <span class="n">Swarm</span><span class="p">{</span>
-        <span class="n">n_agent</span>     <span class="mi">5</span>
+        <span class="n">n_agent</span> <span class="mi">5</span>
     <span class="p">}</span>
     <span class="n">n_step</span>  <span class="mi">100</span>
 <span class="p">}</span>
@@ -100,7 +100,11 @@ each step (1 through <em>[step_count]</em>).</p>
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html"> Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html"> Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html"> Usage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="main.html"> Parameter File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html"> Output</a></li>
 </ul>
 
 <div class="relations">
