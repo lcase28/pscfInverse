@@ -13,8 +13,8 @@ communication graph, and length of the search.
 
 .. summary
 
-The ``Pso{ ... }`` block defines the details of the search.
-The general format of this block is as follows:
+The ``Pso{ ... }`` block defines the details of the PSO algorithm itself.
+The general format of this block is as shown below.
 
 ::
 
@@ -26,7 +26,7 @@ The general format of this block is as follows:
             neighbor_weight 2.05
         }
         Swarm{
-            n_agent     5
+            n_agent 5
         }
         n_step  100
     }
