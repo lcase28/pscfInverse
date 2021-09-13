@@ -1,0 +1,11 @@
+software        pscf
+parameter_file  param
+output_file     rho_kgrid.in
+structure_type  particle
+
+coord_input_style   basis
+N_particles         1
+particle_positions   
+    0       0
+finish
+

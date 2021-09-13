@@ -273,6 +273,56 @@ class KuhnVariable(MesophaseVariable):
     def getEquation(self):
         return [params.KuhnLength(self._mon, 1.0)], self.trueValue
 
+class KuhnRatioVariable(MesophaseVariable):
+    """
+    Describes the ratio of statistical segment lengths.
+    
+    Scaling of the variable is logarithmic, such that the pso
+    value is ln(b1/b2)
+    """
+    
+    def __init__(self, monomer1, monomer2, value = 0.0, lower = -4.5, upper = 4.5):
+        """
+        Initialize a KuhnRatioVariable instance.
+        
+        KuhnRatioVariables Represent ratios on a logarithmic scale.
+        The "value" of this variable is given by
+        
+            self.value = LN( monomer1 / monomer2 )
+        
+        where LN is the natural logarithm. Lower and upper bounds follow
+        this same scaling.
+        
+        Parameters
+        ----------
+        monomer1 : int
+            The ID of the monomer whose segment length is in the numerator.
+            Monomer indexing starts at 0.
+        monomer2 : int
+            The ID of the monomer whose segment length is in the denominator.
+            Monomer indexing starts at 0.
+        value : real
+            An initial value for the 
+        """
+        if type(monomer1) == type(1):
+            self._monomer1 = monomer1
+        else:
+            raise(TypeError("Kuhn ratio monomer IDs must be integers."))
+        if type(monomer2) == type(1):
+            self._monomer2 = monomer2
+        else:
+            raise(TypeError("Kuhn ratio monomer IDs must be integers."))
+        
+        lbl = "KuhnRatio_m{}_r_m{}".format(self._monomer1,self._monomer2)
+        
+        super().__init__(value, lower, upper, label = lbl)
+    
+    def getEquation(self):
+        paramset = []
+        paramset.append( params.KuhnLength(self._monomer1, 1.0) )
+        paramset.append( params.KuhnLength(self._monomer2, -np.exp( self.trueValue ) ) )
+        return paramset, 0.0
+
 class PolymerVariableSet(PsoVariableSet):
     """ A collection for polymeric variables """
     

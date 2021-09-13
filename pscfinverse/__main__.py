@@ -1,3 +1,6 @@
+import logging
+logging.disable(logging.WARNING)
+
 # Dask Cluster Setup
 from dask_mpi import initialize
 initialize()
@@ -46,7 +49,7 @@ def isblockend(word):
 
 def ensureblockend(word):
     if not isblockend(word):
-        raise(ValueError("Expected end of block. Got {}.".format(word)))
+        raise(ValueError("Expected end of block. Got '{}'.".format(word)))
 
 def closeblock(words):
     word = next(words)
@@ -95,7 +98,7 @@ def parseVarBounds(words,word):
     checkKey("upper",word)
     upper = words.next_float()
     word = next(words)
-    ckeckKey("velocity_cap",word)
+    checkKey("velocity_cap",word)
     velcap = words.next_float()
     initval = lower + ( (upper - lower) / 2 )
     closeblock(words)
@@ -310,7 +313,6 @@ def parsePhaseDetails(words,root):
 
 if __name__ == '__main__':
     ### Operation
-    
     parser = argparse.ArgumentParser()
     parser.add_argument("--file","-f", type=str,required=True)
     args = parser.parse_args()
@@ -374,7 +376,7 @@ if __name__ == '__main__':
                 eps2 = 2.05
             print("Using Neighbor-Weight: {}".format(eps2))
             ensureblockend(key)
-            integrator = StandardIntegrator(randGen, chi=chi, c1=eps1, c2=eps2
+            integrator = StandardIntegrator(randGen, chi=chi, c1=eps1, c2=eps2)
             key = next(words)
         else:
             integrator = StandardIntegrator(randGen)
@@ -394,6 +396,8 @@ if __name__ == '__main__':
         if nstep <= 0:
             raise(ValueError("Must have a positive number of steps; gave {}".format(nstep)))
         print("Running {} steps.".format(nstep))
+        closeblock(words)
+        closeblock(words)
         
         velcap = np.array(velcap)
         velval = np.zeros_like(velcap)
